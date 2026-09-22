@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createChildAction, updateChildAction } from "@/lib/actions/children";
+import { useFormAction } from "@/lib/use-form-action";
 import { GESTATIONAL_AGE_MAX_WEEKS, GESTATIONAL_AGE_MIN_WEEKS } from "@/schemas/child";
 import { todayYMD } from "@/lib/growth/age";
 import { FieldError } from "@/components/auth/field-error";
@@ -12,29 +13,20 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { ActionResult } from "@/lib/action-result";
 import type { Child } from "@/db/schema";
-
-type State = ActionResult<{ id: string }> | null;
 
 export function ChildForm({ child }: { child?: Child }) {
   const router = useRouter();
   const [birthType, setBirthType] = useState<"TERM" | "PRETERM">(child?.birthType ?? "TERM");
 
-  const [state, action] = useActionState(async (_prev: State, formData: FormData) => {
-    const result = child
-      ? await updateChildAction(child.id, formData)
-      : await createChildAction(formData);
-
-    if (result.success) {
+  const { action, fields, formError, values } = useFormAction(
+    (formData) =>
+      child ? updateChildAction(child.id, formData) : createChildAction(formData),
+    ({ id }) => {
       toast.success(child ? "Data anak diperbarui." : "Anak berhasil ditambahkan.");
-      router.push(`/children/${result.data.id}`);
-    }
-    return result;
-  }, null);
-
-  const fields = state && !state.success ? state.error.fields : undefined;
-  const formError = state && !state.success && !fields ? state.error.message : undefined;
+      router.push(`/children/${id}`);
+    },
+  );
 
   return (
     <form action={action} className="space-y-5" noValidate>
@@ -49,7 +41,7 @@ export function ChildForm({ child }: { child?: Child }) {
         <Input
           id="name"
           name="name"
-          defaultValue={child?.name}
+          defaultValue={values.name ?? child?.name}
           required
           aria-invalid={!!fields?.name}
           aria-describedby={fields?.name ? "name-error" : undefined}
@@ -59,7 +51,7 @@ export function ChildForm({ child }: { child?: Child }) {
 
       <fieldset className="space-y-2">
         <legend className="text-sm leading-none font-medium">Jenis Kelamin</legend>
-        <RadioGroup name="sex" defaultValue={child?.sex} required className="gap-2">
+        <RadioGroup name="sex" defaultValue={values.sex ?? child?.sex} required className="gap-2">
           <div className="flex items-center gap-2">
             <RadioGroupItem value="MALE" id="sex-male" />
             <Label htmlFor="sex-male" className="font-normal">
@@ -86,7 +78,7 @@ export function ChildForm({ child }: { child?: Child }) {
           name="dateOfBirth"
           type="date"
           max={todayYMD()}
-          defaultValue={child?.dateOfBirth}
+          defaultValue={values.dateOfBirth ?? child?.dateOfBirth}
           required
           aria-invalid={!!fields?.dateOfBirth}
           aria-describedby={fields?.dateOfBirth ? "dob-error" : undefined}
@@ -134,7 +126,7 @@ export function ChildForm({ child }: { child?: Child }) {
                 max={GESTATIONAL_AGE_MAX_WEEKS}
                 step={1}
                 placeholder="32"
-                defaultValue={child?.gestationalAgeWeeks ?? ""}
+                defaultValue={values.gestationalAgeWeeks ?? child?.gestationalAgeWeeks ?? ""}
                 aria-invalid={!!fields?.gestationalAgeWeeks}
                 aria-describedby={
                   fields?.gestationalAgeWeeks ? "ga-weeks-error" : "ga-hint"
@@ -153,7 +145,7 @@ export function ChildForm({ child }: { child?: Child }) {
                 max={6}
                 step={1}
                 placeholder="4"
-                defaultValue={child?.gestationalAgeDays ?? ""}
+                defaultValue={values.gestationalAgeDays ?? child?.gestationalAgeDays ?? ""}
                 aria-invalid={!!fields?.gestationalAgeDays}
                 aria-describedby={fields?.gestationalAgeDays ? "ga-days-error" : "ga-hint"}
               />

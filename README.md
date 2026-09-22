@@ -38,6 +38,14 @@ npm run dev
 
 `AUTH_SECRET` dapat dibuat dengan `npx auth secret` atau `openssl rand -base64 32`.
 
+### Catatan deployment
+
+`trustHost: true` aktif di [src/lib/auth/config.ts](./src/lib/auth/config.ts) karena
+Auth.js hanya mempercayai Host header secara otomatis di Vercel. Host header berasal
+dari client, jadi di production reverse proxy wajib men-set `Host`/`X-Forwarded-Host`
+ke domain aplikasi yang sebenarnya — atau setel `AUTH_URL` — agar callback URL tidak
+dapat dibelokkan ke domain lain.
+
 ### Database
 
 PostgreSQL 17 lewat Docker:
@@ -73,6 +81,7 @@ npm run db:seed     # demo@tumbuhkembang.local / Demo1234
 | `npm run typecheck` | TypeScript, tanpa emit |
 | `npm run test` | Vitest (butuh database untuk test integrasi) |
 | `npm run test:watch` | Vitest mode watch |
+| `npm run test:e2e` | Smoke test alur utama di browser (server harus sudah jalan) |
 | `npm run db:generate` | Membuat file migration dari schema |
 | `npm run db:migrate` | Menerapkan migration |
 | `npm run db:push` | Push schema langsung (khusus development) |

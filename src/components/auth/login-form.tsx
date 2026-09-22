@@ -1,24 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
 import { loginAction } from "@/lib/auth/actions";
+import { useFormAction } from "@/lib/use-form-action";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "./field-error";
 import { SubmitButton } from "./submit-button";
-import type { ActionResult } from "@/lib/action-result";
-
-type State = ActionResult | null;
 
 export function LoginForm() {
-  const [state, action] = useActionState(
-    async (_prev: State, formData: FormData) => loginAction(formData),
-    null,
-  );
-  const fields = state && !state.success ? state.error.fields : undefined;
-  const formError =
-    state && !state.success && !fields ? state.error.message : undefined;
+  const { action, fields, formError, values } = useFormAction(loginAction);
 
   return (
     <form action={action} className="space-y-4" noValidate>
@@ -36,6 +27,7 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
+          defaultValue={values.email}
           aria-describedby={fields?.email ? "email-error" : undefined}
           aria-invalid={!!fields?.email}
         />

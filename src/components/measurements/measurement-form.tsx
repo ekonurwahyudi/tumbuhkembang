@@ -1,19 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createMeasurementAction, updateMeasurementAction } from "@/lib/actions/measurements";
+import { useFormAction } from "@/lib/use-form-action";
 import { todayYMD } from "@/lib/growth/age";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ActionResult } from "@/lib/action-result";
 import type { GrowthMeasurement } from "@/db/schema";
-
-type State = ActionResult<{ id: string }> | null;
 
 export function MeasurementForm({
   childId,
@@ -29,21 +26,17 @@ export function MeasurementForm({
 }) {
   const router = useRouter();
 
-  const [state, action] = useActionState(async (_prev: State, formData: FormData) => {
-    const result = measurement
-      ? await updateMeasurementAction(measurement.id, formData)
-      : await createMeasurementAction(childId, formData);
-
-    if (result.success) {
+  const { action, fields, formError, values } = useFormAction(
+    (formData) =>
+      measurement
+        ? updateMeasurementAction(measurement.id, formData)
+        : createMeasurementAction(childId, formData),
+    () => {
       toast.success(measurement ? "Pengukuran diperbarui." : "Pengukuran disimpan.");
       onDone?.();
       router.refresh();
-    }
-    return result;
-  }, null);
-
-  const fields = state && !state.success ? state.error.fields : undefined;
-  const formError = state && !state.success && !fields ? state.error.message : undefined;
+    },
+  );
 
   return (
     <form action={action} className="space-y-4" noValidate>
@@ -61,7 +54,7 @@ export function MeasurementForm({
           type="date"
           min={minDate}
           max={todayYMD()}
-          defaultValue={measurement?.measuredAt ?? todayYMD()}
+          defaultValue={values.measuredAt ?? measurement?.measuredAt ?? todayYMD()}
           required
           aria-invalid={!!fields?.measuredAt}
           aria-describedby={fields?.measuredAt ? "measured-error" : undefined}
@@ -79,7 +72,7 @@ export function MeasurementForm({
           step="0.01"
           min="0"
           placeholder="7.40"
-          defaultValue={measurement?.weightKg ?? ""}
+          defaultValue={values.weightKg ?? measurement?.weightKg ?? ""}
           aria-invalid={!!fields?.weightKg}
           aria-describedby={fields?.weightKg ? "weight-error" : undefined}
         />
@@ -96,7 +89,7 @@ export function MeasurementForm({
           step="0.1"
           min="0"
           placeholder="67.8"
-          defaultValue={measurement?.lengthHeightCm ?? ""}
+          defaultValue={values.lengthHeightCm ?? measurement?.lengthHeightCm ?? ""}
           aria-invalid={!!fields?.lengthHeightCm}
           aria-describedby={fields?.lengthHeightCm ? "length-error" : undefined}
         />
@@ -113,7 +106,7 @@ export function MeasurementForm({
           step="0.1"
           min="0"
           placeholder="43.2"
-          defaultValue={measurement?.headCircumferenceCm ?? ""}
+          defaultValue={values.headCircumferenceCm ?? measurement?.headCircumferenceCm ?? ""}
           aria-invalid={!!fields?.headCircumferenceCm}
           aria-describedby={fields?.headCircumferenceCm ? "head-error" : "measure-hint"}
         />
@@ -130,7 +123,7 @@ export function MeasurementForm({
           id="notes"
           name="notes"
           maxLength={500}
-          defaultValue={measurement?.notes ?? ""}
+          defaultValue={values.notes ?? measurement?.notes ?? ""}
           aria-invalid={!!fields?.notes}
           aria-describedby={fields?.notes ? "notes-error" : undefined}
         />
