@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
-import { logoutAction } from "@/lib/auth/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LogoutButton } from "@/components/logout-button";
 import { TopNav } from "./top-nav";
 
 const initials = (name: string) =>
@@ -36,7 +35,11 @@ export function AppHeader({ name, email }: { name: string; email: string }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menu akun">
                 <Avatar className="size-8">
-                  <AvatarFallback>{initials(name)}</AvatarFallback>
+                  {/* text-foreground, bukan warna muted bawaan: pasangan muted/muted-foreground
+                      hanya mencapai rasio kontras 4.34:1, di bawah ambang WCAG AA 4.5:1. */}
+                  <AvatarFallback className="text-foreground font-medium">
+                    {initials(name)}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -50,13 +53,10 @@ export function AppHeader({ name, email }: { name: string; email: string }) {
                 <Link href="/settings">Profil &amp; pengaturan</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <form action={logoutAction}>
-                  <button type="submit" className="flex w-full items-center gap-2">
-                    <LogOut className="size-4" aria-hidden />
-                    Keluar
-                  </button>
-                </form>
+              <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
+                {/* Keluar lewat komponen tersendiri agar cache service worker
+                    ikut dibersihkan, sama seperti dari halaman Profil. */}
+                <LogoutButton variant="ghost" className="h-auto w-full justify-start px-2 py-1.5 font-normal" />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

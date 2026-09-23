@@ -21,7 +21,9 @@ export default auth((req) => {
 });
 
 export const config = {
+  // Aset publik PWA dilewatkan: semuanya harus dapat diambil tanpa sesi, termasuk
+  // oleh service worker dan oleh browser saat memasang aplikasi.
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|icons|apple-icon.png|favicon.ico).*)",
+    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|apple-icon.png|icon.png|favicon.ico).*)",
   ],
 };

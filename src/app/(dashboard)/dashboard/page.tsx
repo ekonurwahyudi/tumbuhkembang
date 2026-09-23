@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { listChildrenWithLatestMeasurement } from "@/lib/data/children";
 import { ChildCard } from "@/components/children/child-card";
 import { EmptyState } from "@/components/empty-state";
+import { InstallPrompt } from "@/components/install-prompt";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Beranda" };
@@ -21,6 +22,8 @@ export default async function DashboardPage() {
           Pantau pertumbuhan anak Anda dari satu tempat.
         </p>
       </header>
+
+      <InstallPrompt />
 
       <section className="space-y-3" aria-labelledby="anak-saya">
         <div className="flex items-center justify-between">

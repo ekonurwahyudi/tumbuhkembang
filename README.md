@@ -18,7 +18,7 @@ Spesifikasi lengkap: [README.md — Tumbuh Kembang Anak.md](./README.md%20—%20
 | 4 | Growth engine (dataset WHO, LMS, z-score, percentile) | Selesai |
 | 5 | Growth charts dengan kurva reference | Selesai |
 | 6 | Feeding | Selesai |
-| 7 | PWA produksi lengkap (offline shell sudah ada) | Sebagian |
+| 7 | PWA produksi (manifest, service worker, offline, Lighthouse) | Selesai |
 
 Fitur yang belum memiliki reference tervalidasi **ditampilkan sebagai belum
 tersedia**, bukan diisi nilai perkiraan — lihat tabel
@@ -84,6 +84,8 @@ npm run db:seed     # demo@tumbuhkembang.local / Demo1234
 | `npm run test:e2e` | Smoke test alur auth & CRUD di browser (server harus sudah jalan) |
 | `npm run test:e2e:growth` | Smoke test grafik pertumbuhan di browser (butuh `db:seed`) |
 | `npm run test:e2e:feeding` | Smoke test modul asupan di browser (butuh `db:seed`) |
+| `npm run test:e2e:pwa` | Smoke test PWA: manifest, service worker, perilaku offline |
+| `npm run test:e2e:a11y` | Audit aksesibilitas WCAG 2 AA seluruh halaman (axe-core) |
 | `npm run db:generate` | Membuat file migration dari schema |
 | `npm run db:migrate` | Menerapkan migration |
 | `npm run db:push` | Push schema langsung (khusus development) |
@@ -194,10 +196,46 @@ Aplikasi menyatakan status ini di layar, bukan menampilkan angka tebakan.
 
 ## PWA
 
-Manifest, ikon (192/512/maskable), dan service worker tersedia. Strategi cache
-sengaja konservatif: hanya aset statis yang di-cache. Halaman berisi data anak
-tidak pernah masuk cache; saat offline ditampilkan shell offline. Mutasi offline
-belum diaktifkan karena strategi konflik/sync-nya belum ditentukan.
+Manifest lengkap dengan `id`, shortcut, dan ikon 192/512/maskable; service worker
+aktif; dapat dipasang ke layar utama.
+
+### Strategi cache
+
+Sengaja konservatif. Hanya aset statis publik yang di-cache: berkas build Next
+(nama ber-hash), ikon, dan manifest. Halaman, respons Server Action, dan seluruh
+`/api/*` **tidak pernah** masuk cache — catatan kesehatan anak tidak boleh
+tertinggal di perangkat bersama, apalagi tampil ke akun yang login setelahnya.
+
+Saat offline, navigasi menampilkan shell offline, bukan halaman dari cache. Saat
+keluar, halaman meminta service worker menghapus seluruh cache dan menunggu
+konfirmasinya lewat `MessageChannel` — tanpa menunggu, navigasi logout memutus
+halaman sebelum penghapusan selesai.
+
+Mutasi offline belum diaktifkan: strategi konflik/sync harus ditentukan lebih
+dulu sebelum catatan medis boleh ditulis tanpa jaringan.
+
+`robots.txt` melarang pengindeksan seluruh aplikasi. Ini pelengkap, bukan
+pengganti autentikasi.
+
+### Hasil audit
+
+Lighthouse pada `/login`, emulasi ponsel dengan throttling:
+
+| Kategori | Skor |
+|---|---|
+| Performance | 100 |
+| Accessibility | 100 |
+| Best practices | 100 |
+
+LCP 1,5 s · CLS 0 · TBT 10 ms.
+
+Kategori SEO sengaja rendah: audit `is-crawlable` gagal karena `robots.txt`
+melarang pengindeksan, dan itu memang yang diinginkan untuk aplikasi berisi
+catatan kesehatan anak.
+
+Lighthouse hanya dapat menguji halaman publik. Aksesibilitas halaman terproteksi
+diperiksa `npm run test:e2e:a11y` memakai axe-core — mesin yang sama dipakai
+Lighthouse — pada 14 halaman dan dialog, seluruhnya lolos WCAG 2 A/AA.
 
 ## Lisensi
 

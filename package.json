@@ -17,7 +17,9 @@
     "db:seed": "tsx --env-file=.env.local scripts/seed-dev.ts",
     "test:e2e": "node test/e2e.mjs",
     "test:e2e:growth": "node test/e2e-growth.mjs",
-    "test:e2e:feeding": "node test/e2e-feeding.mjs"
+    "test:e2e:feeding": "node test/e2e-feeding.mjs",
+    "test:e2e:pwa": "node test/e2e-pwa.mjs",
+    "test:e2e:a11y": "node test/e2e-a11y.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -46,10 +48,12 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.13.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "axe-core": "^4.13.0",
     "dotenv": "^18.0.2",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
