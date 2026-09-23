@@ -5,7 +5,10 @@ import { ChevronLeft, LineChart, ListOrdered, Pencil, Ruler } from "lucide-react
 import { requireUser } from "@/lib/auth";
 import { getChild } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
+import { evaluateMeasurement, referenceMeta } from "@/lib/growth/engine";
+import { isGrowthResult } from "@/lib/growth/types";
 import { ChildAgeSummary } from "@/components/children/child-age-summary";
+import { GrowthBadges } from "@/components/growth/growth-badges";
 import { DeleteChildButton } from "@/components/children/delete-child-button";
 import { MeasurementDialog } from "@/components/measurements/measurement-dialog";
 import { EmptyState } from "@/components/empty-state";
@@ -28,6 +31,7 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
 
   const measurements = await listMeasurements(user.id, child.id, "desc");
   const latest = measurements[0];
+  const growth = latest ? evaluateMeasurement(child, latest) : null;
 
   return (
     <div className="space-y-5">
@@ -109,6 +113,15 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
                   </dd>
                 </div>
               </dl>
+
+              {growth && growth.some(isGrowthResult) && (
+                <div className="mt-4 space-y-2 border-t pt-4">
+                  <p className="text-muted-foreground text-xs">
+                    Menurut {referenceMeta("weight-for-age", child.sex).name}
+                  </p>
+                  <GrowthBadges outcomes={growth} />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

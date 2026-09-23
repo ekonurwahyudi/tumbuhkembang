@@ -2,17 +2,24 @@ import { describe, expect, it } from "vitest";
 import { childSchema } from "./child";
 import { measurementSchema } from "./measurement";
 import { registerSchema } from "./auth";
+import { isNotFuture, isValidYMD } from "./date";
 
-const yesterday = () => {
+/**
+ * Helper memakai kalender LOKAL, bukan toISOString() (yang memberi tanggal UTC).
+ * Di zona waktu timur seperti WIB, tanggal UTC bisa tertinggal satu hari dan
+ * membuat test lolos padahal validasinya rusak.
+ */
+const shiftDays = (n: number) => {
   const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  d.setDate(d.getDate() + n);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 };
-const tomorrow = () => {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-};
+const yesterday = () => shiftDays(-1);
+const tomorrow = () => shiftDays(1);
+const today = () => shiftDays(0);
 
 describe("childSchema", () => {
   it("menolak TERM yang menyertakan gestational age (dinormalisasi jadi null)", () => {
@@ -143,5 +150,57 @@ describe("registerSchema", () => {
       confirmPassword: "Rahasia123",
     });
     expect(r.email).toBe("eko@example.com");
+  });
+});
+
+describe("validasi tanggal dan zona waktu", () => {
+  it("menerima tanggal hari ini", () => {
+    expect(
+      childSchema.safeParse({
+        name: "Anak",
+        sex: "MALE",
+        dateOfBirth: today(),
+        birthType: "TERM",
+      }).success,
+    ).toBe(true);
+    expect(
+      measurementSchema.safeParse({ measuredAt: today(), weightKg: 7 }).success,
+    ).toBe(true);
+  });
+
+  it("menolak hari esok pada kedua schema", () => {
+    expect(
+      childSchema.safeParse({
+        name: "Anak",
+        sex: "MALE",
+        dateOfBirth: tomorrow(),
+        birthType: "TERM",
+      }).success,
+    ).toBe(false);
+    expect(
+      measurementSchema.safeParse({ measuredAt: tomorrow(), weightKg: 7 }).success,
+    ).toBe(false);
+  });
+
+  it("tidak terpengaruh zona waktu", () => {
+    // Regresi: new Date("YYYY-MM-DD") diurai sebagai UTC lalu dibandingkan dengan
+    // waktu lokal, sehingga di WIB (UTC+7) tanggal besok sempat lolos validasi.
+    const jamSubuh = new Date(2026, 8, 23, 3, 59); // 23 Sep 2026 03:59 waktu lokal
+    expect(isNotFuture("2026-09-23", jamSubuh)).toBe(true);
+    expect(isNotFuture("2026-09-24", jamSubuh)).toBe(false);
+
+    const jamMalam = new Date(2026, 8, 23, 23, 30);
+    expect(isNotFuture("2026-09-23", jamMalam)).toBe(true);
+    expect(isNotFuture("2026-09-24", jamMalam)).toBe(false);
+  });
+
+  it("menolak tanggal yang tidak ada di kalender", () => {
+    expect(isValidYMD("2026-02-31")).toBe(false);
+    expect(isValidYMD("2026-13-01")).toBe(false);
+    expect(isValidYMD("2024-02-29")).toBe(true); // kabisat
+    expect(isValidYMD("2026-02-29")).toBe(false);
+    expect(
+      measurementSchema.safeParse({ measuredAt: "2026-02-31", weightKg: 7 }).success,
+    ).toBe(false);
   });
 });

@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Ruler } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getChild } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
+import { buildChartSeries } from "@/lib/growth/chart-data";
+import type { MeasurementType } from "@/lib/growth/types";
 import { ChildAgeSummary } from "@/components/children/child-age-summary";
-import { MeasurementList } from "@/components/measurements/measurement-list";
+import { GrowthSummary } from "@/components/growth/growth-summary";
+import { GrowthTabs } from "@/components/growth/growth-tabs";
+import { MeasurementDialog } from "@/components/measurements/measurement-dialog";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { EmptyState } from "@/components/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Pertumbuhan" };
+
+const TYPES: MeasurementType[] = [
+  "weight-for-age",
+  "length-for-age",
+  "head-circumference-for-age",
+];
 
 export default async function GrowthPage({ params }: PageProps<"/children/[id]/growth">) {
   const { id } = await params;
@@ -20,6 +30,14 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
   if (!child) notFound();
 
   const measurements = await listMeasurements(user.id, child.id, "asc");
+
+  // Perhitungan seluruhnya di server; komponen chart hanya menerima angka jadi.
+  const series = TYPES.map((type) => buildChartSeries(child, measurements, type));
+  const summaries = Object.fromEntries(
+    series.map((s) => [s.measurementType, <GrowthSummary key={s.measurementType} series={s} />]),
+  );
+
+  const refName = series[0].reference;
 
   return (
     <div className="space-y-5">
@@ -31,8 +49,9 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
         {child.name}
       </Link>
 
-      <header>
+      <header className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold tracking-tight">Pertumbuhan {child.name}</h1>
+        <MeasurementDialog childId={child.id} minDate={child.dateOfBirth} />
       </header>
 
       <Card>
@@ -41,35 +60,23 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
         </CardContent>
       </Card>
 
-      {/*
-        Grafik dengan reference curve WHO/Fenton belum diaktifkan karena dataset
-        reference-nya belum dimasukkan ke repository. Menampilkan grafik tanpa
-        reference akan menyesatkan, jadi halaman ini menyatakan statusnya apa adanya
-        dan tetap menampilkan data mentah yang sudah tercatat.
-      */}
-      <Alert>
-        <AlertTitle>Grafik pertumbuhan belum tersedia</AlertTitle>
-        <AlertDescription>
-          Grafik beserta kurva reference (WHO Child Growth Standards untuk anak cukup bulan,
-          Fenton untuk bayi prematur) sedang disiapkan. Data yang Anda catat tetap tersimpan
-          lengkap dan akan langsung tampil pada grafik begitu reference resminya diterapkan.
-        </AlertDescription>
-      </Alert>
+      {measurements.length === 0 ? (
+        <EmptyState
+          icon={Ruler}
+          title="Belum ada pengukuran."
+          description="Tambahkan pengukuran pertama untuk mulai membuat grafik pertumbuhan."
+          action={<MeasurementDialog childId={child.id} minDate={child.dateOfBirth} />}
+        />
+      ) : (
+        <GrowthTabs series={series} summaries={summaries} />
+      )}
 
-      <section className="space-y-3" aria-labelledby="data-tercatat">
-        <h2 id="data-tercatat" className="font-medium">
-          Data tercatat
-        </h2>
-        {measurements.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Belum ada pengukuran.</p>
-        ) : (
-          <MeasurementList
-            measurements={[...measurements].reverse()}
-            childId={child.id}
-            dateOfBirth={child.dateOfBirth}
-          />
-        )}
-      </section>
+      <p className="text-muted-foreground text-xs">
+        Kurva reference: {refName.name} ({refName.version}).{" "}
+        {child.birthType === "PRETERM"
+          ? "Usia yang dipakai adalah usia terkoreksi sesuai rekomendasi AAP."
+          : "Usia yang dipakai adalah usia kronologis."}
+      </p>
 
       <MedicalDisclaimer />
     </div>

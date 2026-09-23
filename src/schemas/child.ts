@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isNotFuture, isValidYMD } from "./date";
 
 /**
  * Batas gestational age mengikuti cakupan Fenton 2013 preterm growth chart
@@ -8,23 +9,17 @@ import { z } from "zod";
 export const GESTATIONAL_AGE_MIN_WEEKS = 22;
 export const GESTATIONAL_AGE_MAX_WEEKS = 36;
 
-const today = () => {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d;
-};
-
 const dateOnly = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid")
-  .refine((s) => !Number.isNaN(Date.parse(s)), "Tanggal tidak valid");
+  .refine(isValidYMD, "Tanggal tidak valid");
 
 export const childSchema = z
   .object({
     name: z.string().trim().min(1, "Nama anak wajib diisi").max(100),
     sex: z.enum(["MALE", "FEMALE"], { message: "Jenis kelamin wajib dipilih" }),
     dateOfBirth: dateOnly.refine(
-      (s) => new Date(s) <= today(),
+      (s) => isNotFuture(s),
       "Tanggal lahir tidak boleh di masa depan",
     ),
     birthType: z.enum(["TERM", "PRETERM"], { message: "Status kelahiran wajib dipilih" }),

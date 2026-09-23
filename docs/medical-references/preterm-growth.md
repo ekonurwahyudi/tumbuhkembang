@@ -1,8 +1,21 @@
 # Preterm Growth Reference
 
 **Status: belum diterapkan.** Dataset preterm belum dimasukkan ke repository.
-Yang sudah diterapkan hanya perhitungan usia (corrected age dan post-menstrual
-age) — lihat [age-terminology.md](./age-terminology.md).
+
+## Apa yang dilakukan aplikasi saat ini untuk bayi prematur
+
+| Kondisi | Perlakuan |
+|---|---|
+| Corrected age < 0 (belum mencapai usia term) | **Tidak dinilai.** Aplikasi menyatakan reference preterm belum tersedia, bukan memakai WHO yang tidak berlaku pada fase ini. |
+| Corrected age >= 0, usia kronologis <= 3 tahun | Dinilai dengan WHO Child Growth Standards memakai **corrected age** sebagai sumbu usia. |
+| Usia kronologis > 3 tahun | Dinilai dengan WHO memakai usia kronologis (batas koreksi AAP). |
+
+Pemakaian WHO dengan corrected age setelah bayi mencapai usia term adalah
+pendekatan yang lazim, tetapi **bukan pengganti** reference khusus preterm pada
+fase sebelum term. Karena itu fase tersebut sengaja tidak dinilai.
+
+Perhitungan usianya sendiri — corrected age dan post-menstrual age — sudah
+diterapkan; lihat [age-terminology.md](./age-terminology.md).
 
 ## Source yang akan digunakan
 

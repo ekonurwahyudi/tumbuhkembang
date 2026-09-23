@@ -16,6 +16,6 @@ pengambilan, transformasi data, rumus, dan keterbatasan yang diketahui.
 | Dokumen | Cakupan | Status |
 |---|---|---|
 | [age-terminology.md](./age-terminology.md) | Usia kronologis, corrected age, PMA | Diterapkan |
-| [who-growth.md](./who-growth.md) | WHO Child Growth Standards (LMS) | Belum diterapkan (Phase 4) |
-| [preterm-growth.md](./preterm-growth.md) | Fenton preterm growth chart | Belum diterapkan (Phase 4) |
+| [who-growth.md](./who-growth.md) | WHO Child Growth Standards (LMS, z-score, persentil) | Diterapkan |
+| [preterm-growth.md](./preterm-growth.md) | Reference preterm (Fenton) | Belum diterapkan |
 | [feeding.md](./feeding.md) | Estimasi kebutuhan asupan | Belum diterapkan (Phase 6) |

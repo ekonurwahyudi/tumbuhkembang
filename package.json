@@ -15,7 +15,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env.local scripts/seed-dev.ts",
-    "test:e2e": "node test/e2e.mjs"
+    "test:e2e": "node test/e2e.mjs",
+    "test:e2e:growth": "node test/e2e-growth.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -35,7 +36,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.88.0",
-    "recharts": "^3.10.1",
+    "recharts": "^3.8.0",
     "server-only": "^0.0.1",
     "shadcn": "^4.21.0",
     "sonner": "^2.0.8",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isNotFuture, isValidYMD } from "./date";
 
 /**
  * Batas plausibilitas longgar — hanya menolak salah ketik nyata (mis. berat 700 kg).
@@ -8,34 +9,36 @@ const MAX_WEIGHT_KG = 150;
 const MAX_LENGTH_CM = 220;
 const MAX_HEAD_CM = 80;
 
-/** Input kosong (field opsional di form) jadi null; selain itu wajib angka > 0 dan <= max. */
+/**
+ * Input kosong jadi null; selain itu wajib angka > 0 dan <= max.
+ *
+ * `.optional()` diperlukan agar KUNCI-nya boleh tidak ada sama sekali, bukan hanya
+ * bernilai undefined — keduanya hal berbeda di Zod. Server action selalu mengirim
+ * seluruh kunci (FormData.get() memberi null), tetapi pemanggil lain belum tentu.
+ */
 const optionalMeasure = (max: number, label: string) =>
   z
-    .union([z.string(), z.number(), z.null(), z.undefined()])
+    .union([z.string(), z.number(), z.null()])
+    .optional()
     .transform((v) => (typeof v === "string" ? v.trim() : v))
     .transform((v) => (v === "" || v == null ? null : Number(v)))
     .refine((n) => n === null || Number.isFinite(n), `${label} harus berupa angka`)
     .refine((n) => n === null || n > 0, `${label} harus lebih dari 0`)
     .refine((n) => n === null || n <= max, `${label} melebihi batas wajar (${max})`);
 
-const notFuture = (s: string) => {
-  const d = new Date(`${s}T00:00:00`);
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  return !Number.isNaN(d.getTime()) && d <= end;
-};
-
 export const measurementSchema = z
   .object({
     measuredAt: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid")
-      .refine(notFuture, "Tanggal pengukuran tidak boleh di masa depan"),
+      .refine(isValidYMD, "Tanggal tidak valid")
+      .refine((s) => isNotFuture(s), "Tanggal pengukuran tidak boleh di masa depan"),
     weightKg: optionalMeasure(MAX_WEIGHT_KG, "Berat badan"),
     lengthHeightCm: optionalMeasure(MAX_LENGTH_CM, "Panjang/tinggi badan"),
     headCircumferenceCm: optionalMeasure(MAX_HEAD_CM, "Lingkar kepala"),
     notes: z
-      .union([z.string(), z.null(), z.undefined()])
+      .union([z.string(), z.null()])
+      .optional()
       .transform((v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null))
       .refine((v) => v === null || v.length <= 500, "Catatan maksimal 500 karakter"),
   })
