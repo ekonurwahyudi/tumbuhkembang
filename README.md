@@ -17,13 +17,12 @@ Spesifikasi lengkap: [README.md — Tumbuh Kembang Anak.md](./README.md%20—%20
 | 3 | CRUD pengukuran, riwayat, pengukuran terakhir | Selesai |
 | 4 | Growth engine (dataset WHO, LMS, z-score, percentile) | Selesai |
 | 5 | Growth charts dengan kurva reference | Selesai |
-| 6 | Feeding | Belum |
+| 6 | Feeding | Selesai |
 | 7 | PWA produksi lengkap (offline shell sudah ada) | Sebagian |
 
 Fitur yang belum memiliki reference tervalidasi **ditampilkan sebagai belum
-tersedia**, bukan diisi nilai perkiraan. Saat ini itu berlaku untuk kalkulator
-asupan (Phase 6) dan untuk bayi prematur yang belum mencapai usia term — reference
-khusus preterm (mis. Fenton) belum diterapkan. Lihat
+tersedia**, bukan diisi nilai perkiraan — lihat tabel
+[Yang belum tersedia](#yang-belum-tersedia) dan
 [docs/medical-references/](./docs/medical-references/).
 
 ## Menjalankan
@@ -84,6 +83,7 @@ npm run db:seed     # demo@tumbuhkembang.local / Demo1234
 | `npm run test:watch` | Vitest mode watch |
 | `npm run test:e2e` | Smoke test alur auth & CRUD di browser (server harus sudah jalan) |
 | `npm run test:e2e:growth` | Smoke test grafik pertumbuhan di browser (butuh `db:seed`) |
+| `npm run test:e2e:feeding` | Smoke test modul asupan di browser (butuh `db:seed`) |
 | `npm run db:generate` | Membuat file migration dari schema |
 | `npm run db:migrate` | Menerapkan migration |
 | `npm run db:push` | Push schema langsung (khusus development) |
@@ -102,10 +102,11 @@ src/
 ├── components/            ui (shadcn), layout, children, measurements
 ├── db/                    schema Drizzle + migrations
 ├── lib/
-│   ├── actions/           server actions (children, measurements)
+│   ├── actions/           server actions (children, measurements, feeding)
 │   ├── auth/              Auth.js, rate limit, actions
 │   ├── data/              akses database terotorisasi
-│   └── growth/            calculation engine (usia, corrected age)
+│   ├── feeding/           ringkasan harian + estimasi asupan
+│   └── growth/            calculation engine (usia, corrected age, LMS)
 ├── schemas/               validasi Zod
 └── middleware.ts          proteksi route
 ```
@@ -164,6 +165,21 @@ Rumus (termasuk koreksi ekor WHO di luar +-3 SD) ada di
 Unit test menguji terhadap **angka yang tercetak di tabel WHO**, bukan sekadar
 memastikan fungsi berjalan.
 
+### Estimasi asupan
+
+Mengikuti AAP, *Amount and Schedule of Baby Formula Feedings*: sekitar 75 mL
+formula per hari untuk setiap 453 g berat badan, maksimum rata-rata 960 mL per
+24 jam.
+
+Estimasi **hanya** ditampilkan untuk susu formula pada bayi cukup bulan di bawah
+usia 6 bulan. Untuk bayi yang menyusu langsung tidak ada target volume: WHO
+menganjurkan menyusui responsif dan tidak menetapkan angka dalam ml.
+
+Sesi menyusui langsung tanpa volume terukur **tidak pernah** dijumlahkan ke total
+ml — hanya dihitung sebagai jumlah sesi, dan layar menyatakan hal itu.
+
+Dokumentasi: [feeding.md](./docs/medical-references/feeding.md).
+
 ### Yang belum tersedia
 
 | Hal | Status |
@@ -171,7 +187,8 @@ memastikan fungsi berjalan.
 | Reference preterm (Fenton) | Belum - bayi yang belum mencapai term tidak dinilai |
 | Weight-for-length, BMI-for-age | Belum - butuh sumbu panjang/tinggi, bukan usia |
 | Usia di atas 5 tahun | Belum - di luar cakupan WHO Child Growth Standards |
-| Kalkulator asupan | Belum - reference belum dipilih |
+| Estimasi asupan bayi prematur | Belum - mengikuti guideline neonatal tersendiri |
+| Estimasi asupan di atas 6 bulan | Belum - makanan pendamping ikut menyumbang asupan |
 
 Aplikasi menyatakan status ini di layar, bukan menampilkan angka tebakan.
 

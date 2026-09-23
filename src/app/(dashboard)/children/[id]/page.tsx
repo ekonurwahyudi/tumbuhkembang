@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, LineChart, ListOrdered, Pencil, Ruler } from "lucide-react";
+import { ChevronLeft, LineChart, ListOrdered, Milk, Pencil, Ruler } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getChild } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
@@ -10,6 +10,7 @@ import { isGrowthResult } from "@/lib/growth/types";
 import { ChildAgeSummary } from "@/components/children/child-age-summary";
 import { GrowthBadges } from "@/components/growth/growth-badges";
 import { DeleteChildButton } from "@/components/children/delete-child-button";
+import { FeedingDialog } from "@/components/feeding/feeding-dialog";
 import { MeasurementDialog } from "@/components/measurements/measurement-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
 
       <div className="flex flex-wrap gap-2">
         <MeasurementDialog childId={child.id} minDate={child.dateOfBirth} />
+        <FeedingDialog childId={child.id} />
         <Button asChild variant="outline">
           <Link href={`/children/${child.id}/growth`}>
             <LineChart className="size-4" aria-hidden />
@@ -71,6 +73,12 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
           <Link href={`/children/${child.id}/measurements`}>
             <ListOrdered className="size-4" aria-hidden />
             Riwayat Pengukuran
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href={`/children/${child.id}/feeding`}>
+            <Milk className="size-4" aria-hidden />
+            Riwayat Asupan
           </Link>
         </Button>
       </div>

@@ -22,12 +22,20 @@ import {
   listMeasurements,
   updateMeasurement,
 } from "@/lib/data/measurements";
+import {
+  deleteFeedingLog,
+  getFeedingLog,
+  insertFeedingLog,
+  listFeedingLogs,
+  updateFeedingLog,
+} from "@/lib/data/feeding";
 
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 let alice: string;
 let bob: string;
 let aliceChild: string;
 let aliceMeasurement: string;
+let aliceFeeding: string;
 
 beforeAll(async () => {
   const [a] = await db
@@ -59,6 +67,14 @@ beforeAll(async () => {
     notes: null,
   });
   aliceMeasurement = m.id;
+
+  const f = await insertFeedingLog(aliceChild, {
+    feedingType: "FORMULA",
+    amountMl: "90.0",
+    fedAt: new Date("2026-08-22T09:00:00"),
+    notes: null,
+  });
+  aliceFeeding = f.id;
 });
 
 afterAll(async () => {
@@ -196,5 +212,69 @@ describe("integritas data", () => {
     });
     await deleteChild(alice, tmp.id);
     expect(await getMeasurement(alice, m.id)).toBeUndefined();
+  });
+});
+
+describe("otorisasi catatan asupan", () => {
+  it("Bob tidak dapat membaca catatan asupan milik Alice", async () => {
+    expect(await getFeedingLog(bob, aliceFeeding)).toBeUndefined();
+    expect(await getFeedingLog(alice, aliceFeeding)).toBeDefined();
+    expect(await listFeedingLogs(bob, aliceChild)).toHaveLength(0);
+    expect((await listFeedingLogs(alice, aliceChild)).length).toBeGreaterThan(0);
+  });
+
+  it("Bob tidak dapat mengubah atau menghapus catatan asupan milik Alice", async () => {
+    const values = {
+      feedingType: "FORMULA" as const,
+      amountMl: "999.0",
+      fedAt: new Date("2026-08-22T09:00:00"),
+      notes: "diretas",
+    };
+    expect(await updateFeedingLog(bob, aliceFeeding, values)).toBeUndefined();
+    expect(await deleteFeedingLog(bob, aliceFeeding)).toBeUndefined();
+
+    const still = await getFeedingLog(alice, aliceFeeding);
+    expect(still?.amountMl).toBe("90.0");
+    expect(still?.notes).toBeNull();
+  });
+
+  it("menyimpan ASI langsung tanpa volume", async () => {
+    const row = await insertFeedingLog(aliceChild, {
+      feedingType: "BREAST_DIRECT",
+      amountMl: null,
+      fedAt: new Date("2026-08-22T06:30:00"),
+      notes: null,
+    });
+    expect(row.amountMl).toBeNull();
+  });
+
+  it("menolak volume nol di level database", async () => {
+    await expect(
+      insertFeedingLog(aliceChild, {
+        feedingType: "FORMULA",
+        amountMl: "0.0",
+        fedAt: new Date("2026-08-22T12:00:00"),
+        notes: null,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("menghapus anak ikut menghapus catatan asupannya (cascade)", async () => {
+    const tmp = await insertChild(alice, {
+      name: "Sementara Asupan",
+      sex: "MALE",
+      dateOfBirth: "2026-01-01",
+      birthType: "TERM",
+      gestationalAgeWeeks: null,
+      gestationalAgeDays: null,
+    });
+    const f = await insertFeedingLog(tmp.id, {
+      feedingType: "FORMULA",
+      amountMl: "80.0",
+      fedAt: new Date("2026-02-01T10:00:00"),
+      notes: null,
+    });
+    await deleteChild(alice, tmp.id);
+    expect(await getFeedingLog(alice, f.id)).toBeUndefined();
   });
 });

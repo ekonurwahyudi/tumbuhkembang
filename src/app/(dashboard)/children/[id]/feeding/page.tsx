@@ -1,0 +1,99 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ChevronLeft, Milk } from "lucide-react";
+import { requireUser } from "@/lib/auth";
+import { getChild } from "@/lib/data/children";
+import { listFeedingLogs } from "@/lib/data/feeding";
+import { getLatestMeasurement } from "@/lib/data/measurements";
+import { groupByDay, summarizeDay } from "@/lib/feeding/summary";
+import { todayLocalISO } from "@/schemas/date";
+import { FeedingDay } from "@/components/feeding/feeding-day";
+import { FeedingDialog } from "@/components/feeding/feeding-dialog";
+import { FeedingEstimate } from "@/components/feeding/feeding-estimate";
+import { MedicalDisclaimer } from "@/components/medical-disclaimer";
+import { EmptyState } from "@/components/empty-state";
+
+export const metadata: Metadata = { title: "Asupan" };
+
+/** Berapa hari terakhir yang ditampilkan. */
+const HISTORY_DAYS = 14;
+
+export default async function FeedingPage({ params }: PageProps<"/children/[id]/feeding">) {
+  const { id } = await params;
+  const user = await requireUser();
+  const child = await getChild(user.id, id);
+  if (!child) notFound();
+
+  const from = new Date();
+  from.setDate(from.getDate() - HISTORY_DAYS);
+  from.setHours(0, 0, 0, 0);
+
+  const [logs, latestMeasurement] = await Promise.all([
+    listFeedingLogs(user.id, child.id, { from }),
+    getLatestMeasurement(user.id, child.id),
+  ]);
+
+  const days = groupByDay(logs);
+  const today = todayLocalISO();
+  const todayLogs = days.find((d) => d.date === today)?.logs ?? [];
+  const todaySummary = summarizeDay(todayLogs, today);
+
+  return (
+    <div className="space-y-5">
+      <Link
+        href={`/children/${child.id}`}
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+      >
+        <ChevronLeft className="size-4" aria-hidden />
+        {child.name}
+      </Link>
+
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold tracking-tight">Asupan {child.name}</h1>
+        <FeedingDialog childId={child.id} />
+      </header>
+
+      <FeedingEstimate
+        input={{
+          weightKg: latestMeasurement?.weightKg ? Number(latestMeasurement.weightKg) : null,
+          dateOfBirth: child.dateOfBirth,
+          birthType: child.birthType,
+          gestationalAgeWeeks: child.gestationalAgeWeeks,
+          gestationalAgeDays: child.gestationalAgeDays,
+        }}
+        measuredToday={todaySummary.totalMeasuredMl}
+      />
+
+      <section className="space-y-3" aria-labelledby="riwayat-asupan">
+        <h2 id="riwayat-asupan" className="font-medium">
+          Riwayat {HISTORY_DAYS} hari terakhir
+        </h2>
+
+        {days.length === 0 ? (
+          <EmptyState
+            icon={Milk}
+            title="Belum ada catatan asupan."
+            description="Catat sesi menyusu atau pemberian susu untuk mulai melihat ringkasan harian."
+            action={<FeedingDialog childId={child.id} />}
+          />
+        ) : (
+          <ul className="space-y-3">
+            {days.map((day) => (
+              <li key={day.date}>
+                <FeedingDay
+                  date={day.date}
+                  logs={day.logs}
+                  childId={child.id}
+                  isToday={day.date === today}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <MedicalDisclaimer />
+    </div>
+  );
+}

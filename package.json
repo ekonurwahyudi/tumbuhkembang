@@ -16,7 +16,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env.local scripts/seed-dev.ts",
     "test:e2e": "node test/e2e.mjs",
-    "test:e2e:growth": "node test/e2e-growth.mjs"
+    "test:e2e:growth": "node test/e2e-growth.mjs",
+    "test:e2e:feeding": "node test/e2e-feeding.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

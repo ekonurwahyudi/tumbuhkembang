@@ -18,4 +18,4 @@ pengambilan, transformasi data, rumus, dan keterbatasan yang diketahui.
 | [age-terminology.md](./age-terminology.md) | Usia kronologis, corrected age, PMA | Diterapkan |
 | [who-growth.md](./who-growth.md) | WHO Child Growth Standards (LMS, z-score, persentil) | Diterapkan |
 | [preterm-growth.md](./preterm-growth.md) | Reference preterm (Fenton) | Belum diterapkan |
-| [feeding.md](./feeding.md) | Estimasi kebutuhan asupan | Belum diterapkan (Phase 6) |
+| [feeding.md](./feeding.md) | Estimasi asupan (AAP) + aturan agregasi | Diterapkan sebagian |
