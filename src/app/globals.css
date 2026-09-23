@@ -67,12 +67,16 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  /* Warna seri grafik. Slot 1 dipakai lintasan anak; nilainya dari palet
-     kategorikal tervalidasi (#2a78d6 light / #3987e5 dark) yang lolos ambang
-     lightness, chroma, dan kontras >= 3:1 terhadap surface di kedua mode.
+  /* Warna lintasan anak pada grafik pertumbuhan. Nilainya dari palet kategorikal
+     tervalidasi (#e34948 light / #e66767 dark) yang lolos ambang lightness,
+     chroma, dan kontras >= 3:1 terhadap surface di kedua mode.
      Preset shadcn memakai abu-abu (chroma 0), yang membuat data anak tidak
-     terbedakan dari kurva reference. */
-  --chart-1: oklch(0.575 0.163 255.5);
+     terbedakan dari kurva reference.
+
+     Merah dipilih atas permintaan agar garisnya paling menonjol. Warna ini
+     TIDAK menyatakan status medis apa pun — z-score dan persentil ditampilkan
+     sebagai angka, dan grafik tidak pernah menilai kondisi anak lewat warna. */
+  --chart-1: oklch(0.623 0.191 24.9);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
@@ -107,7 +111,7 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.622 0.161 255.1);
+  --chart-1: oklch(0.669 0.159 22.3);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
