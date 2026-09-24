@@ -86,6 +86,28 @@ export function ChildForm({ child }: { child?: Child }) {
         <FieldError id="dob-error" message={fields?.dateOfBirth} />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="birthWeightGrams">Berat Lahir (gram)</Label>
+        <Input
+          id="birthWeightGrams"
+          name="birthWeightGrams"
+          type="number"
+          inputMode="numeric"
+          min={200}
+          max={8000}
+          step={1}
+          placeholder="3000"
+          defaultValue={values.birthWeightGrams ?? child?.birthWeightGrams ?? ""}
+          aria-invalid={!!fields?.birthWeightGrams}
+          aria-describedby={fields?.birthWeightGrams ? "birth-weight-error" : "birth-weight-hint"}
+        />
+        <p id="birth-weight-hint" className="text-muted-foreground text-xs">
+          Opsional. Dipakai untuk cek syarat penundaan Hepatitis B0 (&lt;2000 g) dan BCG
+          (&lt;2500 g) pada berat lahir rendah.
+        </p>
+        <FieldError id="birth-weight-error" message={fields?.birthWeightGrams} />
+      </div>
+
       <fieldset className="space-y-2">
         <legend className="text-sm leading-none font-medium">Status Kelahiran</legend>
         <RadioGroup

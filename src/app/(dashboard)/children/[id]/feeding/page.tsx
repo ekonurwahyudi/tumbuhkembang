@@ -5,12 +5,10 @@ import { ChevronLeft, Milk } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getChild } from "@/lib/data/children";
 import { listFeedingLogs } from "@/lib/data/feeding";
-import { getLatestMeasurement } from "@/lib/data/measurements";
-import { groupByDay, summarizeDay } from "@/lib/feeding/summary";
+import { groupByDay } from "@/lib/feeding/summary";
 import { todayLocalISO } from "@/schemas/date";
 import { FeedingDay } from "@/components/feeding/feeding-day";
 import { FeedingDialog } from "@/components/feeding/feeding-dialog";
-import { FeedingEstimate } from "@/components/feeding/feeding-estimate";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
 import { EmptyState } from "@/components/empty-state";
 
@@ -29,15 +27,10 @@ export default async function FeedingPage({ params }: PageProps<"/children/[id]/
   from.setDate(from.getDate() - HISTORY_DAYS);
   from.setHours(0, 0, 0, 0);
 
-  const [logs, latestMeasurement] = await Promise.all([
-    listFeedingLogs(user.id, child.id, { from }),
-    getLatestMeasurement(user.id, child.id),
-  ]);
+  const logs = await listFeedingLogs(user.id, child.id, { from });
 
   const days = groupByDay(logs);
   const today = todayLocalISO();
-  const todayLogs = days.find((d) => d.date === today)?.logs ?? [];
-  const todaySummary = summarizeDay(todayLogs, today);
 
   return (
     <div className="space-y-5">
@@ -53,17 +46,6 @@ export default async function FeedingPage({ params }: PageProps<"/children/[id]/
         <h1 className="text-xl font-semibold tracking-tight">Asupan {child.name}</h1>
         <FeedingDialog childId={child.id} />
       </header>
-
-      <FeedingEstimate
-        input={{
-          weightKg: latestMeasurement?.weightKg ? Number(latestMeasurement.weightKg) : null,
-          dateOfBirth: child.dateOfBirth,
-          birthType: child.birthType,
-          gestationalAgeWeeks: child.gestationalAgeWeeks,
-          gestationalAgeDays: child.gestationalAgeDays,
-        }}
-        measuredToday={todaySummary.totalMeasuredMl}
-      />
 
       <section className="space-y-3" aria-labelledby="riwayat-asupan">
         <h2 id="riwayat-asupan" className="font-medium">

@@ -25,12 +25,13 @@ import type { ChartSeries } from "@/lib/growth/chart-data";
 
 const AXIS_TICK = { fontSize: 11 };
 
+/** Diverging: biru di atas median, oranye di bawah, abu-abu netral di median. */
 const SD_LINES = [
-  { key: "sd3neg", label: "−3 SD" },
-  { key: "sd2neg", label: "−2 SD" },
-  { key: "sd0", label: "Median" },
-  { key: "sd2", label: "+2 SD" },
-  { key: "sd3", label: "+3 SD" },
+  { key: "sd3neg", label: "−3 SD", color: "var(--chart-5)", opacity: 0.55 },
+  { key: "sd2neg", label: "−2 SD", color: "var(--chart-4)", opacity: 0.75 },
+  { key: "sd0", label: "Median", color: "var(--muted-foreground)", opacity: 0.55 },
+  { key: "sd2", label: "+2 SD", color: "var(--chart-2)", opacity: 0.75 },
+  { key: "sd3", label: "+3 SD", color: "var(--chart-3)", opacity: 0.55 },
 ] as const;
 
 /** Label usia pada sumbu X: hari saat bayi, bulan setelahnya. */
@@ -102,14 +103,14 @@ export function GrowthChart({ series }: { series: ChartSeries }) {
             />
 
             {/* Kurva reference: konteks, bukan seri utama. Median sedikit lebih tegas. */}
-            {SD_LINES.map(({ key, label }) => (
+            {SD_LINES.map(({ key, label, color, opacity }) => (
               <Line
                 key={key}
                 dataKey={key}
                 name={label}
                 type="monotone"
-                stroke="var(--muted-foreground)"
-                strokeOpacity={key === "sd0" ? 0.55 : 0.3}
+                stroke={color}
+                strokeOpacity={opacity}
                 strokeWidth={key === "sd0" ? 1.5 : 1}
                 dot={false}
                 activeDot={false}
@@ -161,8 +162,20 @@ export function GrowthChart({ series }: { series: ChartSeries }) {
           {series.unit})
         </li>
         <li className="flex items-center gap-1.5">
-          <span aria-hidden className="bg-muted-foreground/30 inline-block h-0.5 w-4 rounded-full" />
-          −3 SD hingga +3 SD
+          <span
+            aria-hidden
+            className="inline-block h-0.5 w-4 rounded-full"
+            style={{ background: "var(--chart-2)" }}
+          />
+          +2 s/d +3 SD
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block h-0.5 w-4 rounded-full"
+            style={{ background: "var(--chart-4)" }}
+          />
+          −2 s/d −3 SD
         </li>
       </ul>
     </figure>

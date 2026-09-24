@@ -37,6 +37,13 @@ export const childSchema = z
       .max(6, "Maksimal 6 hari")
       .nullable()
       .optional(),
+    birthWeightGrams: z
+      .number()
+      .int()
+      .min(200, "Minimal 200 gram")
+      .max(8000, "Maksimal 8000 gram")
+      .nullable()
+      .optional(),
   })
   .superRefine((d, ctx) => {
     if (d.birthType === "PRETERM") {

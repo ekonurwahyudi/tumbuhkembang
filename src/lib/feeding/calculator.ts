@@ -1,43 +1,53 @@
 import { chronologicalAge } from "@/lib/growth/age";
 
 /**
- * Estimasi kisaran asupan susu formula per hari.
+ * Estimasi kisaran asupan susu formula per hari, berbasis mL per kg berat
+ * badan terkini — bukan lagi rumus AAP per-pon (lihat riwayat git untuk
+ * versi lama).
  *
- * Sumber: American Academy of Pediatrics, "Amount and Schedule of Baby Formula
- * Feedings" (HealthyChildren.org) —
- * https://www.healthychildren.org/English/ages-stages/baby/formula-feeding/Pages/amount-and-schedule-of-formula-feedings.aspx
+ * Sumber:
  *
- * Aturan AAP yang dipakai, apa adanya:
- *   - sekitar 75 mL (2,5 ons) formula per hari untuk setiap 453 g (1 pon) berat badan;
- *   - tidak lebih dari rata-rata sekitar 960 mL (32 ons) dalam 24 jam.
+ * - **Bayi prematur**: ESPGHAN, "Enteral Nutrition in Preterm Infants" (2022)
+ *   — target 150–180 mL/kg/hari untuk bayi prematur yang stabil dan tumbuh.
+ *   https://www.espghan.org/dam/jcr:092f7f5a-6557-433c-98d6-7259ab1a9cfa/Enteral%20Nutrition%20in%20Preterm%20Infants%202022%20A.204.pdf
+ * - **Bayi cukup bulan**: Children's Health Queensland, "Your guide to the
+ *   first 12 months" — 150 mL/kg/hari (5 hari–3 bulan), 120 mL/kg/hari (3–6
+ *   bulan). Diakses lewat halaman klinis Nutricia yang mengutip sumber
+ *   tersebut; halaman qld.gov.au aslinya mengembalikan 403 saat dicoba
+ *   diambil langsung dari lingkungan ini — dicatat apa adanya, bukan
+ *   dianggap terverifikasi langsung terhadap sumber primer.
+ *   https://nutricia.com.au/paediatrics/resources/how-much-formula-to-give-baby/
  *
  * Yang SENGAJA tidak dilakukan modul ini:
  *   - Tidak ada estimasi untuk bayi yang menyusu langsung. WHO menganjurkan
  *     menyusui responsif — sesering yang diinginkan bayi — dan tidak menetapkan
  *     target volume dalam ml sama sekali.
- *   - Tidak ada estimasi untuk bayi prematur. Kebutuhan nutrisi enteral bayi
- *     prematur mengikuti guideline neonatal tersendiri yang belum diterapkan.
+ *   - Tidak ada estimasi untuk usia 0–5 hari: sumber di atas menyatakan
+ *     volumenya naik harian (30–60 mL/kg), bukan satu angka mL/kg yang tetap.
  *   - Tidak ada estimasi setelah usia 6 bulan, karena makanan pendamping mulai
  *     menyumbang asupan dan aturan per-berat di atas tidak lagi mewakili.
  *
  * Lihat docs/medical-references/feeding.md
  */
 
-export const AAP_ML_PER_POUND_PER_DAY = 75;
-export const POUND_IN_GRAMS = 453;
-export const AAP_DAILY_MAX_ML = 960;
+export const PRETERM_ML_PER_KG_MIN = 150;
+export const PRETERM_ML_PER_KG_MAX = 180;
+export const TERM_ML_PER_KG_5DAYS_TO_3MONTHS = 150;
+export const TERM_ML_PER_KG_3TO6MONTHS = 120;
 
+/** Usia 0–5 hari: volume naik harian, di luar cakupan (lihat komentar modul). */
+export const NEWBORN_RAMP_END_DAYS = 5;
+/** Batas antar-tier bayi cukup bulan, ~3 bulan. */
+export const TERM_TIER_BREAK_DAYS = 91;
 /** Batas usia penerapan: sebelum makanan pendamping mulai diberikan. */
 export const COMPLEMENTARY_FEEDING_START_DAYS = 183; // ~6 bulan
 
 export type FeedingEstimate = {
   available: true;
-  /** Estimasi kebutuhan harian dari berat badan, sebelum dibatasi. */
-  fromWeightMl: number;
-  /** Nilai yang ditampilkan — sudah dibatasi maksimum harian AAP. */
+  /** Batas bawah (atau satu-satunya nilai, untuk bayi cukup bulan). */
   estimatedMl: number;
-  /** true bila hasil dibatasi oleh maksimum 960 ml/hari. */
-  cappedByDailyMax: boolean;
+  /** Batas atas — hanya terisi untuk bayi prematur (rentang 150–180 mL/kg). */
+  estimatedMlMax?: number;
   weightKg: number;
   ageDays: number;
   reference: { name: string; source: string };
@@ -45,16 +55,21 @@ export type FeedingEstimate = {
 
 export type FeedingEstimateUnavailable = {
   available: false;
-  reason: "NO_WEIGHT" | "PRETERM" | "AGE_OUT_OF_RANGE";
+  reason: "NO_WEIGHT" | "NEWBORN_RAMPING" | "AGE_OUT_OF_RANGE";
   message: string;
 };
 
 export type FeedingEstimateResult = FeedingEstimate | FeedingEstimateUnavailable;
 
-const REFERENCE = {
-  name: "American Academy of Pediatrics — Amount and Schedule of Baby Formula Feedings",
+const PRETERM_REFERENCE = {
+  name: "ESPGHAN — Enteral Nutrition in Preterm Infants (2022)",
   source:
-    "https://www.healthychildren.org/English/ages-stages/baby/formula-feeding/Pages/amount-and-schedule-of-formula-feedings.aspx",
+    "https://www.espghan.org/dam/jcr:092f7f5a-6557-433c-98d6-7259ab1a9cfa/Enteral%20Nutrition%20in%20Preterm%20Infants%202022%20A.204.pdf",
+};
+
+const TERM_REFERENCE = {
+  name: "Children's Health Queensland — Your guide to the first 12 months (via Nutricia)",
+  source: "https://nutricia.com.au/paediatrics/resources/how-much-formula-to-give-baby/",
 };
 
 export type EstimateInput = {
@@ -78,19 +93,16 @@ export function estimateDailyFormula(input: EstimateInput): FeedingEstimateResul
     };
   }
 
-  // Bayi prematur tidak diestimasi sama sekali: kebutuhan nutrisi enteralnya
-  // mengikuti guideline neonatal tersendiri, bukan aturan per-berat AAP untuk
-  // bayi cukup bulan.
-  if (birthType === "PRETERM") {
+  const ageDays = chronologicalAge(dateOfBirth, asOf).days;
+
+  if (ageDays >= 0 && ageDays < NEWBORN_RAMP_END_DAYS) {
     return {
       available: false,
-      reason: "PRETERM",
+      reason: "NEWBORN_RAMPING",
       message:
-        "Estimasi asupan untuk bayi prematur mengikuti guideline neonatal tersendiri yang belum diterapkan di aplikasi ini. Ikuti anjuran tenaga kesehatan yang merawat.",
+        "Pada 5 hari pertama, volume susu naik bertahap tiap hari dan tidak dapat diwakili satu angka per kg berat badan.",
     };
   }
-
-  const ageDays = chronologicalAge(dateOfBirth, asOf).days;
 
   if (ageDays < 0 || ageDays >= COMPLEMENTARY_FEEDING_START_DAYS) {
     return {
@@ -101,17 +113,24 @@ export function estimateDailyFormula(input: EstimateInput): FeedingEstimateResul
     };
   }
 
-  const pounds = (weightKg * 1000) / POUND_IN_GRAMS;
-  const fromWeightMl = Math.round(pounds * AAP_ML_PER_POUND_PER_DAY);
-  const estimatedMl = Math.min(fromWeightMl, AAP_DAILY_MAX_ML);
+  if (birthType === "PRETERM") {
+    return {
+      available: true,
+      estimatedMl: Math.round(weightKg * PRETERM_ML_PER_KG_MIN),
+      estimatedMlMax: Math.round(weightKg * PRETERM_ML_PER_KG_MAX),
+      weightKg,
+      ageDays,
+      reference: PRETERM_REFERENCE,
+    };
+  }
+
+  const mlPerKg = ageDays < TERM_TIER_BREAK_DAYS ? TERM_ML_PER_KG_5DAYS_TO_3MONTHS : TERM_ML_PER_KG_3TO6MONTHS;
 
   return {
     available: true,
-    fromWeightMl,
-    estimatedMl,
-    cappedByDailyMax: fromWeightMl > AAP_DAILY_MAX_ML,
+    estimatedMl: Math.round(weightKg * mlPerKg),
     weightKg,
     ageDays,
-    reference: REFERENCE,
+    reference: TERM_REFERENCE,
   };
 }

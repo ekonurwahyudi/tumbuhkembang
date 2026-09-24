@@ -47,6 +47,8 @@ export const children = pgTable(
     birthType: birthTypeEnum("birth_type").notNull(),
     gestationalAgeWeeks: integer("gestational_age_weeks"),
     gestationalAgeDays: integer("gestational_age_days"),
+    // Dipakai untuk syarat berat lahir rendah (HB0), bukan hanya untuk PRETERM.
+    birthWeightGrams: integer("birth_weight_grams"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -65,6 +67,10 @@ export const children = pgTable(
     check(
       "children_gestational_age_weeks_range",
       sql`${t.gestationalAgeWeeks} IS NULL OR (${t.gestationalAgeWeeks} >= 22 AND ${t.gestationalAgeWeeks} <= 36)`,
+    ),
+    check(
+      "children_birth_weight_range",
+      sql`${t.birthWeightGrams} IS NULL OR (${t.birthWeightGrams} >= 200 AND ${t.birthWeightGrams} <= 8000)`,
     ),
   ],
 );
@@ -117,6 +123,52 @@ export const feedingLogs = pgTable(
   ],
 );
 
+export const vaccinations = pgTable(
+  "vaccinations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    childId: uuid("child_id")
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    // Cocok dengan key di src/lib/immunization/catalog.ts. NULL = catatan vaksin
+    // custom di luar katalog wajib. Bukan pgEnum — katalog Kemenkes sudah dua kali
+    // direvisi belakangan ini (PCV/Rotavirus 2022, IPV2 2024), jadi divalidasi di
+    // Zod, bukan dikunci lewat migrasi enum.
+    catalogKey: text("catalog_key"),
+    // Label disalin saat dicatat, bukan dijoin dari katalog, agar riwayat tidak
+    // ikut berubah kalau label katalog direvisi di kemudian hari.
+    name: text("name").notNull(),
+    givenAt: date("given_at").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("vaccinations_child_id_idx").on(t.childId),
+    // Satu dosis katalog hanya dicatat sekali per anak; entri custom tidak dibatasi.
+    uniqueIndex("vaccinations_child_catalog_unique")
+      .on(t.childId, t.catalogKey)
+      .where(sql`${t.catalogKey} IS NOT NULL`),
+  ],
+);
+
+export const vaccinationSkips = pgTable(
+  "vaccination_skips",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    childId: uuid("child_id")
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    // Cocok dengan key di src/lib/immunization/catalog.ts.
+    catalogKey: text("catalog_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("vaccination_skips_child_id_idx").on(t.childId),
+    uniqueIndex("vaccination_skips_child_catalog_unique").on(t.childId, t.catalogKey),
+  ],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   children: many(children),
 }));
@@ -125,6 +177,8 @@ export const childrenRelations = relations(children, ({ one, many }) => ({
   user: one(users, { fields: [children.userId], references: [users.id] }),
   measurements: many(growthMeasurements),
   feedingLogs: many(feedingLogs),
+  vaccinations: many(vaccinations),
+  vaccinationSkips: many(vaccinationSkips),
 }));
 
 export const growthMeasurementsRelations = relations(growthMeasurements, ({ one }) => ({
@@ -135,7 +189,17 @@ export const feedingLogsRelations = relations(feedingLogs, ({ one }) => ({
   child: one(children, { fields: [feedingLogs.childId], references: [children.id] }),
 }));
 
+export const vaccinationsRelations = relations(vaccinations, ({ one }) => ({
+  child: one(children, { fields: [vaccinations.childId], references: [children.id] }),
+}));
+
+export const vaccinationSkipsRelations = relations(vaccinationSkips, ({ one }) => ({
+  child: one(children, { fields: [vaccinationSkips.childId], references: [children.id] }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type Child = typeof children.$inferSelect;
 export type GrowthMeasurement = typeof growthMeasurements.$inferSelect;
 export type FeedingLog = typeof feedingLogs.$inferSelect;
+export type Vaccination = typeof vaccinations.$inferSelect;
+export type VaccinationSkip = typeof vaccinationSkips.$inferSelect;

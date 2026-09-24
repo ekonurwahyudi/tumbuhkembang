@@ -1,8 +1,9 @@
 # Feeding / Nutrition Reference
 
 **Status: diterapkan sebagian.** Pencatatan asupan berjalan penuh. Estimasi
-kebutuhan hanya tersedia untuk **susu formula pada bayi cukup bulan di bawah
-usia 6 bulan** — di luar itu aplikasi menyatakan estimasi tidak tersedia.
+kebutuhan tersedia untuk **susu formula pada bayi cukup bulan maupun
+prematur, usia 5 hari sampai sekitar 6 bulan** — di luar itu aplikasi
+menyatakan estimasi tidak tersedia.
 
 ## Prinsip
 
@@ -14,40 +15,68 @@ usia 6 bulan** — di luar itu aplikasi menyatakan estimasi tidak tersedia.
 
 ## Source
 
-American Academy of Pediatrics — **"Amount and Schedule of Baby Formula Feedings"**
+Dua sumber terpisah, satu per status kelahiran — bukan satu rumus untuk
+semua, karena kebutuhan bayi prematur dan cukup bulan berbeda dan masing-
+masing sumber hanya bicara tentang populasinya sendiri.
 
-- URL: https://www.healthychildren.org/English/ages-stages/baby/formula-feeding/Pages/amount-and-schedule-of-formula-feedings.aspx
-- Tanggal dikonsultasikan: 2026-09-23
+**Bayi prematur** — ESPGHAN, *"Enteral Nutrition in Preterm Infants"* (2022)
 
-Aturan yang dikutip, apa adanya:
+- URL: https://www.espghan.org/dam/jcr:092f7f5a-6557-433c-98d6-7259ab1a9cfa/Enteral%20Nutrition%20in%20Preterm%20Infants%202022%20A.204.pdf
+- Tanggal dikonsultasikan: 2026-09-24
+- Dikutip apa adanya: "Target feeding volume 150–180 mL/kg/day for preterm
+  infants... most stable growing infants require fluid intakes 150–180
+  mL/kg/day to achieve appropriate growth."
 
-> "about 2½ ounces (75 mL) of infant formula a day for every pound (453 g) of body weight"
+**Bayi cukup bulan** — Children's Health Queensland Hospital and Health
+Service, *"Your guide to the first 12 months"*, dikutip lewat halaman klinis
+Nutricia
 
-> "no more than an average of about 32 ounces (960 mL) of formula in 24 hours"
+- URL: https://nutricia.com.au/paediatrics/resources/how-much-formula-to-give-baby/
+- Tanggal dikonsultasikan: 2026-09-24
+- Dikutip apa adanya (via Nutricia): "5 days–3 months: 150 mL/kg bodyweight
+  per day"; "3–6 months: 120mL/kg bodyweight per day".
+- **Catatan kejujuran sumber**: dua URL qld.gov.au yang menyebut angka yang
+  sama (dikonfirmasi lewat cuplikan hasil pencarian, teratribusi ke Children's
+  Health Queensland) mengembalikan HTTP 403 saat dicoba diambil langsung dari
+  lingkungan ini. Angka di atas TIDAK diverifikasi langsung terhadap halaman
+  qld.gov.au primernya — hanya lewat relay Nutricia dan cuplikan pencarian
+  yang keduanya mengatribusikan ke sumber yang sama. Sama seperti BCG di
+  [immunization.md](./immunization.md), ini dicatat sebagai keterbatasan,
+  bukan disembunyikan.
 
-AAP juga menyatakan bayi mengatur sendiri asupannya dan jumlahnya bervariasi
-antar individu; penyimpangan yang menetap sebaiknya dibicarakan dengan dokter anak.
+Rentang usia 0–5 hari (30–60 mL/kg, naik harian) dan AAP's rumus per-pon lama
+tidak lagi dipakai — lihat "Known limitations" dan riwayat git untuk versi
+sebelumnya.
 
 ## Calculation formula
 
 Implementasi: [`src/lib/feeding/calculator.ts`](../../src/lib/feeding/calculator.ts)
 
 ```
-pon              = berat_gram / 453
-dari_berat_ml    = round(pon × 75)
-estimasi_ml      = min(dari_berat_ml, 960)
+// Prematur (ESPGHAN)
+estimasi_ml_min = round(berat_kg × 150)
+estimasi_ml_max = round(berat_kg × 180)
+
+// Cukup bulan, 5 hari – 3 bulan (Children's Health Queensland)
+estimasi_ml = round(berat_kg × 150)
+
+// Cukup bulan, 3 – 6 bulan (Children's Health Queensland)
+estimasi_ml = round(berat_kg × 120)
 ```
 
-Konstanta `AAP_ML_PER_POUND_PER_DAY = 75`, `POUND_IN_GRAMS = 453`,
-`AAP_DAILY_MAX_ML = 960` — seluruhnya berasal dari kutipan di atas, tidak ada
-yang diturunkan sendiri.
+Konstanta `PRETERM_ML_PER_KG_MIN = 150`, `PRETERM_ML_PER_KG_MAX = 180`,
+`TERM_ML_PER_KG_5DAYS_TO_3MONTHS = 150`, `TERM_ML_PER_KG_3TO6MONTHS = 120` —
+seluruhnya berasal dari kutipan di atas, tidak ada yang diturunkan sendiri.
+150 mL/kg tidak diperpanjang ke rentang 3–6 bulan meski sama-sama "bayi cukup
+bulan", karena sumbernya sendiri memberi angka berbeda (120) untuk rentang
+usia itu — memperpanjang 150 ke sana berarti melampaui apa yang dikutip.
 
 ## Kapan estimasi TIDAK ditampilkan
 
 | Kondisi | Alasan |
 |---|---|
 | Belum ada berat badan tercatat | Tidak ada dasar perhitungan; tidak ditebak. |
-| Bayi prematur | Kebutuhan nutrisi enteral bayi prematur mengikuti guideline neonatal tersendiri yang belum diterapkan. Aturan per-berat AAP di atas ditujukan untuk bayi cukup bulan. |
+| Usia < 5 hari | Sumber menyatakan volume naik bertahap tiap hari (30–60 mL/kg) pada rentang ini, bukan satu angka mL/kg yang tetap — tidak dimodelkan. |
 | Usia ≥ 6 bulan (183 hari) | Makanan pendamping mulai menyumbang asupan, sehingga kebutuhan susu tidak lagi dapat dihitung dari berat badan saja. |
 | Bayi menyusu langsung | Lihat di bawah. |
 
@@ -78,16 +107,20 @@ Implementasi: [`src/lib/feeding/summary.ts`](../../src/lib/feeding/summary.ts)
 ## Unit test
 
 [`src/lib/feeding/calculator.test.ts`](../../src/lib/feeding/calculator.test.ts)
-menguji terhadap angka AAP: 1 pon → 75 ml, 5 kg → 828 ml, dan penerapan batas
-960 ml/hari. [`src/lib/feeding/summary.test.ts`](../../src/lib/feeding/summary.test.ts)
+menguji setiap tier: rentang prematur 150–180 mL/kg, cukup bulan 150 mL/kg
+(<3 bulan) dan 120 mL/kg (3–6 bulan), serta kapan estimasi ditolak (tanpa
+berat, usia <5 hari, usia ≥6 bulan).
+[`src/lib/feeding/summary.test.ts`](../../src/lib/feeding/summary.test.ts)
 menguji aturan agregasi, termasuk contoh dari spesifikasi (3 sesi ASI langsung +
 180 ml perah + 200 ml sufor = total terukur 380 ml).
 
 ## Known limitations
 
-- Aturan AAP yang dikutip berbicara tentang **susu formula**. Aplikasi memakai
-  total volume terukur (termasuk ASI perah) hanya sebagai pembanding di layar,
-  bukan sebagai klaim bahwa angka yang sama berlaku untuk ASI perah.
+- Angka cukup bulan (Children's Health Queensland) hanya diverifikasi lewat
+  relay Nutricia dan cuplikan hasil pencarian, bukan langsung terhadap halaman
+  qld.gov.au primernya (403 saat diakses dari lingkungan ini) — lihat catatan
+  kejujuran sumber di atas.
 - Estimasi ini tidak memperhitungkan kondisi klinis, kebutuhan kejar tumbuh,
   maupun anjuran dokter yang merawat.
-- Belum ada reference untuk bayi prematur maupun untuk usia di atas 6 bulan.
+- Usia 0–5 hari tidak diestimasi — volumenya naik bertahap tiap hari, bukan
+  satu angka mL/kg tetap.

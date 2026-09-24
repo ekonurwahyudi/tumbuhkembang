@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { childSchema } from "./child";
 import { measurementSchema } from "./measurement";
 import { registerSchema } from "./auth";
+import { vaccinationSchema } from "./vaccination";
 import { isNotFuture, isValidYMD } from "./date";
 
 /**
@@ -81,6 +82,15 @@ describe("childSchema", () => {
     });
     expect(r.success).toBe(false);
   });
+
+  it("menerima berat lahir dalam rentang, opsional, dan null", () => {
+    const base = { name: "Budi", sex: "MALE" as const, dateOfBirth: yesterday(), birthType: "TERM" as const };
+    expect(childSchema.safeParse({ ...base, birthWeightGrams: 1800 }).success).toBe(true);
+    expect(childSchema.safeParse({ ...base, birthWeightGrams: null }).success).toBe(true);
+    expect(childSchema.safeParse(base).success).toBe(true);
+    expect(childSchema.safeParse({ ...base, birthWeightGrams: 100 }).success).toBe(false);
+    expect(childSchema.safeParse({ ...base, birthWeightGrams: 9000 }).success).toBe(false);
+  });
 });
 
 describe("measurementSchema", () => {
@@ -150,6 +160,42 @@ describe("registerSchema", () => {
       confirmPassword: "Rahasia123",
     });
     expect(r.email).toBe("eko@example.com");
+  });
+});
+
+describe("vaccinationSchema", () => {
+  it("menerima entri katalog tanpa customName", () => {
+    const r = vaccinationSchema.safeParse({
+      catalogKey: "BCG",
+      givenAt: yesterday(),
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.name).toBe("BCG");
+  });
+
+  it("menolak catalogKey yang tidak dikenal", () => {
+    const r = vaccinationSchema.safeParse({ catalogKey: "TIDAK_ADA", givenAt: yesterday() });
+    expect(r.success).toBe(false);
+  });
+
+  it("mewajibkan customName saat catalogKey kosong", () => {
+    const r = vaccinationSchema.safeParse({ catalogKey: null, givenAt: yesterday() });
+    expect(r.success).toBe(false);
+  });
+
+  it("menerima entri custom dengan customName", () => {
+    const r = vaccinationSchema.safeParse({
+      catalogKey: null,
+      customName: "Vaksin Influenza",
+      givenAt: yesterday(),
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.name).toBe("Vaksin Influenza");
+  });
+
+  it("menolak tanggal pemberian di masa depan", () => {
+    const r = vaccinationSchema.safeParse({ catalogKey: "BCG", givenAt: tomorrow() });
+    expect(r.success).toBe(false);
   });
 });
 

@@ -1,9 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import { Info } from "lucide-react";
 import { estimateDailyFormula, type EstimateInput } from "@/lib/feeding/calculator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 const ml = (n: number) => `${n.toLocaleString("id-ID")} ml`;
+const DEFAULT_SESSIONS = 8;
+const MIN_SESSIONS = 1;
+const MAX_SESSIONS = 20;
 
 /**
  * Estimasi kisaran asupan.
@@ -21,6 +28,9 @@ export function FeedingEstimate({
   measuredToday: number | null;
 }) {
   const estimate = estimateDailyFormula(input);
+  const [sessions, setSessions] = useState(DEFAULT_SESSIONS);
+
+  const hoursApart = (24 / sessions).toLocaleString("id-ID", { maximumFractionDigits: 1 });
 
   return (
     <Card>
@@ -56,7 +66,37 @@ export function FeedingEstimate({
               <div className="flex gap-2">
                 <dt className="text-muted-foreground">Kisaran per hari</dt>
                 <dd className="ml-auto font-medium tabular-nums">
-                  sekitar {ml(estimate.estimatedMl)}
+                  {estimate.estimatedMlMax != null
+                    ? `${ml(estimate.estimatedMl)} – ${ml(estimate.estimatedMlMax)}`
+                    : `sekitar ${ml(estimate.estimatedMl)}`}
+                </dd>
+              </div>
+              <div className="flex items-center gap-2">
+                <dt className="text-muted-foreground">Per sesi</dt>
+                <dd className="ml-auto flex items-center gap-2">
+                  <span className="font-medium tabular-nums">
+                    {estimate.estimatedMlMax != null
+                      ? `${ml(Math.round(estimate.estimatedMl / sessions))} – ${ml(
+                          Math.round(estimate.estimatedMlMax / sessions),
+                        )}`
+                      : ml(Math.round(estimate.estimatedMl / sessions))}
+                  </span>
+                  <span className="text-muted-foreground text-xs">/</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={MIN_SESSIONS}
+                    max={MAX_SESSIONS}
+                    value={sessions}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      if (!Number.isFinite(n)) return;
+                      setSessions(Math.min(MAX_SESSIONS, Math.max(MIN_SESSIONS, Math.round(n))));
+                    }}
+                    aria-label="Jumlah sesi per hari"
+                    className="h-7 w-14 px-1.5 text-right"
+                  />
+                  <span className="text-muted-foreground text-xs">sesi (≈{hoursApart} jam sekali)</span>
                 </dd>
               </div>
               {measuredToday !== null && (
@@ -66,13 +106,6 @@ export function FeedingEstimate({
                 </div>
               )}
             </dl>
-
-            {estimate.cappedByDailyMax && (
-              <p className="text-muted-foreground text-xs">
-                Dibatasi pada maksimum rata-rata {ml(960)} per 24 jam sesuai AAP; perhitungan
-                dari berat badan saja memberi {ml(estimate.fromWeightMl)}.
-              </p>
-            )}
 
             <p className="text-muted-foreground text-xs">
               Ini estimasi untuk susu formula, bukan target yang harus dicapai. Setiap bayi
@@ -90,10 +123,9 @@ export function FeedingEstimate({
           Untuk bayi yang menyusu langsung, WHO menganjurkan menyusui responsif — sesering yang
           diinginkan bayi — dan tidak menetapkan target volume dalam ml.
         </p>
-        <p className="text-muted-foreground text-xs">
-          Reference estimasi: American Academy of Pediatrics, &ldquo;Amount and Schedule of Baby
-          Formula Feedings&rdquo;.
-        </p>
+        {estimate.available && (
+          <p className="text-muted-foreground text-xs">Reference estimasi: {estimate.reference.name}.</p>
+        )}
       </CardContent>
     </Card>
   );

@@ -29,6 +29,7 @@ function parseChildForm(formData: FormData) {
     birthType: formData.get("birthType"),
     gestationalAgeWeeks: optionalInt(formData.get("gestationalAgeWeeks")),
     gestationalAgeDays: optionalInt(formData.get("gestationalAgeDays")),
+    birthWeightGrams: optionalInt(formData.get("birthWeightGrams")),
   });
 }
 
@@ -39,6 +40,7 @@ const toRow = (d: ReturnType<typeof childSchema.parse>): NewChild => ({
   birthType: d.birthType,
   gestationalAgeWeeks: d.gestationalAgeWeeks ?? null,
   gestationalAgeDays: d.gestationalAgeDays ?? null,
+  birthWeightGrams: d.birthWeightGrams ?? null,
 });
 
 export async function createChildAction(formData: FormData): Promise<ActionResult<{ id: string }>> {

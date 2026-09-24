@@ -29,6 +29,11 @@ import {
   listFeedingLogs,
   updateFeedingLog,
 } from "@/lib/data/feeding";
+import {
+  listSkippedCatalogKeys,
+  skipVaccination,
+  unskipVaccination,
+} from "@/lib/data/vaccination-skips";
 
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 let alice: string;
@@ -276,5 +281,49 @@ describe("otorisasi catatan asupan", () => {
     });
     await deleteChild(alice, tmp.id);
     expect(await getFeedingLog(alice, f.id)).toBeUndefined();
+  });
+});
+
+describe("otorisasi vaccination_skips", () => {
+  it("Bob tidak dapat melihat atau membatalkan skip milik Alice", async () => {
+    await skipVaccination(aliceChild, "BCG");
+    expect(await listSkippedCatalogKeys(bob, aliceChild)).toHaveLength(0);
+    expect(await listSkippedCatalogKeys(alice, aliceChild)).toContain("BCG");
+
+    expect(await unskipVaccination(bob, aliceChild, "BCG")).toBe(false);
+    expect(await listSkippedCatalogKeys(alice, aliceChild)).toContain("BCG");
+
+    expect(await unskipVaccination(alice, aliceChild, "BCG")).toBe(true);
+    expect(await listSkippedCatalogKeys(alice, aliceChild)).not.toContain("BCG");
+  });
+
+  it("menghapus anak ikut menghapus skip-nya (cascade)", async () => {
+    const tmp = await insertChild(alice, {
+      name: "Sementara Skip",
+      sex: "MALE",
+      dateOfBirth: "2026-01-01",
+      birthType: "TERM",
+      gestationalAgeWeeks: null,
+      gestationalAgeDays: null,
+    });
+    await skipVaccination(tmp.id, "OPV1");
+    await deleteChild(alice, tmp.id);
+    expect(await listSkippedCatalogKeys(alice, tmp.id)).toHaveLength(0);
+  });
+});
+
+describe("integritas berat lahir", () => {
+  it("menolak berat lahir di luar rentang di level database", async () => {
+    await expect(
+      insertChild(alice, {
+        name: "Berat Invalid",
+        sex: "MALE",
+        dateOfBirth: "2026-01-01",
+        birthType: "TERM",
+        gestationalAgeWeeks: null,
+        gestationalAgeDays: null,
+        birthWeightGrams: 100,
+      }),
+    ).rejects.toThrow();
   });
 });

@@ -19,3 +19,4 @@ pengambilan, transformasi data, rumus, dan keterbatasan yang diketahui.
 | [who-growth.md](./who-growth.md) | WHO Child Growth Standards (LMS, z-score, persentil) | Diterapkan |
 | [preterm-growth.md](./preterm-growth.md) | Reference preterm (Fenton) | Belum diterapkan |
 | [feeding.md](./feeding.md) | Estimasi asupan (AAP) + aturan agregasi | Diterapkan sebagian |
+| [immunization.md](./immunization.md) | Katalog vaksin wajib (Kemenkes RI) | Diterapkan sebagian |

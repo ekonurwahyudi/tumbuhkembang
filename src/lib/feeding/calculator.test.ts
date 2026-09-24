@@ -1,51 +1,63 @@
 /**
- * Uji kalkulator asupan terhadap angka yang dinyatakan AAP, bukan sekadar
- * memastikan fungsi berjalan.
- *
- * Aturan AAP: ~75 mL formula per hari untuk setiap 453 g berat badan,
- * maksimum rata-rata ~960 mL per 24 jam.
+ * Uji kalkulator asupan terhadap angka bersumber (ESPGHAN untuk prematur,
+ * Children's Health Queensland untuk cukup bulan), bukan sekadar memastikan
+ * fungsi berjalan. Lihat docs/medical-references/feeding.md.
  */
 import { describe, expect, it } from "vitest";
 import {
-  AAP_DAILY_MAX_ML,
-  AAP_ML_PER_POUND_PER_DAY,
-  POUND_IN_GRAMS,
+  PRETERM_ML_PER_KG_MAX,
+  PRETERM_ML_PER_KG_MIN,
+  TERM_ML_PER_KG_3TO6MONTHS,
+  TERM_ML_PER_KG_5DAYS_TO_3MONTHS,
   estimateDailyFormula,
 } from "./calculator";
 
 const TERM = {
-  dateOfBirth: "2026-06-23",
+  dateOfBirth: "2026-08-01",
   birthType: "TERM" as const,
   gestationalAgeWeeks: null,
   gestationalAgeDays: null,
-  asOf: "2026-09-23", // usia 92 hari, sekitar 3 bulan
+  asOf: "2026-09-01", // usia 31 hari — dalam tier 5 hari–3 bulan
 };
 
-describe("estimateDailyFormula — aturan AAP", () => {
-  it("tepat 1 pon menghasilkan 75 ml", () => {
-    const r = estimateDailyFormula({ ...TERM, weightKg: POUND_IN_GRAMS / 1000 });
+describe("estimateDailyFormula — bayi prematur (ESPGHAN 150–180 mL/kg)", () => {
+  it("menghitung rentang batas bawah dan atas dari berat badan", () => {
+    const r = estimateDailyFormula({
+      weightKg: 3,
+      dateOfBirth: "2026-08-01",
+      birthType: "PRETERM",
+      gestationalAgeWeeks: 32,
+      gestationalAgeDays: 0,
+      asOf: "2026-09-01",
+    });
     expect(r.available).toBe(true);
     if (!r.available) return;
-    expect(r.fromWeightMl).toBe(AAP_ML_PER_POUND_PER_DAY);
+    expect(r.estimatedMl).toBe(3 * PRETERM_ML_PER_KG_MIN);
+    expect(r.estimatedMlMax).toBe(3 * PRETERM_ML_PER_KG_MAX);
+    expect(r.reference.name).toContain("ESPGHAN");
+  });
+});
+
+describe("estimateDailyFormula — bayi cukup bulan (Children's Health Queensland)", () => {
+  it("150 mL/kg untuk usia 5 hari–3 bulan", () => {
+    const r = estimateDailyFormula({ ...TERM, weightKg: 4 });
+    expect(r.available).toBe(true);
+    if (!r.available) return;
+    expect(r.estimatedMl).toBe(4 * TERM_ML_PER_KG_5DAYS_TO_3MONTHS);
+    expect(r.estimatedMlMax).toBeUndefined();
+    expect(r.reference.name).toContain("Queensland");
   });
 
-  it("bayi 5 kg menghasilkan sekitar 828 ml", () => {
-    // 5 kg = 5000/453 = 11,04 pon -> 11,04 x 75 = 828 ml
-    const r = estimateDailyFormula({ ...TERM, weightKg: 5 });
+  it("120 mL/kg untuk usia 3–6 bulan", () => {
+    const r = estimateDailyFormula({
+      ...TERM,
+      weightKg: 6,
+      dateOfBirth: "2026-05-01",
+      asOf: "2026-09-01", // usia 123 hari, sekitar 4 bulan
+    });
     expect(r.available).toBe(true);
     if (!r.available) return;
-    expect(r.fromWeightMl).toBe(828);
-    expect(r.cappedByDailyMax).toBe(false);
-  });
-
-  it("menerapkan batas maksimum harian AAP", () => {
-    // 8 kg = 17,66 pon -> 1325 ml, melebihi batas 960 ml.
-    const r = estimateDailyFormula({ ...TERM, weightKg: 8 });
-    expect(r.available).toBe(true);
-    if (!r.available) return;
-    expect(r.fromWeightMl).toBeGreaterThan(AAP_DAILY_MAX_ML);
-    expect(r.estimatedMl).toBe(AAP_DAILY_MAX_ML);
-    expect(r.cappedByDailyMax).toBe(true);
+    expect(r.estimatedMl).toBe(6 * TERM_ML_PER_KG_3TO6MONTHS);
   });
 
   it("naik seiring berat badan", () => {
@@ -53,13 +65,6 @@ describe("estimateDailyFormula — aturan AAP", () => {
     const b = estimateDailyFormula({ ...TERM, weightKg: 4 });
     if (!a.available || !b.available) throw new Error("harusnya tersedia");
     expect(b.estimatedMl).toBeGreaterThan(a.estimatedMl);
-  });
-
-  it("membawa metadata reference yang dapat diaudit", () => {
-    const r = estimateDailyFormula({ ...TERM, weightKg: 5 });
-    if (!r.available) throw new Error("harusnya tersedia");
-    expect(r.reference.name).toContain("American Academy of Pediatrics");
-    expect(r.reference.source).toContain("healthychildren.org");
   });
 });
 
@@ -78,18 +83,28 @@ describe("estimateDailyFormula — kapan menolak memberi angka", () => {
     }
   });
 
-  it("tidak mengestimasi bayi prematur", () => {
-    const r = estimateDailyFormula({
+  it("tidak mengestimasi usia di bawah 5 hari, prematur maupun cukup bulan", () => {
+    const term = estimateDailyFormula({
+      ...TERM,
       weightKg: 3,
-      dateOfBirth: "2026-06-23",
-      birthType: "PRETERM",
-      gestationalAgeWeeks: 32,
-      gestationalAgeDays: 4,
-      asOf: "2026-09-23",
+      dateOfBirth: "2026-08-30",
+      asOf: "2026-09-01", // usia 2 hari
     });
-    expect(r.available).toBe(false);
-    if (r.available) return;
-    expect(r.reason).toBe("PRETERM");
+    expect(term.available).toBe(false);
+    if (term.available) return;
+    expect(term.reason).toBe("NEWBORN_RAMPING");
+
+    const preterm = estimateDailyFormula({
+      weightKg: 2,
+      dateOfBirth: "2026-08-30",
+      birthType: "PRETERM",
+      gestationalAgeWeeks: 30,
+      gestationalAgeDays: 0,
+      asOf: "2026-09-01",
+    });
+    expect(preterm.available).toBe(false);
+    if (preterm.available) return;
+    expect(preterm.reason).toBe("NEWBORN_RAMPING");
   });
 
   it("berhenti pada usia sekitar 6 bulan", () => {

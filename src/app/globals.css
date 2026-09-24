@@ -77,10 +77,13 @@
      TIDAK menyatakan status medis apa pun — z-score dan persentil ditampilkan
      sebagai angka, dan grafik tidak pernah menilai kondisi anak lewat warna. */
   --chart-1: oklch(0.623 0.191 24.9);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* chart-2/3 dan chart-4/5: pasangan diverging (biru/oranye) untuk kurva SD
+     WHO di atas/bawah median — bukan status medis, murni supaya garis +2/+3
+     SD dan −2/−3 SD terbedakan satu sama lain, bukan cuma nuansa abu-abu. */
+  --chart-2: oklch(0.62 0.14 240);
+  --chart-3: oklch(0.48 0.16 245);
+  --chart-4: oklch(0.74 0.15 75);
+  --chart-5: oklch(0.6 0.17 55);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -112,10 +115,10 @@
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
   --chart-1: oklch(0.669 0.159 22.3);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-2: oklch(0.7 0.13 240);
+  --chart-3: oklch(0.58 0.15 245);
+  --chart-4: oklch(0.8 0.14 75);
+  --chart-5: oklch(0.68 0.16 55);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);

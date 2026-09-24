@@ -8,6 +8,20 @@
       "when": 1790065091078,
       "tag": "0000_natural_raza",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790222047806,
+      "tag": "0001_little_raider",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790223286740,
+      "tag": "0002_jittery_mariko_yashida",
+      "breakpoints": true
     }
   ]
 }

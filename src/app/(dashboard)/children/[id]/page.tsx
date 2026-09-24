@@ -4,13 +4,20 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, LineChart, ListOrdered, Milk, Pencil, Ruler } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getChild } from "@/lib/data/children";
+import { listFeedingLogs } from "@/lib/data/feeding";
 import { listMeasurements } from "@/lib/data/measurements";
+import { listVaccinations } from "@/lib/data/vaccinations";
+import { listSkippedCatalogKeys } from "@/lib/data/vaccination-skips";
 import { evaluateMeasurement, referenceMeta } from "@/lib/growth/engine";
 import { isGrowthResult } from "@/lib/growth/types";
+import { groupByDay, summarizeDay } from "@/lib/feeding/summary";
+import { todayLocalISO } from "@/schemas/date";
 import { ChildAgeSummary } from "@/components/children/child-age-summary";
 import { GrowthBadges } from "@/components/growth/growth-badges";
 import { DeleteChildButton } from "@/components/children/delete-child-button";
 import { FeedingDialog } from "@/components/feeding/feeding-dialog";
+import { FeedingEstimate } from "@/components/feeding/feeding-estimate";
+import { ImmunizationList } from "@/components/immunization/immunization-list";
 import { MeasurementDialog } from "@/components/measurements/measurement-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -30,9 +37,21 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
   const child = await getChild(user.id, id);
   if (!child) notFound();
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const measurements = await listMeasurements(user.id, child.id, "desc");
+  const vaccinations = await listVaccinations(user.id, child.id);
+  const skippedKeys = await listSkippedCatalogKeys(user.id, child.id);
+  const todayFeedingLogs = await listFeedingLogs(user.id, child.id, { from: todayStart });
   const latest = measurements[0];
   const growth = latest ? evaluateMeasurement(child, latest) : null;
+  const currentWeightGrams =
+    latest?.weightKg != null ? Math.round(Number(latest.weightKg) * 1000) : child.birthWeightGrams;
+
+  const today = todayLocalISO();
+  const todayLogs = groupByDay(todayFeedingLogs).find((d) => d.date === today)?.logs ?? [];
+  const todaySummary = summarizeDay(todayLogs, today);
 
   return (
     <div className="space-y-5">
@@ -133,6 +152,29 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
             </CardContent>
           </Card>
         )}
+      </section>
+
+      <FeedingEstimate
+        input={{
+          weightKg: latest?.weightKg != null ? Number(latest.weightKg) : null,
+          dateOfBirth: child.dateOfBirth,
+          birthType: child.birthType,
+          gestationalAgeWeeks: child.gestationalAgeWeeks,
+          gestationalAgeDays: child.gestationalAgeDays,
+        }}
+        measuredToday={todaySummary.totalMeasuredMl}
+      />
+
+      <section className="space-y-3" aria-labelledby="vaksinasi">
+        <h2 id="vaksinasi" className="font-medium">
+          Vaksinasi
+        </h2>
+        <ImmunizationList
+          child={child}
+          vaccinations={vaccinations}
+          skippedKeys={skippedKeys}
+          currentWeightGrams={currentWeightGrams}
+        />
       </section>
 
       <section className="pt-2">

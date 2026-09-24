@@ -27,10 +27,15 @@ export function MeasurementForm({
   const router = useRouter();
 
   const { action, fields, formError, values } = useFormAction(
-    (formData) =>
-      measurement
+    (formData) => {
+      const grams = formData.get("weightKg");
+      if (typeof grams === "string" && grams.trim() !== "") {
+        formData.set("weightKg", (Number(grams) / 1000).toString());
+      }
+      return measurement
         ? updateMeasurementAction(measurement.id, formData)
-        : createMeasurementAction(childId, formData),
+        : createMeasurementAction(childId, formData);
+    },
     () => {
       toast.success(measurement ? "Pengukuran diperbarui." : "Pengukuran disimpan.");
       onDone?.();
@@ -63,16 +68,20 @@ export function MeasurementForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="weightKg">Berat Badan (kg)</Label>
+        <Label htmlFor="weightKg">Berat Badan (gram)</Label>
         <Input
           id="weightKg"
           name="weightKg"
           type="number"
-          inputMode="decimal"
-          step="0.01"
-          min="0"
-          placeholder="7.40"
-          defaultValue={values.weightKg ?? measurement?.weightKg ?? ""}
+          inputMode="numeric"
+          step={1}
+          min={0}
+          max={150000}
+          placeholder="7400"
+          defaultValue={
+            values.weightKg ??
+            (measurement?.weightKg != null ? Math.round(Number(measurement.weightKg) * 1000) : "")
+          }
           aria-invalid={!!fields?.weightKg}
           aria-describedby={fields?.weightKg ? "weight-error" : undefined}
         />
