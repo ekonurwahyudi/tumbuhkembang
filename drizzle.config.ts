@@ -1,6 +1,13 @@
+import { createRequire } from "node:module";
 import { defineConfig } from "drizzle-kit";
-import { config } from "dotenv";
-config({ path: ".env.local" });
+
+// dotenv cuma devDependency (buat baca .env.local pas dev lokal). Di container
+// production, env sudah disuntik langsung oleh host — modulnya sengaja tidak ada.
+try {
+  createRequire(import.meta.url)("dotenv").config({ path: ".env.local" });
+} catch {
+  // no-op di production
+}
 
 export default defineConfig({
   schema: "./src/db/schema/index.ts",
