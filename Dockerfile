@@ -15,24 +15,25 @@ ENV DATABASE_URL="postgres://build:build@localhost:5432/build"
 ENV AUTH_SECRET="build-time-placeholder-not-used-at-runtime"
 RUN npm run build
 
-# drizzle-kit ada di devDependencies, jadi tidak ikut ke node_modules standalone
-# di stage "runner" — pakai node_modules lengkap dari "deps" untuk stage migrasi ini.
-FROM deps AS migrator
-WORKDIR /app
-COPY drizzle.config.ts tsconfig.json ./
-COPY src/db ./src/db
-CMD ["npx", "drizzle-kit", "migrate"]
-
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY drizzle.config.ts ./
+COPY src/db ./src/db
+
+RUN chown -R nextjs:nodejs /app
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
-CMD ["node", "server.js"]
+# ponytail: migrate lalu start di satu container, cocok buat single-instance
+# EasyPanel. Kalau nanti scale ke banyak replica, pindahkan migrate ke job
+# terpisah (docker run --entrypoint sh <image> -c "npx drizzle-kit migrate")
+# supaya tidak race — image ini sama, cukup override command-nya.
+CMD ["sh", "-c", "npx drizzle-kit migrate && npm start"]
