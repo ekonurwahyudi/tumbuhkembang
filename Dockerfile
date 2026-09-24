@@ -15,6 +15,14 @@ ENV DATABASE_URL="postgres://build:build@localhost:5432/build"
 ENV AUTH_SECRET="build-time-placeholder-not-used-at-runtime"
 RUN npm run build
 
+# drizzle-kit ada di devDependencies, jadi tidak ikut ke node_modules standalone
+# di stage "runner" — pakai node_modules lengkap dari "deps" untuk stage migrasi ini.
+FROM deps AS migrator
+WORKDIR /app
+COPY drizzle.config.ts tsconfig.json ./
+COPY src/db ./src/db
+CMD ["npx", "drizzle-kit", "migrate"]
+
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
