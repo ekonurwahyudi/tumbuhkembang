@@ -60,7 +60,7 @@ export function todayYMD(now = new Date()): string {
 }
 
 /** Tambah bulan kalender dengan clamp ke akhir bulan: 31 Jan + 1 bulan = 28/29 Feb. */
-function addMonthsClamped({ year, month, day }: YMD, months: number): YMD {
+export function addMonthsClamped({ year, month, day }: YMD, months: number): YMD {
   const total = year * 12 + (month - 1) + months;
   const y = Math.floor(total / 12);
   const m = total % 12;
@@ -111,4 +111,32 @@ export function formatAge(age: ChronologicalAge): string {
   if (age.years < 1) return `${age.months} bulan`;
   if (age.months === 0) return `${age.years} tahun`;
   return `${age.years} tahun ${age.months} bulan`;
+}
+
+/**
+ * Label usia lengkap sampai hari — dipakai kartu profil anak: "8 Bulan 14 Hari".
+ * Di atas 1 tahun hari tidak ditampilkan lagi ("3 Tahun 2 Bulan"), mengikuti
+ * konvensi KIA: hari penting justru pada usia muda saat koreksi prematur relevan.
+ */
+export function formatAgeDetailed(age: ChronologicalAge): string {
+  if (age.days < 0) return "-";
+  if (age.days < 14) return `${age.days} Hari`;
+  if (age.years >= 1)
+    return age.months === 0
+      ? `${age.years} Tahun`
+      : `${age.years} Tahun ${age.months} Bulan`;
+  if (age.totalMonths < 1)
+    return `${Math.floor(age.days / 7)} Minggu ${age.days % 7} Hari`;
+  return `${age.months} Bulan ${age.remainingDays} Hari`;
+}
+
+/** `correctedAge().days` → label "6 Bulan 20 Hari" tanpa objek ChronologicalAge. */
+export function formatAgeDaysDetailed(days: number): string {
+  // Usia terkoreksi tidak pernah negatif saat ditampilkan (bayi belum term = 0).
+  // ponytail: anchor kalender tetap — sisa hari bisa meleset ±1 hari karena
+  // panjang bulan bervariasi; presisi hari hanya relevan untuk usia <2 minggu
+  // yang tidak menyentuh konversi bulan. Butuh eksak? Hitung dari EDD asli.
+  const from = formatYMD({ year: 2000, month: 1, day: 1 });
+  const to = formatYMD(addDays(from, Math.max(0, days)));
+  return formatAgeDetailed(chronologicalAge(from, to));
 }

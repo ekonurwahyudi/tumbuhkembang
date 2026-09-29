@@ -8,6 +8,7 @@ import { todayYMD } from "@/lib/growth/age";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GrowthMeasurement } from "@/db/schema";
@@ -53,16 +54,15 @@ export function MeasurementForm({
 
       <div className="space-y-2">
         <Label htmlFor="measuredAt">Tanggal Pengukuran</Label>
-        <Input
+        <DateField
           id="measuredAt"
           name="measuredAt"
-          type="date"
           min={minDate}
           max={todayYMD()}
           defaultValue={values.measuredAt ?? measurement?.measuredAt ?? todayYMD()}
           required
-          aria-invalid={!!fields?.measuredAt}
-          aria-describedby={fields?.measuredAt ? "measured-error" : undefined}
+          invalid={!!fields?.measuredAt}
+          describedBy={fields?.measuredAt ? "measured-error" : undefined}
         />
         <FieldError id="measured-error" message={fields?.measuredAt} />
       </div>

@@ -3,6 +3,7 @@ import { childSchema } from "./child";
 import { measurementSchema } from "./measurement";
 import { registerSchema } from "./auth";
 import { vaccinationSchema } from "./vaccination";
+import { reminderSchema } from "./reminder";
 import { isNotFuture, isValidYMD } from "./date";
 
 /**
@@ -132,33 +133,31 @@ describe("measurementSchema", () => {
 });
 
 describe("registerSchema", () => {
+  const base = {
+    name: "Eko",
+    email: "eko@example.com",
+    password: "Rahasia123",
+    confirmPassword: "Rahasia123",
+    terms: true,
+  };
+
   it("menolak konfirmasi password yang tidak sama", () => {
-    const r = registerSchema.safeParse({
-      name: "Eko",
-      email: "eko@example.com",
-      password: "Rahasia123",
-      confirmPassword: "Rahasia124",
-    });
+    const r = registerSchema.safeParse({ ...base, confirmPassword: "Rahasia124" });
+    expect(r.success).toBe(false);
+  });
+
+  it("menolak ketentuan yang belum disetujui", () => {
+    const r = registerSchema.safeParse({ ...base, terms: false });
     expect(r.success).toBe(false);
   });
 
   it("menolak password lemah", () => {
-    const r = registerSchema.safeParse({
-      name: "Eko",
-      email: "eko@example.com",
-      password: "rahasia",
-      confirmPassword: "rahasia",
-    });
+    const r = registerSchema.safeParse({ ...base, password: "rahasia", confirmPassword: "rahasia" });
     expect(r.success).toBe(false);
   });
 
   it("menormalkan email jadi huruf kecil", () => {
-    const r = registerSchema.parse({
-      name: "Eko",
-      email: "  EKO@Example.COM ",
-      password: "Rahasia123",
-      confirmPassword: "Rahasia123",
-    });
+    const r = registerSchema.parse({ ...base, email: "  EKO@Example.COM " });
     expect(r.email).toBe("eko@example.com");
   });
 });
@@ -191,6 +190,19 @@ describe("vaccinationSchema", () => {
     });
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.name).toBe("Vaksin Influenza");
+  });
+
+  it("memetakan nama yang cocok katalog ke catalogKey-nya", () => {
+    const r = vaccinationSchema.safeParse({
+      catalogKey: null,
+      customName: "bcg",
+      givenAt: yesterday(),
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.catalogKey).toBe("BCG");
+      expect(r.data.name).toBe("BCG");
+    }
   });
 
   it("menolak tanggal pemberian di masa depan", () => {
@@ -248,5 +260,32 @@ describe("validasi tanggal dan zona waktu", () => {
     expect(
       measurementSchema.safeParse({ measuredAt: "2026-02-31", weightKg: 7 }).success,
     ).toBe(false);
+  });
+});
+
+describe("reminderSchema", () => {
+  const base = { catalogKey: "BCG", remindOn: tomorrow(), remindTime: "09:00" };
+
+  it("menerima hari ini dan masa depan, menolak masa lalu", () => {
+    // Kebalikan dari givenAt: mengingatkan sesuatu yang sudah lewat tidak berguna.
+    expect(reminderSchema.safeParse({ ...base, remindOn: today() }).success).toBe(true);
+    expect(reminderSchema.safeParse(base).success).toBe(true);
+    expect(reminderSchema.safeParse({ ...base, remindOn: yesterday() }).success).toBe(false);
+  });
+
+  it("menolak jam dan tanggal yang tidak ada", () => {
+    expect(reminderSchema.safeParse({ ...base, remindTime: "25:00" }).success).toBe(false);
+    expect(reminderSchema.safeParse({ ...base, remindTime: "09:60" }).success).toBe(false);
+    expect(reminderSchema.safeParse({ ...base, remindTime: "9:00" }).success).toBe(false);
+    expect(reminderSchema.safeParse({ ...base, remindOn: "2027-02-31" }).success).toBe(false);
+  });
+
+  it("menolak catalogKey di luar katalog", () => {
+    expect(reminderSchema.safeParse({ ...base, catalogKey: "TIDAK_ADA" }).success).toBe(false);
+  });
+
+  it("menormalkan catatan kosong jadi null", () => {
+    expect(reminderSchema.parse({ ...base, notes: "   " }).notes).toBeNull();
+    expect(reminderSchema.parse({ ...base, notes: " Posyandu " }).notes).toBe("Posyandu");
   });
 });

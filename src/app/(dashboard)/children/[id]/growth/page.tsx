@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Ruler } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getChild } from "@/lib/data/children";
+import { getChildForViewer } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
 import { buildChartSeries } from "@/lib/growth/chart-data";
 import type { MeasurementType } from "@/lib/growth/types";
-import { ChildAgeSummary } from "@/components/children/child-age-summary";
+import { ChildHero } from "@/components/children/child-hero";
 import { GrowthSummary } from "@/components/growth/growth-summary";
 import { GrowthTabs } from "@/components/growth/growth-tabs";
 import { MeasurementDialog } from "@/components/measurements/measurement-dialog";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
 import { EmptyState } from "@/components/empty-state";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Pertumbuhan" };
 
@@ -26,7 +26,8 @@ const TYPES: MeasurementType[] = [
 export default async function GrowthPage({ params }: PageProps<"/children/[id]/growth">) {
   const { id } = await params;
   const user = await requireUser();
-  const child = await getChild(user.id, id);
+  const viewer = await getChildForViewer(user.id, id);
+  const child = viewer?.child;
   if (!child) notFound();
 
   const measurements = await listMeasurements(user.id, child.id, "asc");
@@ -40,38 +41,41 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
   const refName = series[0].reference;
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-4 pt-2">
       <Link
         href={`/children/${child.id}`}
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+        className="text-muted-foreground hover:text-foreground text-body-sm inline-flex w-fit items-center gap-1"
       >
-        <ChevronLeft className="size-4" aria-hidden />
+        <Icon name="arrow_back" className="text-[16px]" />
         {child.name}
       </Link>
 
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Pertumbuhan {child.name}</h1>
-        <MeasurementDialog childId={child.id} minDate={child.dateOfBirth} />
-      </header>
-
-      <Card>
-        <CardContent className="py-4">
-          <ChildAgeSummary child={child} />
-        </CardContent>
-      </Card>
+      <ChildHero child={child} />
 
       {measurements.length === 0 ? (
         <EmptyState
-          icon={Ruler}
+          icon="straighten"
           title="Belum ada pengukuran."
           description="Tambahkan pengukuran pertama untuk mulai membuat grafik pertumbuhan."
           action={<MeasurementDialog childId={child.id} minDate={child.dateOfBirth} />}
         />
       ) : (
-        <GrowthTabs series={series} summaries={summaries} />
+        <>
+          <GrowthTabs series={series} summaries={summaries} />
+          <MeasurementDialog
+            childId={child.id}
+            minDate={child.dateOfBirth}
+            trigger={
+              <Button size="lg" className="w-full">
+                <Icon name="add_circle" className="text-[20px]" />
+                Catat Pengukuran Baru
+              </Button>
+            }
+          />
+        </>
       )}
 
-      <p className="text-muted-foreground text-xs">
+      <p className="text-muted-foreground text-label-sm">
         Kurva reference: {refName.name} ({refName.version}).{" "}
         {child.birthType === "PRETERM"
           ? "Usia yang dipakai adalah usia terkoreksi sesuai rekomendasi AAP."

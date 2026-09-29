@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteFeedingAction } from "@/lib/actions/feeding";
 import {
@@ -17,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 export function DeleteFeedingButton({ logId, label }: { logId: string; label: string }) {
   const router = useRouter();
@@ -27,7 +27,7 @@ export function DeleteFeedingButton({ logId, label }: { logId: string; label: st
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="icon" aria-label={`Hapus catatan asupan ${label}`}>
-          <Trash2 className="size-4" aria-hidden />
+          <Icon name="delete" className="text-[16px]" />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

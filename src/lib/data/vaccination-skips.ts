@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { children, vaccinationSkips } from "@/db/schema";
+import { childVisibleTo } from "./children";
 
 /** Sama seperti data/vaccinations.ts: selalu di-join ke `children` untuk otorisasi. */
 
@@ -10,7 +11,7 @@ export async function listSkippedCatalogKeys(userId: string, childId: string): P
     .select({ catalogKey: vaccinationSkips.catalogKey })
     .from(vaccinationSkips)
     .innerJoin(children, eq(children.id, vaccinationSkips.childId))
-    .where(and(eq(vaccinationSkips.childId, childId), eq(children.userId, userId)));
+    .where(and(eq(vaccinationSkips.childId, childId), childVisibleTo(userId)));
   return rows.map((r) => r.catalogKey);
 }
 
@@ -28,7 +29,7 @@ export async function unskipVaccination(
   const owned = await db
     .select({ id: children.id })
     .from(children)
-    .where(and(eq(children.id, childId), eq(children.userId, userId)))
+    .where(and(eq(children.id, childId), childVisibleTo(userId)))
     .limit(1);
   if (!owned.length) return false;
 

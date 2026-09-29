@@ -10,9 +10,11 @@ import { todayLocalISO } from "@/schemas/date";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { TimeField } from "@/components/ui/time-field";
 import type { FeedingLog } from "@/db/schema";
 
 /** Pecah timestamp jadi nilai awal input tanggal dan jam (waktu lokal). */
@@ -108,28 +110,26 @@ export function FeedingForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="fedDate">Tanggal</Label>
-          <Input
+          <DateField
             id="fedDate"
             name="fedDate"
-            type="date"
             max={todayLocalISO()}
             defaultValue={values.fedDate ?? initial.date}
             required
-            aria-invalid={!!fields?.fedDate}
-            aria-describedby={fields?.fedDate ? "date-error" : undefined}
+            invalid={!!fields?.fedDate}
+            describedBy={fields?.fedDate ? "date-error" : undefined}
           />
           <FieldError id="date-error" message={fields?.fedDate} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="fedTime">Jam</Label>
-          <Input
+          <TimeField
             id="fedTime"
             name="fedTime"
-            type="time"
             defaultValue={values.fedTime ?? initial.time}
             required
-            aria-invalid={!!fields?.fedTime}
-            aria-describedby={fields?.fedTime ? "time-error" : undefined}
+            invalid={!!fields?.fedTime}
+            describedBy={fields?.fedTime ? "time-error" : undefined}
           />
           <FieldError id="time-error" message={fields?.fedTime} />
         </div>

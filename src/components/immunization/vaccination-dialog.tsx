@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,31 +13,47 @@ import {
 import { VaccinationForm } from "./vaccination-form";
 import type { Vaccination } from "@/db/schema";
 import type { CatalogVaccine } from "@/lib/immunization/catalog";
+import { Icon } from "@/components/ui/icon";
 
 export function VaccinationDialog({
   childId,
   catalog,
   record,
+  freeTextOnly,
   trigger,
+  open: openProp,
+  onOpenChange,
+  beforeForm,
 }: {
   childId: string;
   catalog?: CatalogVaccine;
   record?: Vaccination;
+  /** Nama vaksin diketik bebas, tanpa daftar katalog — lihat VaccinationForm. */
+  freeTextOnly?: boolean;
   trigger?: React.ReactNode;
+  /** Kendali dari luar, untuk pemanggil yang membuka dialog tanpa trigger sendiri. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Disisipkan di atas form, mis. pemilih anak saat mencatat dari nav bawah. */
+  beforeForm?: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolled, setUncontrolled] = useState(false);
+  const open = openProp ?? uncontrolled;
+  const setOpen = onOpenChange ?? setUncontrolled;
   const editing = !!record;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm">
-            <Plus className="size-4" aria-hidden />
-            Tambah Vaksin Lain
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm">
+              <Icon name="add" className="text-[16px]" />
+              Tambah Vaksin Lain
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{editing ? "Ubah Catatan Vaksinasi" : "Catat Vaksinasi"}</DialogTitle>
@@ -48,7 +63,14 @@ export function VaccinationDialog({
               : "Tanggal pemberian dan catatan (mis. merk vaksin) tersimpan di riwayat anak."}
           </DialogDescription>
         </DialogHeader>
-        <VaccinationForm childId={childId} catalog={catalog} record={record} onDone={() => setOpen(false)} />
+        {beforeForm}
+        <VaccinationForm
+          childId={childId}
+          catalog={catalog}
+          record={record}
+          freeTextOnly={freeTextOnly}
+          onDone={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

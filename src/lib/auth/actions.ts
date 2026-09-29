@@ -10,6 +10,7 @@ import { users } from "@/db/schema";
 import { loginSchema, registerSchema } from "@/schemas/auth";
 import { fail, fieldErrors, handleUnexpected, ok, type ActionResult } from "@/lib/action-result";
 import { signIn, signOut } from "./index";
+import { googleOAuthConfigured } from "./config";
 import { checkRateLimit, pruneRateLimit, resetRateLimit } from "./rate-limit";
 
 const BCRYPT_ROUNDS = 12;
@@ -26,6 +27,7 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
     email: formData.get("email"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
+    terms: formData.get("terms") === "on",
   });
   if (!parsed.success)
     return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
@@ -78,11 +80,32 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     return handleUnexpected("loginAction", err);
   }
 
-  redirect("/dashboard");
+  // ?next= hanya boleh path internal — cegah open redirect lewat URL absolut.
+  const next = formData.get("next");
+  redirect(
+    typeof next === "string" && next.startsWith("/") && !next.startsWith("//")
+      ? next
+      : "/dashboard",
+  );
 }
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/login" });
+}
+
+/**
+ * Dipanggil tombol Google di halaman login/daftar. Bila kredensial Google
+ * belum diisi, kembalikan error agar tombolnya bisa memunculkan toast —
+ * tombol tetap tampil supaya tampilannya sama dengan desain.
+ *
+ * Saat berhasil, `signIn` melempar NEXT_REDIRECT ke Google — biarkan lewat,
+ * jangan ditangkap.
+ */
+export async function googleSignInAction(): Promise<ActionResult> {
+  if (!googleOAuthConfigured())
+    return fail("NOT_CONFIGURED", "Login Google belum dikonfigurasi di server.");
+  await signIn("google", { redirectTo: "/dashboard" });
+  return ok(undefined); // tak tercapai — signIn selalu melempar redirect
 }
 
 export { ok };

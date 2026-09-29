@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { assertChildOwned } from "@/lib/data/children";
+import { assertChildAccessible } from "@/lib/data/children";
 import {
   deleteVaccination,
   insertVaccination,
@@ -37,7 +37,7 @@ export async function createVaccinationAction(
   try {
     const user = await requireUser();
     // childId datang dari client — verifikasi kepemilikan sebelum menulis apa pun.
-    if (!(await assertChildOwned(user.id, childId)))
+    if (!(await assertChildAccessible(user.id, childId)))
       return fail("NOT_FOUND", "Data anak tidak ditemukan.");
 
     const parsed = parseForm(formData);

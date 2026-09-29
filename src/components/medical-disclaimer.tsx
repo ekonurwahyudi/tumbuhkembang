@@ -1,5 +1,5 @@
-import { Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Disclaimer medis. Ditampilkan sekali per halaman growth/feeding —
@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export function MedicalDisclaimer({ className }: { className?: string }) {
   return (
     <Alert className={className}>
-      <Info className="size-4" aria-hidden />
+      <Icon name="info" className="text-[16px]" />
       <AlertDescription>
         Informasi pada aplikasi ini digunakan untuk membantu pencatatan dan pemantauan pertumbuhan
         anak dan bukan pengganti diagnosis, pemeriksaan, atau rekomendasi dokter, dokter anak,

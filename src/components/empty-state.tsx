@@ -1,12 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Icon, type IconName } from "@/components/ui/icon";
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: IconName;
   title: string;
   description: string;
   action?: React.ReactNode;
@@ -14,12 +15,12 @@ export function EmptyState({
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-        <span className="bg-muted text-muted-foreground rounded-full p-3">
-          <Icon className="size-6" />
+        <span className="bg-accent text-primary rounded-full p-3">
+          <Icon name={icon} className="text-[28px]" />
         </span>
         <div className="space-y-1">
-          <h2 className="font-medium">{title}</h2>
-          <p className="text-muted-foreground mx-auto max-w-xs text-sm">{description}</p>
+          <h2 className="text-headline-sm">{title}</h2>
+          <p className="text-muted-foreground text-body-sm mx-auto max-w-xs">{description}</p>
         </div>
         {action}
       </CardContent>

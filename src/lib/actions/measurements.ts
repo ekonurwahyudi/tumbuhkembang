@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { assertChildOwned } from "@/lib/data/children";
+import { assertChildAccessible } from "@/lib/data/children";
 import {
   deleteMeasurement,
   insertMeasurement,
+  toMeasurementValues,
   updateMeasurement,
-  type MeasurementValues,
 } from "@/lib/data/measurements";
 import { measurementSchema } from "@/schemas/measurement";
 import { fail, fieldErrors, handleUnexpected, ok, type ActionResult } from "@/lib/action-result";
@@ -22,14 +22,7 @@ function parseForm(formData: FormData) {
   });
 }
 
-/** numeric Postgres dikirim sebagai string agar presisi desimal tidak hilang lewat float. */
-const toRow = (d: ReturnType<typeof measurementSchema.parse>): MeasurementValues => ({
-  measuredAt: d.measuredAt,
-  weightKg: d.weightKg === null ? null : d.weightKg.toFixed(3),
-  lengthHeightCm: d.lengthHeightCm === null ? null : d.lengthHeightCm.toFixed(2),
-  headCircumferenceCm: d.headCircumferenceCm === null ? null : d.headCircumferenceCm.toFixed(2),
-  notes: d.notes,
-});
+const toRow = toMeasurementValues;
 
 function revalidateChild(childId: string) {
   revalidatePath("/dashboard");
@@ -45,7 +38,7 @@ export async function createMeasurementAction(
   try {
     const user = await requireUser();
     // childId datang dari client — verifikasi kepemilikan sebelum menulis apa pun.
-    if (!(await assertChildOwned(user.id, childId)))
+    if (!(await assertChildAccessible(user.id, childId)))
       return fail("NOT_FOUND", "Data anak tidak ditemukan.");
 
     const parsed = parseForm(formData);

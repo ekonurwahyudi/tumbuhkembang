@@ -22,10 +22,15 @@ export const registerSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
+    terms: z.boolean(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Konfirmasi password tidak sama",
     path: ["confirmPassword"],
+  })
+  .refine((d) => d.terms, {
+    message: "Anda harus menyetujui ketentuan layanan",
+    path: ["terms"],
   });
 
 export const loginSchema = z.object({

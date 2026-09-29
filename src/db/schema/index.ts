@@ -8,6 +8,7 @@ import {
   pgEnum,
   pgTable,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -15,6 +16,7 @@ import {
 
 export const sexEnum = pgEnum("sex", ["MALE", "FEMALE"]);
 export const birthTypeEnum = pgEnum("birth_type", ["TERM", "PRETERM"]);
+export const shareStatusEnum = pgEnum("share_status", ["PENDING", "ACCEPTED"]);
 export const feedingTypeEnum = pgEnum("feeding_type", [
   "BREAST_DIRECT",
   "EXPRESSED_BREAST_MILK",
@@ -27,7 +29,10 @@ export const users = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull(),
-    passwordHash: text("password_hash").notNull(),
+    // Null untuk akun yang dibuat lewat Google — tidak bisa login via password.
+    passwordHash: text("password_hash"),
+    phone: text("phone"),
+    photoKey: text("photo_key"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -49,6 +54,9 @@ export const children = pgTable(
     gestationalAgeDays: integer("gestational_age_days"),
     // Dipakai untuk syarat berat lahir rendah (HB0), bukan hanya untuk PRETERM.
     birthWeightGrams: integer("birth_weight_grams"),
+    // Key objek di R2, bukan URL: bucket-nya privat dan berkasnya disajikan
+    // lewat route terotorisasi, sehingga foto tidak pernah dapat tautan publik.
+    photoKey: text("photo_key"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -169,8 +177,75 @@ export const vaccinationSkips = pgTable(
   ],
 );
 
+/**
+ * Pengingat jadwal vaksin yang dibuat orang tua sendiri: satu per (anak, vaksin
+ * katalog), diubah lewat upsert supaya tidak menumpuk.
+ *
+ * Tanggal dan jam disimpan terpisah, bukan timestamptz: ini waktu lokal orang tua
+ * ("Kamis 09:00 di posyandu"), bukan momen absolut. Container production berjalan
+ * UTC — menggabungkannya di server akan menggeser jamnya.
+ */
+export const vaccineReminders = pgTable(
+  "vaccine_reminders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    childId: uuid("child_id")
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    // Cocok dengan key di src/lib/immunization/catalog.ts; divalidasi di Zod,
+    // alasannya sama seperti vaccinations.catalogKey.
+    catalogKey: text("catalog_key").notNull(),
+    remindOn: date("remind_on").notNull(),
+    remindTime: time("remind_time").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("vaccine_reminders_child_id_idx").on(t.childId),
+    uniqueIndex("vaccine_reminders_child_catalog_unique").on(t.childId, t.catalogKey),
+  ],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   children: many(children),
+}));
+
+/**
+ * Undangan "Akses Pasangan": pemilik anak membagikan satu anak lewat link ber-token.
+ * Link ditujukan ke email tertentu — hanya akun dengan email yang sama yang bisa
+ * menerima. ACCEPTED = inviteeUserId terisi dan akun itu punya akses ke anak.
+ */
+export const childShares = pgTable(
+  "child_shares",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    childId: uuid("child_id")
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    inviteeEmail: text("invitee_email").notNull(),
+    token: text("token").notNull(),
+    status: shareStatusEnum("status").notNull().default("PENDING"),
+    inviteeUserId: uuid("invitee_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("child_shares_token_unique").on(t.token),
+    index("child_shares_child_id_idx").on(t.childId),
+    index("child_shares_invitee_user_id_idx").on(t.inviteeUserId),
+  ],
+);
+
+export const childSharesRelations = relations(childShares, ({ one }) => ({
+  child: one(children, { fields: [childShares.childId], references: [children.id] }),
+  owner: one(users, { fields: [childShares.ownerId], references: [users.id] }),
 }));
 
 export const childrenRelations = relations(children, ({ one, many }) => ({
@@ -179,6 +254,7 @@ export const childrenRelations = relations(children, ({ one, many }) => ({
   feedingLogs: many(feedingLogs),
   vaccinations: many(vaccinations),
   vaccinationSkips: many(vaccinationSkips),
+  vaccineReminders: many(vaccineReminders),
 }));
 
 export const growthMeasurementsRelations = relations(growthMeasurements, ({ one }) => ({
@@ -197,9 +273,15 @@ export const vaccinationSkipsRelations = relations(vaccinationSkips, ({ one }) =
   child: one(children, { fields: [vaccinationSkips.childId], references: [children.id] }),
 }));
 
+export const vaccineRemindersRelations = relations(vaccineReminders, ({ one }) => ({
+  child: one(children, { fields: [vaccineReminders.childId], references: [children.id] }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type Child = typeof children.$inferSelect;
 export type GrowthMeasurement = typeof growthMeasurements.$inferSelect;
 export type FeedingLog = typeof feedingLogs.$inferSelect;
 export type Vaccination = typeof vaccinations.$inferSelect;
 export type VaccinationSkip = typeof vaccinationSkips.$inferSelect;
+export type VaccineReminder = typeof vaccineReminders.$inferSelect;
+export type ChildShare = typeof childShares.$inferSelect;

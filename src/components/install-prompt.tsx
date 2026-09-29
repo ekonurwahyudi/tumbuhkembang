@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Ajakan memasang aplikasi.
@@ -73,11 +73,11 @@ export function InstallPrompt() {
             setEvent(null);
           }}
         >
-          <Download className="size-4" aria-hidden />
+          <Icon name="download" className="text-[16px]" />
           Pasang
         </Button>
         <Button variant="ghost" size="icon" onClick={dismiss} aria-label="Tutup ajakan pasang">
-          <X className="size-4" aria-hidden />
+          <Icon name="close" className="text-[16px]" />
         </Button>
       </CardContent>
     </Card>

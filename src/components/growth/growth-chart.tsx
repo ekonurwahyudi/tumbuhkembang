@@ -2,9 +2,10 @@
 
 import { useId } from "react";
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -16,9 +17,11 @@ import type { ChartSeries } from "@/lib/growth/chart-data";
 /**
  * Grafik pertumbuhan: kurva reference WHO + lintasan anak pada satu sumbu.
  *
- * Kurva SD digambar abu-abu recessive sebagai konteks; hanya lintasan anak yang
- * memakai warna seri. Garis SD juga dijelaskan lewat label di bawah grafik,
- * sehingga identitasnya tidak bergantung pada warna saja.
+ * Pita berarsir menandai rentang ±2 SD dan ±2 s/d ±3 SD populasi acuan — itu
+ * properti kurva WHO, bukan penilaian atas anak. Kurva SD sendiri digambar
+ * recessive; hanya lintasan anak yang memakai warna seri penuh. Setiap pita dan
+ * garis punya label di bawah grafik, sehingga identitasnya tidak bergantung
+ * pada warna saja.
  *
  * Satu sumbu Y saja — tidak pernah dual-axis.
  */
@@ -58,22 +61,94 @@ function niceDomain(points: { sd3neg: number; sd3: number; child: number | null 
 
 export function GrowthChart({ series }: { series: ChartSeries }) {
   const titleId = useId();
+  const gradientId = useId();
 
   if (series.points.length === 0) return null;
 
   const lastPoint = series.points.at(-1)!;
+  const latest = series.childPoints.at(-1);
   const yDomain = niceDomain(series.points);
 
+  // Recharts menggambar Area berpita dari pasangan [bawah, atas] pada satu
+  // dataKey. Pita dirakit di sini, bukan di server, supaya ChartPoint tetap
+  // berisi angka kurva saja.
+  const data = series.points.map((p) => ({
+    ...p,
+    bandNormal: [p.sd2neg, p.sd2] as [number, number],
+    bandLow: [p.sd3neg, p.sd2neg] as [number, number],
+    bandHigh: [p.sd2, p.sd3] as [number, number],
+  }));
+
+  const safeId = `${gradientId}-safe`;
+  const edgeId = `${gradientId}-edge`;
+
   return (
-    <figure className="space-y-3">
+    <figure className="space-y-2">
       <figcaption id={titleId} className="sr-only">
         {series.label} menurut usia, dibandingkan dengan kurva reference {series.reference.name}
       </figcaption>
 
+      {/* Ringkas plot terakhir di atas kanvas, seperti template. */}
+      {latest && (
+        <div className="text-body-sm text-muted-foreground flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="inline-block size-2 rounded-full"
+              style={{ background: "var(--chart-1)" }}
+            />
+            Plot terakhir:{" "}
+            <strong className="text-foreground font-semibold tabular-nums">
+              {latest.value.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {series.unit}
+            </strong>
+            <span className="text-muted-foreground">
+              ({series.ageBasis === "corrected" ? "usia terkoreksi" : "usia"}{" "}
+              {formatAgeDaysLong(latest.ageDays)})
+            </span>
+          </span>
+          <span className="text-primary font-semibold tabular-nums">
+            Persentil {formatPercentile(latest.percentile)}
+          </span>
+        </div>
+      )}
+
       <div className="h-[280px] w-full sm:h-[340px]" role="img" aria-labelledby={titleId}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={series.points} margin={{ top: 8, right: 16, bottom: 4, left: -12 }}>
-            <CartesianGrid stroke="var(--border)" strokeWidth={1} vertical={false} />
+        {/*
+          initialDimension menggantikan default Recharts {-1,-1}: render pertama
+          terjadi sebelum ResizeObserver mengukur, dan ukuran negatif memicu
+          peringatan "width(-1) and height(-1) ... should be greater than 0".
+          Lebar tetap 0 supaya grafik baru digambar setelah lebar asli diketahui.
+        */}
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          initialDimension={{ width: 0, height: 280 }}
+        >
+          <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: -12 }}>
+            <defs>
+              {/*
+                Gradien memakai warna kurva SD yang sama (biru di atas, oranye di
+                bawah) dengan opasitas rendah, bukan palet tetap template: dengan
+                begitu pita ikut benar di mode gelap dan tetap satu keluarga
+                dengan garisnya.
+              */}
+              <linearGradient id={safeId} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.2} />
+                <stop offset="50%" stopColor="var(--chart-2)" stopOpacity={0.07} />
+                <stop offset="100%" stopColor="var(--chart-4)" stopOpacity={0.16} />
+              </linearGradient>
+              <linearGradient id={edgeId} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--chart-4)" stopOpacity={0.05} />
+                <stop offset="100%" stopColor="var(--chart-4)" stopOpacity={0.16} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid
+              stroke="var(--border)"
+              strokeDasharray="2 3"
+              strokeWidth={1}
+              vertical={false}
+            />
 
             <XAxis
               dataKey="ageDays"
@@ -102,6 +177,41 @@ export function GrowthChart({ series }: { series: ChartSeries }) {
               allowDecimals={false}
             />
 
+            {/* Pita rentang: latar konteks, digambar sebelum garis mana pun. */}
+            <Area
+              dataKey="bandHigh"
+              name="+2 s/d +3 SD"
+              type="monotone"
+              fill={`url(#${edgeId})`}
+              stroke="none"
+              isAnimationActive={false}
+              activeDot={false}
+              tooltipType="none"
+              legendType="none"
+            />
+            <Area
+              dataKey="bandNormal"
+              name="Rentang ±2 SD"
+              type="monotone"
+              fill={`url(#${safeId})`}
+              stroke="none"
+              isAnimationActive={false}
+              activeDot={false}
+              tooltipType="none"
+              legendType="none"
+            />
+            <Area
+              dataKey="bandLow"
+              name="−2 s/d −3 SD"
+              type="monotone"
+              fill={`url(#${edgeId})`}
+              stroke="none"
+              isAnimationActive={false}
+              activeDot={false}
+              tooltipType="none"
+              legendType="none"
+            />
+
             {/* Kurva reference: konteks, bukan seri utama. Median sedikit lebih tegas. */}
             {SD_LINES.map(({ key, label, color, opacity }) => (
               <Line
@@ -111,26 +221,27 @@ export function GrowthChart({ series }: { series: ChartSeries }) {
                 type="monotone"
                 stroke={color}
                 strokeOpacity={opacity}
-                strokeWidth={key === "sd0" ? 1.5 : 1}
+                strokeWidth={key === "sd0" ? 1.8 : 1}
+                strokeDasharray={key === "sd0" ? undefined : "3 3"}
                 dot={false}
                 activeDot={false}
                 isAnimationActive={false}
               />
             ))}
 
-            {/* Lintasan anak: satu-satunya seri berwarna. */}
+            {/* Lintasan anak: satu-satunya seri berwarna penuh. */}
             <Line
               dataKey="child"
               name={series.label}
               type="monotone"
               stroke="var(--chart-1)"
-              strokeWidth={2}
+              strokeWidth={2.6}
               strokeLinecap="round"
               strokeLinejoin="round"
               connectNulls
-              dot={{ r: 4, fill: "var(--chart-1)", stroke: "var(--background)", strokeWidth: 2 }}
+              dot={{ r: 3.2, fill: "var(--background)", stroke: "var(--chart-1)", strokeWidth: 2 }}
               activeDot={{
-                r: 6,
+                r: 5,
                 fill: "var(--chart-1)",
                 stroke: "var(--background)",
                 strokeWidth: 2,
@@ -142,40 +253,43 @@ export function GrowthChart({ series }: { series: ChartSeries }) {
               cursor={{ stroke: "var(--muted-foreground)", strokeOpacity: 0.4, strokeWidth: 1 }}
               content={<GrowthTooltip series={series} />}
             />
-          </LineChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Keterangan garis — identitas tidak bergantung warna saja. */}
-      <ul className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+      {/* Keterangan garis dan pita — identitas tidak bergantung warna saja. */}
+      <ul className="text-muted-foreground flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t pt-2 text-xs">
         <li className="text-foreground flex items-center gap-1.5 font-medium">
           <span
             aria-hidden
-            className="inline-block h-0.5 w-4 rounded-full"
+            className="inline-block h-1 w-3 rounded-full"
             style={{ background: "var(--chart-1)" }}
           />
-          {series.label}
+          Kurva anak
         </li>
         <li className="flex items-center gap-1.5">
-          <span aria-hidden className="bg-muted-foreground/55 inline-block h-0.5 w-4 rounded-full" />
-          Median ({lastPoint.sd0.toLocaleString("id-ID", { maximumFractionDigits: 1 })}{" "}
+          <span aria-hidden className="bg-muted-foreground/55 inline-block h-1 w-3 rounded-full" />
+          Median WHO ({lastPoint.sd0.toLocaleString("id-ID", { maximumFractionDigits: 1 })}{" "}
           {series.unit})
         </li>
         <li className="flex items-center gap-1.5">
           <span
             aria-hidden
-            className="inline-block h-0.5 w-4 rounded-full"
-            style={{ background: "var(--chart-2)" }}
+            className="inline-block h-2.5 w-3 rounded-sm"
+            style={{
+              background:
+                "linear-gradient(to bottom, color-mix(in oklab, var(--chart-2) 20%, transparent), color-mix(in oklab, var(--chart-4) 16%, transparent))",
+            }}
           />
-          +2 s/d +3 SD
+          Rentang ±2 SD
         </li>
         <li className="flex items-center gap-1.5">
           <span
             aria-hidden
-            className="inline-block h-0.5 w-4 rounded-full"
-            style={{ background: "var(--chart-4)" }}
+            className="inline-block h-2.5 w-3 rounded-sm"
+            style={{ background: "color-mix(in oklab, var(--chart-4) 16%, transparent)" }}
           />
-          −2 s/d −3 SD
+          ±2 s/d ±3 SD
         </li>
       </ul>
     </figure>

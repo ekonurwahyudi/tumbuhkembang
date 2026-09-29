@@ -3,27 +3,63 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createChildAction, updateChildAction } from "@/lib/actions/children";
+import {
+  createChildAction,
+  updateChildAction,
+  uploadChildPhotoAction,
+} from "@/lib/actions/children";
 import { useFormAction } from "@/lib/use-form-action";
 import { GESTATIONAL_AGE_MAX_WEEKS, GESTATIONAL_AGE_MIN_WEEKS } from "@/schemas/child";
 import { todayYMD } from "@/lib/growth/age";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ChildPhotoPicker } from "./child-photo-field";
 import type { Child } from "@/db/schema";
+
+/** Pengukuran awal (hanya anak baru) — nama field sama dengan measurementSchema. */
+const INITIAL_MEASURES = [
+  { name: "weightKg", label: "Berat (kg)", placeholder: "3,4", max: 150, step: 0.01 },
+  { name: "lengthHeightCm", label: "Panjang (cm)", placeholder: "50", max: 220, step: 0.1 },
+  { name: "headCircumferenceCm", label: "Lingkar Kepala (cm)", placeholder: "34", max: 80, step: 0.1 },
+] as const;
 
 export function ChildForm({ child }: { child?: Child }) {
   const router = useRouter();
   const [birthType, setBirthType] = useState<"TERM" | "PRETERM">(child?.birthType ?? "TERM");
+  // Hanya untuk anak baru: fotonya ditahan sampai ada id yang bisa dituju.
+  const [photo, setPhoto] = useState<File | null>(null);
 
   const { action, fields, formError, values } = useFormAction(
     (formData) =>
       child ? updateChildAction(child.id, formData) : createChildAction(formData),
-    ({ id }) => {
-      toast.success(child ? "Data anak diperbarui." : "Anak berhasil ditambahkan.");
+    async ({ id }) => {
+      if (child) {
+        toast.success("Data anak diperbarui.");
+        router.push(`/children/${id}`);
+        return;
+      }
+
+      // Anak sudah tersimpan. Foto menyusul, dan kegagalannya tidak
+      // membatalkan apa pun — datanya sudah aman, fotonya bisa diulang dari
+      // halaman ubah data.
+      if (photo) {
+        const formData = new FormData();
+        formData.set("photo", photo);
+        const res = await uploadChildPhotoAction(id, formData);
+        toast[res.success ? "success" : "warning"](
+          res.success
+            ? "Anak berhasil ditambahkan."
+            : "Anak tersimpan, tetapi fotonya gagal diunggah. Coba lagi dari Ubah Data Anak.",
+        );
+      } else {
+        toast.success("Anak berhasil ditambahkan.");
+      }
+
       router.push(`/children/${id}`);
     },
   );
@@ -35,6 +71,8 @@ export function ChildForm({ child }: { child?: Child }) {
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
+
+      {!child && <ChildPhotoPicker file={photo} onSelect={setPhoto} />}
 
       <div className="space-y-2">
         <Label htmlFor="name">Nama Anak</Label>
@@ -73,15 +111,14 @@ export function ChildForm({ child }: { child?: Child }) {
 
       <div className="space-y-2">
         <Label htmlFor="dateOfBirth">Tanggal Lahir</Label>
-        <Input
+        <DateField
           id="dateOfBirth"
           name="dateOfBirth"
-          type="date"
           max={todayYMD()}
           defaultValue={values.dateOfBirth ?? child?.dateOfBirth}
           required
-          aria-invalid={!!fields?.dateOfBirth}
-          aria-describedby={fields?.dateOfBirth ? "dob-error" : undefined}
+          invalid={!!fields?.dateOfBirth}
+          describedBy={fields?.dateOfBirth ? "dob-error" : undefined}
         />
         <FieldError id="dob-error" message={fields?.dateOfBirth} />
       </div>
@@ -177,6 +214,37 @@ export function ChildForm({ child }: { child?: Child }) {
           <p id="ga-hint" className="text-muted-foreground text-xs">
             Contoh: 32 minggu 4 hari. Hari diisi 0–6. Dipakai untuk menghitung corrected age.
           </p>
+        </fieldset>
+      )}
+
+      {!child && (
+        <fieldset className="bg-muted/40 space-y-3 rounded-lg border p-4">
+          <legend className="px-1 text-sm font-medium">Pengukuran Saat Ini</legend>
+          <p className="text-muted-foreground text-xs">
+            Opsional. Bila diisi, langsung tercatat sebagai pengukuran pertama anak dan jadi
+            titik awal grafik pertumbuhannya.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {INITIAL_MEASURES.map(({ name, label, placeholder, max, step }) => (
+              <div key={name} className="space-y-2">
+                <Label htmlFor={name}>{label}</Label>
+                <Input
+                  id={name}
+                  name={name}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={max}
+                  step={step}
+                  placeholder={placeholder}
+                  defaultValue={values[name] ?? ""}
+                  aria-invalid={!!fields?.[name]}
+                  aria-describedby={fields?.[name] ? `${name}-error` : undefined}
+                />
+                <FieldError id={`${name}-error`} message={fields?.[name]} />
+              </div>
+            ))}
+          </div>
         </fieldset>
       )}
 

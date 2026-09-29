@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { assertChildOwned } from "@/lib/data/children";
+import { assertChildAccessible } from "@/lib/data/children";
 import { skipVaccination, unskipVaccination } from "@/lib/data/vaccination-skips";
 import { CATALOG_KEYS } from "@/lib/immunization/catalog";
 import { fail, handleUnexpected, ok, type ActionResult } from "@/lib/action-result";
@@ -17,7 +17,7 @@ export async function skipVaccinationAction(
       return fail("VALIDATION_ERROR", "Vaksin tidak dikenal.");
 
     const user = await requireUser();
-    if (!(await assertChildOwned(user.id, childId)))
+    if (!(await assertChildAccessible(user.id, childId)))
       return fail("NOT_FOUND", "Data anak tidak ditemukan.");
 
     await skipVaccination(childId, catalogKey);

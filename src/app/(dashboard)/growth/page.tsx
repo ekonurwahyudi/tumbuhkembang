@@ -1,30 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Baby, ChevronRight } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { listChildren } from "@/lib/data/children";
+import { listChildrenForViewer } from "@/lib/data/children";
 import { chronologicalAge, formatAge } from "@/lib/growth/age";
 import { EmptyState } from "@/components/empty-state";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Pertumbuhan" };
 
 export default async function GrowthIndexPage() {
   const user = await requireUser();
-  const children = await listChildren(user.id);
+  const children = await listChildrenForViewer(user.id);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4 pt-2">
       <header>
-        <h1 className="text-xl font-semibold tracking-tight">Pertumbuhan</h1>
-        <p className="text-muted-foreground text-sm">Pilih anak untuk melihat perkembangannya.</p>
+        <h1 className="text-headline-lg">Pertumbuhan</h1>
+        <p className="text-muted-foreground text-body-sm">Pilih anak untuk melihat perkembangannya.</p>
       </header>
 
       {children.length === 0 ? (
         <EmptyState
-          icon={Baby}
+          icon="child_care"
           title="Belum ada data anak."
           description="Tambahkan profil anak untuk mulai memantau pertumbuhannya."
           action={
@@ -35,7 +35,7 @@ export default async function GrowthIndexPage() {
         />
       ) : (
         <ul className="space-y-2">
-          {children.map((child) => (
+          {children.map(({ child }) => (
             <li key={child.id}>
               <Card>
                 <CardContent className="p-0">
@@ -49,7 +49,7 @@ export default async function GrowthIndexPage() {
                         {formatAge(chronologicalAge(child.dateOfBirth))}
                       </span>
                     </span>
-                    <ChevronRight className="text-muted-foreground size-4" aria-hidden />
+                    <Icon name="chevron_right" className="text-muted-foreground text-[16px]" />
                   </Link>
                 </CardContent>
               </Card>

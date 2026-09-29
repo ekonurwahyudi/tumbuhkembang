@@ -5,15 +5,21 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { childShares, users } from "@/db/schema";
 import {
+  assertChildAccessible,
   assertChildOwned,
   deleteChild,
+  acceptShare,
+  findShareByToken,
   getChild,
+  getChildForViewer,
   insertChild,
   listChildren,
+  listChildrenForViewer,
   listChildrenWithLatestMeasurement,
   updateChild,
+  upsertShare,
 } from "@/lib/data/children";
 import {
   deleteMeasurement,
@@ -34,6 +40,12 @@ import {
   skipVaccination,
   unskipVaccination,
 } from "@/lib/data/vaccination-skips";
+import {
+  deleteReminder,
+  getReminder,
+  listReminders,
+  upsertReminder,
+} from "@/lib/data/vaccine-reminders";
 
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 let alice: string;
@@ -312,6 +324,65 @@ describe("otorisasi vaccination_skips", () => {
   });
 });
 
+describe("otorisasi vaccine_reminders", () => {
+  it("Bob tidak dapat membaca atau menghapus pengingat milik Alice", async () => {
+    const r = await upsertReminder(aliceChild, {
+      catalogKey: "BCG",
+      remindOn: "2026-12-01",
+      remindTime: "09:00",
+      notes: null,
+    });
+
+    expect(await listReminders(bob, aliceChild)).toHaveLength(0);
+    expect(await getReminder(bob, r.id)).toBeUndefined();
+    expect(await deleteReminder(bob, r.id)).toBeUndefined();
+
+    // Milik sendiri tetap terbaca — bukan sekadar query yang selalu kosong.
+    expect(await getReminder(alice, r.id)).toBeDefined();
+    expect(await deleteReminder(alice, r.id)).toBeDefined();
+  });
+
+  it("partner yang sudah menerima share ikut melihat pengingat", async () => {
+    // Email Bob dibaca dari DB, bukan ditimpa: describe share di bawah memakainya.
+    const [row] = await db.select({ email: users.email }).from(users).where(eq(users.id, bob));
+    const email = row.email;
+    const share = await upsertShare({ childId: aliceChild, ownerId: alice, inviteeEmail: email });
+    await acceptShare(share.id, bob, email);
+
+    const r = await upsertReminder(aliceChild, {
+      catalogKey: "HEPB0",
+      remindOn: "2026-12-02",
+      remindTime: "10:30",
+      notes: null,
+    });
+    expect((await listReminders(bob, aliceChild)).some((x) => x.id === r.id)).toBe(true);
+
+    // Share dibersihkan: test lain di berkas ini mengandaikan Bob bukan partner.
+    await deleteReminder(alice, r.id);
+    await db.delete(childShares).where(eq(childShares.id, share.id));
+  });
+
+  it("menjadwal ulang vaksin yang sama mengganti, bukan menumpuk", async () => {
+    await upsertReminder(aliceChild, {
+      catalogKey: "OPV1",
+      remindOn: "2026-12-01",
+      remindTime: "09:00",
+      notes: null,
+    });
+    const second = await upsertReminder(aliceChild, {
+      catalogKey: "OPV1",
+      remindOn: "2026-12-10",
+      remindTime: "14:00",
+      notes: "Posyandu",
+    });
+    const mine = (await listReminders(alice, aliceChild)).filter((x) => x.catalogKey === "OPV1");
+    expect(mine).toHaveLength(1);
+    expect(mine[0].id).toBe(second.id);
+    expect(mine[0].remindOn).toBe("2026-12-10");
+    await deleteReminder(alice, second.id);
+  });
+});
+
 describe("integritas berat lahir", () => {
   it("menolak berat lahir di luar rentang di level database", async () => {
     await expect(
@@ -325,5 +396,80 @@ describe("integritas berat lahir", () => {
         birthWeightGrams: 100,
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("akses pasangan (share)", () => {
+  const bobEmail = `bob-${suffix}@test.local`;
+
+  it("sebelum diterima, Bob tetap tidak punya akses", async () => {
+    const share = await upsertShare({
+      childId: aliceChild,
+      ownerId: alice,
+      inviteeEmail: bobEmail,
+    });
+    expect(share.status).toBe("PENDING");
+    expect(await findShareByToken(share.token)).toBeDefined();
+    expect(await getChildForViewer(bob, aliceChild)).toBeUndefined();
+    expect(await assertChildAccessible(bob, aliceChild)).toBe(false);
+    expect(
+      (await listChildrenForViewer(bob)).some(({ child }) => child.id === aliceChild),
+    ).toBe(false);
+  });
+
+  it("setelah diterima, Bob melihat dan mencatat, tapi tetap bukan pemilik", async () => {
+    const share = await upsertShare({
+      childId: aliceChild,
+      ownerId: alice,
+      inviteeEmail: bobEmail,
+    });
+    await acceptShare(share.id, bob, bobEmail);
+
+    const viewer = await getChildForViewer(bob, aliceChild);
+    expect(viewer?.role).toBe("PARTNER");
+    expect(await assertChildAccessible(bob, aliceChild)).toBe(true);
+    expect(await assertChildOwned(bob, aliceChild)).toBe(false);
+    expect(
+      (await listChildrenForViewer(bob)).some(({ child }) => child.id === aliceChild),
+    ).toBe(true);
+
+    // Jalur catat terbuka untuk partner.
+    const m = await insertMeasurement(aliceChild, {
+      measuredAt: "2026-09-05",
+      weightKg: "7.200",
+      lengthHeightCm: null,
+      headCircumferenceCm: null,
+      notes: null,
+    });
+    expect((await listMeasurements(bob, aliceChild)).some((r) => r.id === m.id)).toBe(true);
+
+    // Mutasi profil anak tetap owner-only.
+    expect(await deleteChild(bob, aliceChild)).toBeUndefined();
+    expect(await updateChild(bob, aliceChild, {
+      name: "Diretas",
+      sex: "MALE",
+      dateOfBirth: "2026-01-15",
+      birthType: "TERM",
+      gestationalAgeWeeks: null,
+      gestationalAgeDays: null,
+    })).toBeUndefined();
+  });
+
+  it("undangan kedaluwarsa dan email salah tidak diterima", async () => {
+    const share = await upsertShare({
+      childId: aliceChild,
+      ownerId: alice,
+      inviteeEmail: bobEmail,
+    });
+    // Email tidak cocok: acceptShare tidak mengubah apa pun.
+    expect(await acceptShare(share.id, bob, "bukan-bob@test.local")).toBeUndefined();
+
+    // Kedaluwarsa: share dianggap tidak ada oleh findShareByToken.
+    await db
+      .update(childShares)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(childShares.id, share.id));
+    expect(await findShareByToken(share.token)).toBeUndefined();
+    expect(await acceptShare(share.id, bob, bobEmail)).toBeUndefined();
   });
 });

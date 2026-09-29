@@ -2,6 +2,8 @@ import "server-only";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { children, growthMeasurements, type GrowthMeasurement } from "@/db/schema";
+import { childVisibleTo } from "./children";
+import type { MeasurementOutput } from "@/schemas/measurement";
 
 /**
  * Akses measurement selalu di-join ke `children` agar terikat pada pemilik.
@@ -14,7 +16,7 @@ export async function listMeasurements(userId: string, childId: string, order: "
     .select({ m: growthMeasurements })
     .from(growthMeasurements)
     .innerJoin(children, eq(children.id, growthMeasurements.childId))
-    .where(and(eq(growthMeasurements.childId, childId), eq(children.userId, userId)))
+    .where(and(eq(growthMeasurements.childId, childId), childVisibleTo(userId)))
     .orderBy(sort(growthMeasurements.measuredAt), sort(growthMeasurements.createdAt));
   return rows.map((r) => r.m);
 }
@@ -27,7 +29,7 @@ export async function getMeasurement(
     .select({ m: growthMeasurements })
     .from(growthMeasurements)
     .innerJoin(children, eq(children.id, growthMeasurements.childId))
-    .where(and(eq(growthMeasurements.id, measurementId), eq(children.userId, userId)))
+    .where(and(eq(growthMeasurements.id, measurementId), childVisibleTo(userId)))
     .limit(1);
   return row?.m;
 }
@@ -44,6 +46,17 @@ export type MeasurementValues = {
   headCircumferenceCm: string | null;
   notes: string | null;
 };
+
+/** numeric Postgres dikirim sebagai string agar presisi desimal tidak hilang lewat float. */
+export function toMeasurementValues(d: MeasurementOutput): MeasurementValues {
+  return {
+    measuredAt: d.measuredAt,
+    weightKg: d.weightKg === null ? null : d.weightKg.toFixed(3),
+    lengthHeightCm: d.lengthHeightCm === null ? null : d.lengthHeightCm.toFixed(2),
+    headCircumferenceCm: d.headCircumferenceCm === null ? null : d.headCircumferenceCm.toFixed(2),
+    notes: d.notes,
+  };
+}
 
 /** Caller wajib sudah memverifikasi kepemilikan `childId` lewat assertChildOwned. */
 export async function insertMeasurement(childId: string, values: MeasurementValues) {

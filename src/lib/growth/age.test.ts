@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { addDays, chronologicalAge, diffInDays, formatAge, formatYMD, todayYMD } from "./age";
+import {
+  addDays,
+  chronologicalAge,
+  diffInDays,
+  formatAge,
+  formatAgeDaysDetailed,
+  formatAgeDetailed,
+  formatYMD,
+  parseYMD,
+  todayYMD,
+} from "./age";
 import {
   CORRECTION_LIMIT_DAYS,
   TERM_GESTATION_DAYS,
@@ -73,6 +83,31 @@ describe("formatAge", () => {
   });
 });
 
+describe("formatAgeDetailed", () => {
+  it("menampilkan sampai hari sesuai rentang usia", () => {
+    expect(formatAgeDetailed(chronologicalAge("2026-09-20", "2026-09-22"))).toBe("2 Hari");
+    expect(formatAgeDetailed(chronologicalAge("2026-09-08", "2026-09-22"))).toBe("2 Minggu 0 Hari");
+    expect(formatAgeDetailed(chronologicalAge("2026-01-08", "2026-09-22"))).toBe(
+      "8 Bulan 14 Hari",
+    );
+    expect(formatAgeDetailed(chronologicalAge("2023-07-22", "2026-09-22"))).toBe(
+      "3 Tahun 2 Bulan",
+    );
+    expect(formatAgeDetailed(chronologicalAge("2023-07-22", "2025-07-22"))).toBe("2 Tahun");
+  });
+
+  it("hari negatif (belum lahir menurut EDD) tampil sebagai strip", () => {
+    expect(formatAgeDetailed({ ...chronologicalAge("2026-01-15", "2026-01-01"), days: -14 })).toBe(
+      "-",
+    );
+  });
+
+  it("formatAgeDaysDetailed menghitung dari jumlah hari (anchor 2000)", () => {
+    expect(formatAgeDaysDetailed(257)).toBe("8 Bulan 13 Hari");
+    expect(formatAgeDaysDetailed(10)).toBe("10 Hari");
+  });
+});
+
 describe("addDays / formatYMD / todayYMD", () => {
   it("menambah hari melintasi batas bulan", () => {
     expect(formatYMD(addDays("2026-02-28", 1))).toBe("2026-03-01");
@@ -82,6 +117,20 @@ describe("addDays / formatYMD / todayYMD", () => {
 
   it("todayYMD menghasilkan format ISO tanggal", () => {
     expect(todayYMD(new Date(2026, 8, 22))).toBe("2026-09-22");
+  });
+
+  it("YMD ⇄ Date lokal bolak-balik tanpa bergeser sehari", () => {
+    /*
+      Jalur yang dipakai DateField (@/components/ui/date-field.tsx): react-day-picker
+      memberi objek Date, form mengirim string. Lewat toISOString() tanggalnya
+      bergeser satu hari di zona timur seperti WIB, jadi konversinya harus lewat
+      parseYMD/formatYMD.
+    */
+    for (const ymd of ["2026-09-22", "2026-01-01", "2026-12-31", "2024-02-29"]) {
+      const { year, month, day } = parseYMD(ymd);
+      const asDate = new Date(year, month - 1, day);
+      expect(formatYMD(parseYMD(asDate))).toBe(ymd);
+    }
   });
 });
 

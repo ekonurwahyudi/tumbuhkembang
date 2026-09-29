@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Baby } from "lucide-react";
 import { chronologicalAge, formatAge } from "@/lib/growth/age";
-import { BIRTH_TYPE_LABEL, formatDate, formatHead, formatLength, formatWeight } from "@/lib/format";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BIRTH_TYPE_LABEL, formatDate, splitHead, splitLength, splitWeight } from "@/lib/format";
+import { Card, CardContent } from "@/components/ui/card";
+import { Icon, type IconName } from "@/components/ui/icon";
+import { ChildAvatar } from "./child-avatar";
 import type { Child } from "@/db/schema";
 
 export type ChildWithLatest = {
@@ -15,51 +14,70 @@ export type ChildWithLatest = {
   latestHeadCircumferenceCm: string | null;
 };
 
+const METRICS = [
+  { key: "latestWeightKg", label: "Berat", icon: "scale", format: splitWeight },
+  { key: "latestLengthHeightCm", label: "Panjang", icon: "height", format: splitLength },
+  { key: "latestHeadCircumferenceCm", label: "L. Kepala", icon: "psychology", format: splitHead },
+] as const satisfies readonly { key: string; label: string; icon: IconName; format: unknown }[];
+
 export function ChildCard({ item }: { item: ChildWithLatest }) {
   const { child } = item;
   const age = formatAge(chronologicalAge(child.dateOfBirth));
 
   return (
     <Card>
-      <CardHeader className="gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <Baby className="text-muted-foreground size-5 shrink-0" aria-hidden />
-          <CardTitle className="text-lg">{child.name}</CardTitle>
-          <Badge variant={child.birthType === "PRETERM" ? "secondary" : "outline"}>
-            {BIRTH_TYPE_LABEL[child.birthType]}
-          </Badge>
+      <CardContent className="space-y-3.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <ChildAvatar
+              child={child}
+              className="ring-accent size-14 shrink-0 ring-2"
+              iconClassName="text-[28px]"
+            />
+            <div className="min-w-0">
+              <h3 className="text-headline-md truncate">{child.name}</h3>
+              <p className="text-muted-foreground text-body-sm">{age}</p>
+            </div>
+          </div>
+          {child.birthType === "PRETERM" && (
+            <span className="text-label-sm inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-butter-pastel)] px-2.5 py-1 font-bold text-[var(--color-on-butter)]">
+              <Icon name="history" className="text-[14px]" />
+              {BIRTH_TYPE_LABEL.PRETERM}
+            </span>
+          )}
         </div>
-        <p className="text-muted-foreground text-sm">{age}</p>
-      </CardHeader>
 
-      <CardContent className="space-y-4">
-        <dl className="grid grid-cols-3 gap-3 text-sm">
-          <div>
-            <dt className="text-muted-foreground">Berat</dt>
-            <dd className="font-medium tabular-nums">{formatWeight(item.latestWeightKg)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Tinggi</dt>
-            <dd className="font-medium tabular-nums">{formatLength(item.latestLengthHeightCm)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Kepala</dt>
-            <dd className="font-medium tabular-nums">{formatHead(item.latestHeadCircumferenceCm)}</dd>
-          </div>
+        <dl className="grid grid-cols-3 gap-2.5">
+          {METRICS.map(({ key, label, icon, format }) => {
+            const m = format(item[key]);
+            return (
+              <div key={key} className="bg-muted border-border rounded-xl border p-3">
+                <dt className="text-muted-foreground text-label-sm flex items-center justify-between gap-1">
+                  {label}
+                  <Icon name={icon} className="text-primary text-[16px]" />
+                </dt>
+                <dd className="mt-1.5 flex items-baseline gap-0.5">
+                  <span className="text-metric tabular-nums">{m.value}</span>
+                  {m.unit && <span className="text-muted-foreground text-label-sm">{m.unit}</span>}
+                </dd>
+              </div>
+            );
+          })}
         </dl>
 
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground text-label-sm">
           {item.latestMeasuredAt
             ? `Pengukuran terakhir ${formatDate(item.latestMeasuredAt)}`
             : "Belum ada pengukuran"}
         </p>
 
-        <Button asChild variant="secondary" className="w-full">
-          <Link href={`/children/${child.id}`}>
-            Lihat Perkembangan
-            <ArrowRight className="size-4" aria-hidden />
-          </Link>
-        </Button>
+        <Link
+          href={`/children/${child.id}`}
+          className="bg-muted hover:bg-accent text-body-sm flex min-h-11 items-center justify-center gap-1.5 rounded-full font-semibold transition-colors"
+        >
+          Lihat Perkembangan
+          <Icon name="arrow_forward" className="text-[16px]" />
+        </Link>
       </CardContent>
     </Card>
   );

@@ -161,13 +161,30 @@ export function weightGateSatisfied(
 ): boolean {
   const rule = cv.lowBirthWeight;
   if (!rule || rule.kind !== "requireCurrentWeight") return true;
-  if (rule.pretermOnly && child.birthType !== "PRETERM") return true;
-  if (rule.triggerBelowGrams != null) {
-    const triggered = child.birthWeightGrams != null && child.birthWeightGrams < rule.triggerBelowGrams;
-    if (!triggered) return true;
-  }
+  if (!weightRuleApplies(cv, child)) return true;
   if (currentWeightGrams == null) return true;
   return currentWeightGrams >= rule.requiredGrams;
+}
+
+/**
+ * Syarat berat pada vaksin ini berlaku untuk anak INI? Untuk bayi cukup bulan
+ * dengan berat lahir normal, jawabannya false — syaratnya tidak relevan dan
+ * tidak perlu ditampilkan. Dipakai UI untuk memutuskan menampilkan kriteria,
+ * dan oleh `weightGateSatisfied` agar aturan "berlaku untuk siapa" hanya
+ * ditulis di satu tempat.
+ */
+export function weightRuleApplies(
+  cv: CatalogVaccine,
+  child: { birthType: "TERM" | "PRETERM"; birthWeightGrams: number | null },
+): boolean {
+  const rule = cv.lowBirthWeight;
+  if (!rule) return false;
+  const belowTrigger = (grams: number) =>
+    child.birthWeightGrams != null && child.birthWeightGrams < grams;
+  if (rule.kind === "delayToAge") return belowTrigger(rule.triggerBelowGrams);
+  if (rule.pretermOnly && child.birthType !== "PRETERM") return false;
+  if (rule.triggerBelowGrams != null) return belowTrigger(rule.triggerBelowGrams);
+  return true;
 }
 
 /** Teks singkat untuk baris UI saat `weightGateSatisfied` bernilai false. */

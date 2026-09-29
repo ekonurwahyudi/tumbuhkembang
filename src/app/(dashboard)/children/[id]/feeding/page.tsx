@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Milk } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getChild } from "@/lib/data/children";
+import { getChildForViewer } from "@/lib/data/children";
 import { listFeedingLogs } from "@/lib/data/feeding";
 import { groupByDay } from "@/lib/feeding/summary";
 import { todayLocalISO } from "@/schemas/date";
@@ -11,6 +10,7 @@ import { FeedingDay } from "@/components/feeding/feeding-day";
 import { FeedingDialog } from "@/components/feeding/feeding-dialog";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
 import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Asupan" };
 
@@ -20,7 +20,8 @@ const HISTORY_DAYS = 14;
 export default async function FeedingPage({ params }: PageProps<"/children/[id]/feeding">) {
   const { id } = await params;
   const user = await requireUser();
-  const child = await getChild(user.id, id);
+  const viewer = await getChildForViewer(user.id, id);
+  const child = viewer?.child;
   if (!child) notFound();
 
   const from = new Date();
@@ -33,17 +34,17 @@ export default async function FeedingPage({ params }: PageProps<"/children/[id]/
   const today = todayLocalISO();
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-4 pt-2">
       <Link
         href={`/children/${child.id}`}
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+        className="text-muted-foreground hover:text-foreground text-body-sm inline-flex w-fit items-center gap-1"
       >
-        <ChevronLeft className="size-4" aria-hidden />
+        <Icon name="arrow_back" className="text-[16px]" />
         {child.name}
       </Link>
 
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Asupan {child.name}</h1>
+      <header className="flex items-start justify-between gap-3">
+        <h1 className="text-headline-lg">Asupan {child.name}</h1>
         <FeedingDialog childId={child.id} />
       </header>
 
@@ -54,7 +55,7 @@ export default async function FeedingPage({ params }: PageProps<"/children/[id]/
 
         {days.length === 0 ? (
           <EmptyState
-            icon={Milk}
+            icon="water_bottle"
             title="Belum ada catatan asupan."
             description="Catat sesi menyusu atau pemberian susu untuk mulai melihat ringkasan harian."
             action={<FeedingDialog childId={child.id} />}

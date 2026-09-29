@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "stitch_littlesteps_child_growth_tracker", "tumbuh-kembang---monitoring-anak-&-buku-kia-digital"]
 }

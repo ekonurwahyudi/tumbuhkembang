@@ -2,6 +2,7 @@ import "server-only";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { children, feedingLogs, type FeedingLog } from "@/db/schema";
+import { childVisibleTo } from "./children";
 
 /**
  * Akses catatan asupan selalu di-join ke `children` agar terikat pada pemiliknya.
@@ -13,7 +14,7 @@ export async function listFeedingLogs(
   childId: string,
   opts: { from?: Date; to?: Date; limit?: number } = {},
 ): Promise<FeedingLog[]> {
-  const conditions = [eq(feedingLogs.childId, childId), eq(children.userId, userId)];
+  const conditions = [eq(feedingLogs.childId, childId), childVisibleTo(userId)];
   if (opts.from) conditions.push(gte(feedingLogs.fedAt, opts.from));
   if (opts.to) conditions.push(lt(feedingLogs.fedAt, opts.to));
 
@@ -36,7 +37,7 @@ export async function getFeedingLog(
     .select({ f: feedingLogs })
     .from(feedingLogs)
     .innerJoin(children, eq(children.id, feedingLogs.childId))
-    .where(and(eq(feedingLogs.id, logId), eq(children.userId, userId)))
+    .where(and(eq(feedingLogs.id, logId), childVisibleTo(userId)))
     .limit(1);
   return row?.f;
 }

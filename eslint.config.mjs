@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Template design referensi (proyek Vite terpisah) — bukan bagian build.
+    "tumbuh-kembang---monitoring-anak-&-buku-kia-digital/**",
   ]),
 ]);
 

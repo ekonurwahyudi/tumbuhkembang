@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { children, vaccinations, type Vaccination } from "@/db/schema";
+import { childVisibleTo } from "./children";
 
 /**
  * Akses catatan vaksinasi selalu di-join ke `children` agar terikat pada pemiliknya.
@@ -13,7 +14,7 @@ export async function listVaccinations(userId: string, childId: string): Promise
     .select({ v: vaccinations })
     .from(vaccinations)
     .innerJoin(children, eq(children.id, vaccinations.childId))
-    .where(and(eq(vaccinations.childId, childId), eq(children.userId, userId)))
+    .where(and(eq(vaccinations.childId, childId), childVisibleTo(userId)))
     .orderBy(asc(vaccinations.givenAt));
   return rows.map((r) => r.v);
 }
@@ -26,7 +27,7 @@ export async function getVaccination(
     .select({ v: vaccinations })
     .from(vaccinations)
     .innerJoin(children, eq(children.id, vaccinations.childId))
-    .where(and(eq(vaccinations.id, vaccinationId), eq(children.userId, userId)))
+    .where(and(eq(vaccinations.id, vaccinationId), childVisibleTo(userId)))
     .limit(1);
   return row?.v;
 }

@@ -1,6 +1,10 @@
 import type { NextAuthConfig } from "next-auth";
 
 /** Config tanpa dependency Node (bcrypt/db) supaya aman dipakai middleware edge. */
+/** Dipakai provider di index.ts dan tombol Google di halaman login/daftar. */
+export const googleOAuthConfigured = () =>
+  !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
+
 export const authConfig = {
   /**
    * Auth.js hanya mempercayai Host header secara otomatis di Vercel. Di self-host

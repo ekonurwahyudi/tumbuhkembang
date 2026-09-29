@@ -1,9 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
-import { LogOut } from "lucide-react";
 import { logoutAction } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Tombol keluar yang membersihkan cache service worker sebelum sesi diakhiri.
@@ -64,8 +65,21 @@ export function LogoutButton({
         })
       }
     >
-      <LogOut className="size-4" aria-hidden />
+      <Icon name="logout" className="text-[18px]" />
       {pending ? "Keluar..." : "Keluar"}
     </Button>
+  );
+}
+
+/**
+ * Versi untuk dropdown. `onSelect` harus dipasang di sini, bukan di pemanggil:
+ * AppHeader adalah server component dan tidak boleh mengoper event handler.
+ * preventDefault menahan menu agar tidak tertutup sebelum aksi keluar berjalan.
+ */
+export function LogoutMenuItem() {
+  return (
+    <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
+      <LogoutButton variant="ghost" className="h-auto w-full justify-start px-2 py-1.5 font-normal" />
+    </DropdownMenuItem>
   );
 }

@@ -30,6 +30,38 @@ export const formatWeight = (v: string | null) => formatDecimal(v, "kg", 2);
 export const formatLength = (v: string | null) => formatDecimal(v, "cm", 1);
 export const formatHead = (v: string | null) => formatDecimal(v, "cm", 1);
 
+/** Angka dan satuan terpisah, untuk ubin metrik yang menampilkannya beda ukuran. */
+export function splitMeasure(
+  value: string | null,
+  unit: string,
+  digits: number,
+): { value: string; unit: string | null } {
+  if (value === null) return { value: "—", unit: null };
+  const n = Number(value);
+  if (!Number.isFinite(n)) return { value: "—", unit: null };
+  return {
+    value: n.toLocaleString("id-ID", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }),
+    unit,
+  };
+}
+
+export const splitWeight = (v: string | null) => splitMeasure(v, "kg", 2);
+export const splitLength = (v: string | null) => splitMeasure(v, "cm", 1);
+export const splitHead = (v: string | null) => splitMeasure(v, "cm", 1);
+
+const longDateFormatter = new Intl.DateTimeFormat("id-ID", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+/** "Senin, 24 Oktober 2026" — sapaan beranda. */
+export const formatLongDate = (value: Date = new Date()) => longDateFormatter.format(value);
+
 export const SEX_LABEL = { MALE: "Laki-laki", FEMALE: "Perempuan" } as const;
 export const BIRTH_TYPE_LABEL = { TERM: "Cukup bulan", PRETERM: "Prematur" } as const;
 

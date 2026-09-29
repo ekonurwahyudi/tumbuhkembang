@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { isNotFuture, isValidYMD } from "./date";
-import { CATALOG_KEYS, catalogVaccine } from "@/lib/immunization/catalog";
+import { CATALOG_KEYS, IMMUNIZATION_CATALOG, catalogVaccine } from "@/lib/immunization/catalog";
+
+/**
+ * Nama bebas yang persis sama dengan vaksin katalog dicatat sebagai entri
+ * katalog. Form memberi daftar pilihan, jadi memilih "BCG" dari daftar dan
+ * mengetiknya sendiri harus berakhir sama — kalau tidak, dosis yang dipilih
+ * dari daftar tidak ikut terhitung di kemajuan imunisasi.
+ */
+const catalogKeyByName = (name: string): string | null =>
+  IMMUNIZATION_CATALOG.find((cv) => cv.name.toLowerCase() === name.toLowerCase())?.key ?? null;
 
 export const vaccinationSchema = z
   .object({
@@ -35,12 +44,15 @@ export const vaccinationSchema = z
       });
     }
   })
-  .transform((d) => ({
-    catalogKey: d.catalogKey,
-    name: d.catalogKey ? catalogVaccine(d.catalogKey)!.name : d.customName!,
-    givenAt: d.givenAt,
-    notes: d.notes,
-  }));
+  .transform((d) => {
+    const key = d.catalogKey ?? (d.customName ? catalogKeyByName(d.customName) : null);
+    return {
+      catalogKey: key,
+      name: key ? catalogVaccine(key)!.name : d.customName!,
+      givenAt: d.givenAt,
+      notes: d.notes,
+    };
+  });
 
 export type VaccinationInput = z.input<typeof vaccinationSchema>;
 export type VaccinationOutput = z.output<typeof vaccinationSchema>;

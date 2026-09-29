@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { catalogVaccine, effectiveMinAgeMonths, weightGateSatisfied } from "./catalog";
+import {
+  catalogVaccine,
+  effectiveMinAgeMonths,
+  weightGateSatisfied,
+  weightRuleApplies,
+} from "./catalog";
 
 describe("effectiveMinAgeMonths", () => {
   const hb0 = catalogVaccine("HB0")!;
@@ -56,5 +61,34 @@ describe("weightGateSatisfied", () => {
 
   it("vaksin tanpa syarat berat (mis. PCV1) selalu lolos", () => {
     expect(weightGateSatisfied(pcv1, preterm(500), 500)).toBe(true);
+  });
+});
+
+describe("weightRuleApplies", () => {
+  const term = (birthWeightGrams: number | null) => ({ birthType: "TERM" as const, birthWeightGrams });
+  const preterm = (birthWeightGrams: number | null) => ({ birthType: "PRETERM" as const, birthWeightGrams });
+  const opv1 = catalogVaccine("OPV1")!;
+  const bcg = catalogVaccine("BCG")!;
+  const hb0 = catalogVaccine("HB0")!;
+  const pcv1 = catalogVaccine("PCV1")!;
+
+  it("aturan pretermOnly hanya berlaku untuk bayi prematur", () => {
+    expect(weightRuleApplies(opv1, preterm(3000))).toBe(true);
+    expect(weightRuleApplies(opv1, term(1800))).toBe(false);
+    // Prematur berat lahir tak diketahui tetap terkena: pretermOnly tanpa ambang.
+    expect(weightRuleApplies(opv1, preterm(null))).toBe(true);
+  });
+
+  it("aturan berambang hanya berlaku di bawah ambang berat lahir", () => {
+    expect(weightRuleApplies(bcg, term(2400))).toBe(true);
+    expect(weightRuleApplies(bcg, term(2500))).toBe(false);
+    expect(weightRuleApplies(hb0, term(1999))).toBe(true);
+    expect(weightRuleApplies(hb0, term(2000))).toBe(false);
+    // Berat lahir tak diketahui: ambang tak bisa dipenuhi, aturan tidak ditampilkan.
+    expect(weightRuleApplies(bcg, term(null))).toBe(false);
+  });
+
+  it("vaksin tanpa syarat berat tidak pernah berlaku", () => {
+    expect(weightRuleApplies(pcv1, preterm(500))).toBe(false);
   });
 });

@@ -8,15 +8,18 @@ import { todayLocalISO } from "@/schemas/date";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Vaccination } from "@/db/schema";
 import type { CatalogVaccine } from "@/lib/immunization/catalog";
+import { VaccinePicker } from "./vaccine-picker";
 
 export function VaccinationForm({
   childId,
   catalog,
   record,
+  freeTextOnly,
   onDone,
 }: {
   childId: string;
@@ -24,6 +27,12 @@ export function VaccinationForm({
   catalog?: CatalogVaccine;
   /** Diisi saat mengubah catatan yang sudah ada. */
   record?: Vaccination;
+  /**
+   * Kolom nama polos tanpa daftar katalog. Dipakai "Tambah Vaksin Lain" di
+   * halaman anak: vaksin katalog punya barisnya sendiri di daftar itu, jadi
+   * menawarkan daftar yang sama di sini cuma jalan memutar.
+   */
+  freeTextOnly?: boolean;
   onDone?: () => void;
 }) {
   const router = useRouter();
@@ -53,15 +62,30 @@ export function VaccinationForm({
       {isCustomName ? (
         <div className="space-y-2">
           <Label htmlFor="customName">Nama vaksin</Label>
-          <Input
-            id="customName"
-            name="customName"
-            maxLength={100}
-            required
-            defaultValue={values.customName ?? record?.name ?? ""}
-            aria-invalid={!!fields?.customName}
-            aria-describedby={fields?.customName ? "name-error" : undefined}
-          />
+          {freeTextOnly ? (
+            <Input
+              id="customName"
+              name="customName"
+              autoComplete="off"
+              placeholder="mis. Influenza"
+              maxLength={100}
+              required
+              defaultValue={values.customName ?? record?.name ?? ""}
+              aria-invalid={!!fields?.customName}
+              aria-describedby={fields?.customName ? "name-error" : "customName-hint"}
+            />
+          ) : (
+            <VaccinePicker
+              defaultValue={values.customName ?? record?.name ?? ""}
+              invalid={!!fields?.customName}
+              describedBy={fields?.customName ? "name-error" : "customName-hint"}
+            />
+          )}
+          <p id="customName-hint" className="text-muted-foreground text-label-sm">
+            {freeTextOnly
+              ? "Untuk vaksin di luar jadwal program — vaksin program dicatat dari daftarnya di atas."
+              : "Pilih dari daftar vaksin program, atau tulis nama vaksin lain."}
+          </p>
           <FieldError id="name-error" message={fields?.customName} />
         </div>
       ) : (
@@ -73,15 +97,14 @@ export function VaccinationForm({
 
       <div className="space-y-2">
         <Label htmlFor="givenAt">Tanggal diberikan</Label>
-        <Input
+        <DateField
           id="givenAt"
           name="givenAt"
-          type="date"
           max={todayLocalISO()}
           defaultValue={values.givenAt ?? record?.givenAt ?? todayLocalISO()}
           required
-          aria-invalid={!!fields?.givenAt}
-          aria-describedby={fields?.givenAt ? "date-error" : undefined}
+          invalid={!!fields?.givenAt}
+          describedBy={fields?.givenAt ? "date-error" : undefined}
         />
         <FieldError id="date-error" message={fields?.givenAt} />
       </div>

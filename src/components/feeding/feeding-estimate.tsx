@@ -1,13 +1,64 @@
 "use client";
 
 import { useState } from "react";
-import { Info } from "lucide-react";
 import { estimateDailyFormula, type EstimateInput } from "@/lib/feeding/calculator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Icon } from "@/components/ui/icon";
 
 const ml = (n: number) => `${n.toLocaleString("id-ID")} ml`;
+
+const RING_R = 28;
+const RING_C = 2 * Math.PI * RING_R;
+
+/** Persen tercatat terhadap estimasi, dibatasi 0–100. Diekspor untuk diuji. */
+export function intakePercent(measured: number, estimate: number): number {
+  if (!(estimate > 0)) return 0;
+  return Math.max(0, Math.min(100, Math.round((measured / estimate) * 100)));
+}
+
+/**
+ * Cincin progres ala template: perbandingan volume tercatat terhadap batas
+ * bawah estimasi. Ini pembanding, bukan target — angkanya tetap ditulis di
+ * sebelahnya agar tidak hanya tersedia secara visual.
+ */
+function IntakeRing({ measured, estimate }: { measured: number; estimate: number }) {
+  const percent = intakePercent(measured, estimate);
+
+  return (
+    <div className="bg-muted border-border flex items-center gap-4 rounded-xl border p-3.5">
+      <div className="relative grid size-16 shrink-0 place-items-center">
+        <svg viewBox="0 0 64 64" className="size-16 -rotate-90" aria-hidden>
+          <circle cx="32" cy="32" r={RING_R} fill="none" stroke="var(--border)" strokeWidth="6" />
+          <circle
+            cx="32"
+            cy="32"
+            r={RING_R}
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={RING_C}
+            strokeDashoffset={RING_C - (RING_C * percent) / 100}
+          />
+        </svg>
+        <span className="text-body-sm absolute font-bold tabular-nums">{percent}%</span>
+      </div>
+      <div className="min-w-0">
+        <p className="flex items-baseline gap-1">
+          <span className="text-metric tabular-nums">{measured.toLocaleString("id-ID")}</span>
+          <span className="text-muted-foreground text-body-sm">
+            / {estimate.toLocaleString("id-ID")} ml tercatat
+          </span>
+        </p>
+        <p className="text-muted-foreground text-label-sm mt-0.5">
+          Dibandingkan batas bawah estimasi hari ini.
+        </p>
+      </div>
+    </div>
+  );
+}
 const DEFAULT_SESSIONS = 8;
 const MIN_SESSIONS = 1;
 const MAX_SESSIONS = 20;
@@ -35,14 +86,17 @@ export function FeedingEstimate({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Estimasi kisaran asupan</CardTitle>
+        <CardTitle className="text-headline-sm flex items-center gap-2">
+          <Icon name="nutrition" className="text-[var(--color-status-warning-text)]" />
+          Estimasi kisaran asupan
+        </CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {!estimate.available ? (
           <>
             <Alert>
-              <Info className="size-4" aria-hidden />
+              <Icon name="info" className="text-[16px]" />
               <AlertDescription>{estimate.message}</AlertDescription>
             </Alert>
             {measuredToday !== null && (
@@ -56,7 +110,11 @@ export function FeedingEstimate({
           </>
         ) : (
           <>
-            <dl className="space-y-2 text-sm">
+            {measuredToday !== null && (
+              <IntakeRing measured={measuredToday} estimate={estimate.estimatedMl} />
+            )}
+
+            <dl className="text-body-sm space-y-2">
               <div className="flex gap-2">
                 <dt className="text-muted-foreground">Berat terakhir</dt>
                 <dd className="ml-auto font-medium tabular-nums">

@@ -1,4 +1,3 @@
-import { Pencil } from "lucide-react";
 import { FEEDING_TYPE_LABEL } from "@/schemas/feeding";
 import { summarizeDay } from "@/lib/feeding/summary";
 import { formatDate } from "@/lib/format";
@@ -8,6 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteFeedingButton } from "./delete-feeding-button";
 import { FeedingDialog } from "./feeding-dialog";
 import type { FeedingLog } from "@/db/schema";
+import { Icon, type IconName } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
+
+const TYPE_ICON: Record<string, IconName> = {
+  BREAST_DIRECT: "child_care",
+  EXPRESSED_BREAST_MILK: "vaccines",
+  FORMULA: "water_bottle",
+};
 
 const formatTime = (d: Date) =>
   `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -38,34 +45,54 @@ export function FeedingDay({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">
+        <CardTitle className="text-headline-sm flex items-center justify-between gap-2">
           {isToday ? "Hari ini" : formatDate(date)}
-          <span className="text-muted-foreground ml-2 text-sm font-normal">
-            {s.totalSessions} sesi
+          <span className="text-muted-foreground text-label-sm font-normal">
+            {s.totalSessions} catatan
           </span>
         </CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <ul className="divide-y">
+        <ul className="space-y-2">
           {logs.map((log) => (
-            <li key={log.id} className="flex items-center gap-3 py-2 first:pt-0">
-              <span className="text-muted-foreground w-12 shrink-0 text-sm tabular-nums">
-                {formatTime(log.fedAt)}
+            <li
+              key={log.id}
+              className="bg-muted border-border flex items-start justify-between gap-3 rounded-xl border p-3"
+            >
+              <span
+                className={cn(
+                  "grid size-10 shrink-0 place-items-center rounded-full",
+                  log.feedingType === "FORMULA"
+                    ? "bg-[var(--color-butter-pastel)] text-[var(--color-on-butter)]"
+                    : "bg-accent text-primary",
+                )}
+              >
+                <Icon name={TYPE_ICON[log.feedingType]} className="text-[20px]" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm">{FEEDING_TYPE_LABEL[log.feedingType]}</span>
+                <span className="text-body-sm block font-bold">
+                  {FEEDING_TYPE_LABEL[log.feedingType]}
+                </span>
                 {log.notes && (
-                  <span className="text-muted-foreground block truncate text-xs">
+                  <span className="text-muted-foreground text-body-sm block truncate">
                     {log.notes}
                   </span>
                 )}
+                <span className="text-primary text-label-sm mt-0.5 block font-semibold tabular-nums">
+                  {formatTime(log.fedAt)}
+                </span>
               </span>
-              <span className="shrink-0 text-sm font-medium tabular-nums">
+              <span className="shrink-0 text-right">
                 {log.amountMl === null ? (
-                  <span className="text-muted-foreground font-normal">—</span>
+                  <span className="text-muted-foreground text-body-sm">—</span>
                 ) : (
-                  `${Number(log.amountMl).toLocaleString("id-ID", { maximumFractionDigits: 0 })} ml`
+                  <>
+                    <span className="text-metric tabular-nums">
+                      {Number(log.amountMl).toLocaleString("id-ID", { maximumFractionDigits: 0 })}
+                    </span>
+                    <span className="text-muted-foreground text-label-sm ml-0.5">ml</span>
+                  </>
                 )}
               </span>
               <span className="flex shrink-0 items-center">
@@ -78,7 +105,7 @@ export function FeedingDay({
                       size="icon"
                       aria-label={`Ubah catatan ${formatTime(log.fedAt)}`}
                     >
-                      <Pencil className="size-4" aria-hidden />
+                      <Icon name="edit" className="text-[16px]" />
                     </Button>
                   }
                 />
@@ -88,9 +115,9 @@ export function FeedingDay({
           ))}
         </ul>
 
-        <div className="bg-muted/40 space-y-2 rounded-lg p-3">
-          <p className="text-sm font-medium">Ringkasan</p>
-          <dl className="space-y-1 text-sm">
+        <div className="bg-muted border-border space-y-2 rounded-xl border p-3">
+          <p className="text-body-sm font-bold">Ringkasan</p>
+          <dl className="text-body-sm space-y-1">
             {s.breastDirectSessions > 0 && (
               <div className="flex gap-2">
                 <dt className="text-muted-foreground">ASI langsung</dt>
@@ -119,7 +146,7 @@ export function FeedingDay({
           </dl>
 
           {s.hasUnmeasuredSessions && (
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-label-sm">
               Total hanya mencakup sesi yang volumenya tercatat. Sesi menyusui langsung tanpa
               volume tidak ikut dijumlahkan.
             </p>
