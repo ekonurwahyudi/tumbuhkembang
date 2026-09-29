@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ChildPhotoPicker } from "./child-photo-field";
+import type { ActionResult } from "@/lib/action-result";
 import type { Child } from "@/db/schema";
 
 /** Pengukuran awal (hanya anak baru) — nama field sama dengan measurementSchema. */
@@ -28,7 +29,20 @@ const INITIAL_MEASURES = [
   { name: "headCircumferenceCm", label: "Lingkar Kepala (cm)", placeholder: "34", max: 80, step: 0.1 },
 ] as const;
 
-export function ChildForm({ child }: { child?: Child }) {
+/**
+ * `submitAction`/`redirectTo` ada supaya halaman admin bisa memakai ulang form ini apa
+ * adanya. Default-nya perilaku sekarang; menyalin form ini berarti aturan usia gestasi
+ * harus diperbaiki di dua tempat setiap kali berubah.
+ */
+export function ChildForm({
+  child,
+  submitAction,
+  redirectTo,
+}: {
+  child?: Child;
+  submitAction?: (formData: FormData) => Promise<ActionResult<{ id: string }>>;
+  redirectTo?: string;
+}) {
   const router = useRouter();
   const [birthType, setBirthType] = useState<"TERM" | "PRETERM">(child?.birthType ?? "TERM");
   // Hanya untuk anak baru: fotonya ditahan sampai ada id yang bisa dituju.
@@ -36,11 +50,15 @@ export function ChildForm({ child }: { child?: Child }) {
 
   const { action, fields, formError, values } = useFormAction(
     (formData) =>
-      child ? updateChildAction(child.id, formData) : createChildAction(formData),
+      submitAction
+        ? submitAction(formData)
+        : child
+          ? updateChildAction(child.id, formData)
+          : createChildAction(formData),
     async ({ id }) => {
       if (child) {
         toast.success("Data anak diperbarui.");
-        router.push(`/children/${id}`);
+        router.push(redirectTo ?? `/children/${id}`);
         return;
       }
 
@@ -60,7 +78,7 @@ export function ChildForm({ child }: { child?: Child }) {
         toast.success("Anak berhasil ditambahkan.");
       }
 
-      router.push(`/children/${id}`);
+      router.push(redirectTo ?? `/children/${id}`);
     },
   );
 

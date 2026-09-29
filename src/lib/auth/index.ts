@@ -66,12 +66,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       return user ? withDbUserId(token, user) : token;
     },
-    // Name/email di session selalu fresh dari DB — edit profil langsung terlihat
-    // tanpa login ulang. JWT hanya menyimpan id; biaya: satu query per auth().
+    // Name/email/role di session selalu fresh dari DB — edit profil dan perubahan peran
+    // langsung berlaku tanpa login ulang. JWT hanya menyimpan id; biaya: satu query per
+    // auth(). Peran di sinilah yang jadi batas keamanan, bukan klaim di token.
     async session({ session, token }) {
       if (token.id) {
         const [row] = await db
-          .select({ name: users.name, email: users.email })
+          .select({
+            name: users.name,
+            email: users.email,
+            role: users.role,
+            photoKey: users.photoKey,
+          })
           .from(users)
           .where(eq(users.id, token.id as string))
           .limit(1);
@@ -83,6 +89,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.name = row.name;
         session.user.email = row.email;
+        session.user.role = row.role;
+        // Dibawa di session supaya avatar di header ikut berubah begitu foto
+        // profil diganti, tanpa query tambahan di tiap layout.
+        session.user.photoKey = row.photoKey;
       }
       return session;
     },
@@ -111,5 +121,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 export async function requireUser() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("UNAUTHENTICATED");
-  return { id: session.user.id, name: session.user.name ?? "", email: session.user.email ?? "" };
+  return {
+    id: session.user.id,
+    name: session.user.name ?? "",
+    email: session.user.email ?? "",
+    role: session.user.role,
+    photoKey: session.user.photoKey ?? null,
+  };
+}
+
+/**
+ * Batas keamanan sebenarnya untuk /admin dan semua action admin.
+ *
+ * Perannya dari session() di atas, yang membaca DB tiap kali — bukan dari klaim JWT
+ * yang bisa berumur 30 hari. Penjaga di middleware hanya redirect untuk kenyamanan.
+ */
+export async function requireSuperadmin() {
+  const user = await requireUser();
+  if (user.role !== "SUPERADMIN") throw new Error("FORBIDDEN");
+  return user;
 }

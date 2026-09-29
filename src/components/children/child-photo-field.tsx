@@ -25,7 +25,7 @@ export const formatSize = (bytes: number) =>
  * Cek di sini hanya untuk memberi tahu lebih cepat — server tetap memvalidasi,
  * karena permintaan bisa dibuat tanpa lewat form sama sekali.
  */
-async function pickPhoto(file: File): Promise<{ file: File } | { error: string }> {
+export async function pickPhoto(file: File): Promise<{ file: File } | { error: string }> {
   if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number]))
     return { error: "Gunakan berkas JPG, PNG, atau WebP." };
 
@@ -41,23 +41,31 @@ async function pickPhoto(file: File): Promise<{ file: File } | { error: string }
 
 const HINT = `Opsional. JPG, PNG, atau WebP, maksimal ${MB} MB. Foto otomatis dikecilkan dan diubah ke WebP agar ringan. Hanya bisa dilihat oleh akun Anda.`;
 
-/** Kerangka tampilan yang sama untuk kedua mode. */
-function PhotoRow({
+/** Kerangka tampilan yang sama untuk kedua mode, juga dipakai foto MyRegistry. */
+export function PhotoRow({
   avatar,
   actions,
   error,
   inputRef,
-  onFile,
+  onFiles,
+  label = "Foto Anak",
+  hint = HINT,
+  multiple = false,
 }: {
   avatar: React.ReactNode;
   actions: React.ReactNode;
   error: string | null;
   inputRef: React.RefObject<HTMLInputElement | null>;
-  onFile: (file: File) => void;
+  /** Semua berkas terpilih sekaligus — satu panggilan, satu unggahan. */
+  onFiles: (files: File[]) => void;
+  label?: string;
+  hint?: string;
+  /** Foto barang wishlist boleh beberapa sudut; avatar tetap satu. */
+  multiple?: boolean;
 }) {
   return (
     <div className="space-y-2">
-      <span className="text-sm leading-none font-medium">Foto Anak</span>
+      <span className="text-sm leading-none font-medium">{label}</span>
 
       <div className="flex items-center gap-3.5">
         {avatar}
@@ -72,16 +80,17 @@ function PhotoRow({
         ref={inputRef}
         type="file"
         accept={ALLOWED_PHOTO_TYPES.join(",")}
+        multiple={multiple}
         className="sr-only"
-        aria-label="Pilih foto anak"
+        aria-label={`Pilih ${label.toLowerCase()}`}
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length > 0) onFiles(files);
           e.target.value = "";
         }}
       />
 
-      <p className="text-muted-foreground text-xs">{HINT}</p>
+      <p className="text-muted-foreground text-xs">{hint}</p>
       {error && (
         <p role="alert" className="text-destructive text-xs">
           {error}
@@ -144,7 +153,7 @@ export function ChildPhotoField({ child }: { child: Child }) {
     <PhotoRow
       error={error}
       inputRef={inputRef}
-      onFile={onFile}
+      onFiles={([file]) => onFile(file)}
       avatar={
         <ChildAvatar
           child={child}
@@ -220,7 +229,7 @@ export function ChildPhotoPicker({
     <PhotoRow
       error={error}
       inputRef={inputRef}
-      onFile={onFile}
+      onFiles={([file]) => onFile(file)}
       avatar={
         <span className="bg-accent text-primary ring-accent grid size-16 shrink-0 place-items-center overflow-hidden rounded-full ring-2">
           {previewUrl ? (

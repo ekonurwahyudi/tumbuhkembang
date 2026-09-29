@@ -1,62 +1,102 @@
 # Preterm Growth Reference
 
-**Status: belum diterapkan.** Dataset preterm belum dimasukkan ke repository.
+**Status: diterapkan (Fenton 2013, hasil digitasi).** Lihat `src/lib/growth/fenton.ts`
+dan `src/lib/growth/data/fenton-*.json`.
 
-## Apa yang dilakukan aplikasi saat ini untuk bayi prematur
+## Apa yang dilakukan aplikasi untuk bayi prematur
 
 | Kondisi | Perlakuan |
 |---|---|
-| Corrected age < 0 (belum mencapai usia term) | **Tidak dinilai.** Aplikasi menyatakan reference preterm belum tersedia, bukan memakai WHO yang tidak berlaku pada fase ini. |
-| Corrected age >= 0, usia kronologis <= 3 tahun | Dinilai dengan WHO Child Growth Standards memakai **corrected age** sebagai sumbu usia. |
-| Usia kronologis > 3 tahun | Dinilai dengan WHO memakai usia kronologis (batas koreksi AAP). |
+| Usia kehamilan saat lahir <= 37 minggu **dan** PMA di dalam cakupan dataset Fenton | **Fenton 2013**, sumbu **post-menstrual age (PMA)**. |
+| PMA di luar cakupan Fenton, corrected age >= 0 | WHO Child Growth Standards, sumbu **corrected age**. |
+| PMA di luar cakupan Fenton, corrected age < 0 | **Tidak dinilai** — aplikasi menyatakan reference tidak tersedia. |
+| Usia kronologis > 3 tahun | WHO dengan usia kronologis (batas koreksi AAP). |
 
-Pemakaian WHO dengan corrected age setelah bayi mencapai usia term adalah
-pendekatan yang lazim, tetapi **bukan pengganti** reference khusus preterm pada
-fase sebelum term. Karena itu fase tersebut sengaja tidak dinilai.
+Ambang 37 minggu (`FENTON_MAX_GESTATION_DAYS` di `src/lib/growth/engine.ts`)
+sedikit lebih longgar daripada definisi WHO "preterm" (< 37 minggu lengkap):
+37w0d ikut masuk, 37w1d tidak. Grafik sumbernya memang masih menggambar sampai
+sana, dan ini ambang yang diminta produk.
 
-Perhitungan usianya sendiri — corrected age dan post-menstrual age — sudah
-diterapkan; lihat [age-terminology.md](./age-terminology.md).
+Perpindahan Fenton → WHO terjadi **otomatis** begitu PMA melewati cakupan
+dataset; tidak ada aksi pengguna yang diperlukan.
 
-## Source yang akan digunakan
+Pengguna dapat mematikan Fenton lewat `?fenton=off` — saklarnya ada di atas
+grafik pada `/children/[id]` dan `/children/[id]/growth`
+(`src/components/growth/fenton-switch.tsx`). Saat dimatikan, aturan lama berlaku
+dan fase sebelum term kembali tidak dinilai.
 
-American Academy of Pediatrics — **Preterm Infant Growth Tools**
+Satu grafik hanya menggambar satu sumbu usia. Bayi yang riwayatnya melintasi
+batas Fenton→WHO digambar pada sumbu pengukuran **terbaru**; pengukuran lama
+tetap punya z-score-nya sendiri, hanya tidak ikut digambar bersama — kedua sumbu
+terpaut satu usia gestasi penuh, jadi menggabungkannya akan membuat lintasan
+melompat mundur.
 
-- https://www.aap.org/en/patient-care/newborn-infant-and-early-childhood-nutrition/newborn-and-infant-nutrition-assessment-tools/preterm-infant-growth-tools/
+Perhitungan usianya sendiri — corrected age dan PMA — lihat
+[age-terminology.md](./age-terminology.md).
 
-Kandidat reference: **Fenton Preterm Growth Chart (2013 revision)**.
+## Sumber data
 
 - Fenton TR, Kim JH. "A systematic review and meta-analysis to revise the Fenton
   growth chart for preterm infants." *BMC Pediatrics* 2013;13:59.
-- Cakupan: 22–50 minggu post-menstrual age, terpisah untuk bayi laki-laki dan perempuan.
-- Indikator: weight, length, head circumference.
+- Grafik yang didigitasi: Buku KIA Kementerian Kesehatan RI, halaman grafik
+  Fenton untuk bayi perempuan dan laki-laki.
+- Skrip digitasi: `scripts/fenton/digitize.py` (gambar → LMS mingguan; `build()`
+  membaca kolom lengkap, `extend()` melanjutkan tiap indikator di PMA akhir) dan
+  `scripts/fenton/emit.py` (LMS mingguan → dataset harian yang dipakai aplikasi).
 
-## Sumbu usia
+Tabel LMS Fenton tidak diterbitkan dengan lisensi terbuka; angka di repositori
+ini **hasil digitasi grafik**, bukan salinan tabel resmi. Untuk pemakaian klinis
+yang memerlukan angka resmi, hubungi penulisnya (https://ucalgary.ca/fenton).
 
-Chart preterm memakai **post-menstrual age (PMA)**, bukan usia kronologis:
+## Cakupan sebenarnya, dan mengapa lebih sempit dari grafiknya
 
-```
-PMA = gestational_age_at_birth + chronological_age
-```
+Grafik sumber menggambar 22–50 minggu PMA. Dataset di repositori ini sedikit
+lebih sempit, dan **cakupannya berbeda per indikator**:
 
-Sudah diimplementasikan di `postMenstrualAgeDays()`.
+| | Berat | Panjang | Lingkar kepala |
+|---|---|---|---|
+| Laki-laki | 24–49 minggu | 24–46 minggu | 24–49 minggu |
+| Perempuan | 23–49 minggu | 23–46 minggu | 23–46 minggu |
 
-## Aturan transisi ke WHO — BELUM DITENTUKAN
+Sebabnya, semuanya sifat gambar sumbernya:
 
-Pertanyaan yang harus dijawab dengan reference eksplisit sebelum fitur grafik
-diaktifkan:
+- **Di bawah ~23–24 minggu kurvanya memang belum digambar** — pemeriksaan
+  langsung pada gambar menunjukkan bidang plotnya kosong di sana.
+- **Kurva panjang badan keluar dari tepi atas grafik.** Sumbu sentimeter
+  berakhir di ~59,9 cm sementara persentil 97 panjang sudah melewati 60 cm pada
+  minggu 47; garisnya tidak ada lagi untuk dibaca.
+- **Minggu 50 tidak punya cukup kolom** — itu tepi kanan bidang gambar, tempat
+  kurvanya bertemu bingkai.
 
-- [ ] Pada PMA/usia berapa aplikasi berpindah dari Fenton ke WHO?
-- [ ] Setelah transisi, sumbu usia yang dipakai: corrected age atau usia kronologis?
-- [ ] Sampai usia berapa koreksi diterapkan pada grafik? (AAP menyebut 3 tahun
-      untuk terminologi usia; aturan untuk plotting grafik harus dirujuk terpisah.)
+Di atas ~46 minggu pengurutan-menurut-Y milik digitizer runtuh: persentil 97
+berat naik melewati 6,3 kg, tinggi gambar yang pada sumbu kiri terbaca 33 cm,
+sehingga rumpun berat menyusup ke rumpun lingkar kepala. Yang runtuh hanya cara
+mengenali pita, bukan garisnya. Tahap `extend()` di digitizer melewati batas itu
+dengan menambatkan tiap indikator pada posisinya sendiri di minggu sebelumnya,
+jadi perlintasan antar-rumpun tidak lagi mengganggu.
 
-Selama pertanyaan ini belum terjawab dengan sumber, aplikasi **tidak** menampilkan
-kurva reference untuk bayi prematur.
+Menerbitkan tebakan di luar rentang itu lebih buruk daripada menyatakan tidak
+tersedia, jadi di luar cakupan aplikasi berpindah ke WHO atau menyatakan
+reference tidak berlaku.
+
+Batas terendah, 46 minggu PMA, setara sekitar 6 minggu usia terkoreksi — sudah
+berada di dalam cakupan WHO, sehingga tidak ada usia yang kehilangan reference.
+
+## Ketepatan
+
+- Residual LMS tiap minggu yang diterbitkan <= 0,05 unit (ambang `MAX_RMSE` di
+  digitizer); minggu yang melewatinya dibuang, bukan diterbitkan.
+- Patokan luar: P50 laki-laki pada PMA 30 minggu cocok dengan angka terbitan
+  Fenton (berat 1,41 kg; panjang 39,2 cm; lingkar kepala 27,5 cm). Diperiksa
+  ulang terhadap berkas JSON yang benar-benar dipakai aplikasi di
+  `src/lib/growth/fenton.test.ts`, bukan hanya di dalam digitizer.
+- Nilai harian diinterpolasi linear di antara minggu bulat; galat interpolasi
+  jauh di bawah galat digitasi (~0,02 unit).
 
 ## Known limitations
 
-- Fenton 2013 adalah *growth reference* (deskriptif, menggambarkan pertumbuhan
-  janin/bayi preterm), berbeda sifat dari WHO yang merupakan *growth standard*
-  (preskriptif). Keduanya tidak boleh disamakan begitu saja dalam satu grafik.
-- Ketentuan lisensi/distribusi dataset Fenton harus diperiksa sebelum file
-  datanya dimasukkan ke repository publik.
+- Fenton 2013 adalah *growth reference* (deskriptif), berbeda sifat dari WHO yang
+  merupakan *growth standard* (preskriptif). Keduanya tidak disamakan dalam satu
+  grafik — lihat aturan satu-sumbu di atas.
+- Angka hasil digitasi membawa galat pembacaan gambar; bukan pengganti tabel
+  resmi untuk keperluan yang menuntut ketepatan penuh.

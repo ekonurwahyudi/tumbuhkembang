@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   index,
@@ -14,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+export const userRoleEnum = pgEnum("user_role", ["USER", "SUPERADMIN"]);
 export const sexEnum = pgEnum("sex", ["MALE", "FEMALE"]);
 export const birthTypeEnum = pgEnum("birth_type", ["TERM", "PRETERM"]);
 export const shareStatusEnum = pgEnum("share_status", ["PENDING", "ACCEPTED"]);
@@ -21,6 +23,15 @@ export const feedingTypeEnum = pgEnum("feeding_type", [
   "BREAST_DIRECT",
   "EXPRESSED_BREAST_MILK",
   "FORMULA",
+]);
+export const registryPriorityEnum = pgEnum("registry_priority", ["HIGH", "NORMAL", "EXTRA"]);
+export const registryCategoryEnum = pgEnum("registry_category", [
+  "NUTRITION",
+  "CLOTHING",
+  "BEDROOM",
+  "TOYS",
+  "TRANSPORT",
+  "OTHER",
 ]);
 
 export const users = pgTable(
@@ -31,12 +42,24 @@ export const users = pgTable(
     email: text("email").notNull(),
     // Null untuk akun yang dibuat lewat Google — tidak bisa login via password.
     passwordHash: text("password_hash"),
+    // Default USER untuk setiap pendaftar. Dinaikkan hanya lewat scripts/grant-admin.ts —
+    // tidak ada server action yang menulis kolom ini, jadi tidak ada jalur eskalasi.
+    role: userRoleEnum("role").notNull().default("USER"),
     phone: text("phone"),
     photoKey: text("photo_key"),
+    // Tautan publik MyRegistry. Token baru dibuat saat pertama kali dibagikan, bukan
+    // saat pendaftaran: akun yang tidak pernah berbagi tidak punya tautan untuk ditebak.
+    // registryPublic dimatikan tanpa mengganti token, jadi tautannya bisa dihidupkan lagi.
+    registryToken: text("registry_token"),
+    registryPublic: boolean("registry_public").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("users_email_unique").on(sql`lower(${t.email})`)],
+  (t) => [
+    uniqueIndex("users_email_unique").on(sql`lower(${t.email})`),
+    // NULL boleh berkali-kali di unique index Postgres, jadi akun tanpa token aman.
+    uniqueIndex("users_registry_token_unique").on(t.registryToken),
+  ],
 );
 
 export const children = pgTable(
@@ -207,8 +230,100 @@ export const vaccineReminders = pgTable(
   ],
 );
 
+/**
+ * MyRegistry: daftar kado impian milik satu akun orang tua (bukan per anak — satu
+ * daftar, satu tautan publik). `childId` opsional hanya untuk label "Untuk: Aisyah";
+ * anak yang dihapus meninggalkan itemnya utuh, karena barangnya tetap dibutuhkan.
+ *
+ * Tiga kolom tautan toko, bukan tabel anak: jumlah marketplace-nya tetap tiga.
+ */
+export const registryItems = pgTable(
+  "registry_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    childId: uuid("child_id").references(() => children.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    /**
+     * Beberapa foto per barang (sudut berbeda), yang pertama jadi foto utama.
+     * Kolom array, bukan tabel anak: key-nya selalu dibaca bersama barangnya dan
+     * tidak pernah dicari sendiri, jadi tabel terpisah hanya menambah join.
+     */
+    photoKeys: text("photo_keys").array().notNull().default([]),
+    priority: registryPriorityEnum("priority").notNull().default("NORMAL"),
+    category: registryCategoryEnum("category").notNull().default("OTHER"),
+    // Kisaran harga dalam rupiah utuh — integer, bukan numeric: tidak ada sen di sini.
+    priceMinIdr: integer("price_min_idr"),
+    priceMaxIdr: integer("price_max_idr"),
+    desiredQty: integer("desired_qty").notNull().default(1),
+    allowGroup: boolean("allow_group").notNull().default(false),
+    isPublic: boolean("is_public").notNull().default(true),
+    note: text("note"),
+    urlShopee: text("url_shopee"),
+    urlTokopedia: text("url_tokopedia"),
+    urlTiktok: text("url_tiktok"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("registry_items_user_id_idx").on(t.userId),
+    check("registry_items_qty_range", sql`${t.desiredQty} between 1 and 99`),
+    check(
+      "registry_items_price_range",
+      sql`${t.priceMinIdr} IS NULL OR ${t.priceMaxIdr} IS NULL OR ${t.priceMaxIdr} >= ${t.priceMinIdr}`,
+    ),
+  ],
+);
+
+/**
+ * Klaim kado oleh orang luar — satu-satunya tabel di aplikasi ini yang ditulis tanpa
+ * sesi. Otorisasinya cuma dua token: `users.registry_token` untuk membuat klaim, dan
+ * `claim_token` di sini supaya pengklaim bisa kembali mengisi nomor resinya.
+ *
+ * Tidak ada kolom status: `tracking_number IS NULL` berarti belum dikirim, terisi
+ * berarti sedang dikirim. Nama kurir sudah muat di teks resinya.
+ */
+export const registryClaims = pgTable(
+  "registry_claims",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => registryItems.id, { onDelete: "cascade" }),
+    claimerName: text("claimer_name").notNull(),
+    qty: integer("qty").notNull().default(1),
+    message: text("message"),
+    trackingNumber: text("tracking_number"),
+    claimToken: text("claim_token").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("registry_claims_token_unique").on(t.claimToken),
+    index("registry_claims_item_id_idx").on(t.itemId),
+    check("registry_claims_qty_range", sql`${t.qty} between 1 and 99`),
+  ],
+);
+
+export const registryItemsRelations = relations(registryItems, ({ one, many }) => ({
+  user: one(users, { fields: [registryItems.userId], references: [users.id] }),
+  child: one(children, { fields: [registryItems.childId], references: [children.id] }),
+  claims: many(registryClaims),
+}));
+
+export const registryClaimsRelations = relations(registryClaims, ({ one }) => ({
+  item: one(registryItems, {
+    fields: [registryClaims.itemId],
+    references: [registryItems.id],
+  }),
+}));
+
 export const usersRelations = relations(users, ({ many }) => ({
   children: many(children),
+  registryItems: many(registryItems),
 }));
 
 /**
@@ -278,6 +393,8 @@ export const vaccineRemindersRelations = relations(vaccineReminders, ({ one }) =
 }));
 
 export type User = typeof users.$inferSelect;
+/** Satu-satunya sumber nilai peran — jangan tulis literalnya lagi di tempat lain. */
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type Child = typeof children.$inferSelect;
 export type GrowthMeasurement = typeof growthMeasurements.$inferSelect;
 export type FeedingLog = typeof feedingLogs.$inferSelect;
@@ -285,3 +402,8 @@ export type Vaccination = typeof vaccinations.$inferSelect;
 export type VaccinationSkip = typeof vaccinationSkips.$inferSelect;
 export type VaccineReminder = typeof vaccineReminders.$inferSelect;
 export type ChildShare = typeof childShares.$inferSelect;
+export type RegistryItem = typeof registryItems.$inferSelect;
+export type RegistryClaim = typeof registryClaims.$inferSelect;
+/** Satu-satunya sumber nilai prioritas/kategori — jangan tulis literalnya lagi. */
+export type RegistryPriority = (typeof registryPriorityEnum.enumValues)[number];
+export type RegistryCategory = (typeof registryCategoryEnum.enumValues)[number];

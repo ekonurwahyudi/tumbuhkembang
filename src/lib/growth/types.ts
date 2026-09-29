@@ -35,9 +35,17 @@ export type GrowthResult = {
   percentile: number;
   reference: string;
   referenceVersion: string;
-  /** Sumbu usia yang dipakai: kronologis, atau terkoreksi untuk bayi prematur. */
-  ageBasis: "chronological" | "corrected";
+  /** Sumbu usia yang dipakai. */
+  ageBasis: AgeBasis;
 };
+
+/**
+ * Sumbu usia perhitungan:
+ * - chronological: sejak lahir (anak cukup bulan).
+ * - corrected:     kronologis dikurangi prematuritas, sumbu WHO untuk prematur.
+ * - postmenstrual: usia gestasi + kronologis, satu-satunya sumbu Fenton.
+ */
+export type AgeBasis = "chronological" | "corrected" | "postmenstrual";
 
 /** Alasan sebuah perhitungan tidak dapat dilakukan — ditampilkan apa adanya, bukan ditebak. */
 export type GrowthUnavailable = {

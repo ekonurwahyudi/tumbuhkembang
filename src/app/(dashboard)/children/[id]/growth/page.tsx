@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getChildForViewer } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
 import { buildChartSeries } from "@/lib/growth/chart-data";
+import { fentonEligible } from "@/lib/growth/engine";
 import type { MeasurementType } from "@/lib/growth/types";
 import { ChildHero } from "@/components/children/child-hero";
+import { FentonSwitch } from "@/components/growth/fenton-switch";
 import { GrowthSummary } from "@/components/growth/growth-summary";
 import { GrowthTabs } from "@/components/growth/growth-tabs";
 import { MeasurementDialog } from "@/components/measurements/measurement-dialog";
@@ -23,8 +24,12 @@ const TYPES: MeasurementType[] = [
   "head-circumference-for-age",
 ];
 
-export default async function GrowthPage({ params }: PageProps<"/children/[id]/growth">) {
+export default async function GrowthPage({
+  params,
+  searchParams,
+}: PageProps<"/children/[id]/growth">) {
   const { id } = await params;
+  const { fenton } = await searchParams;
   const user = await requireUser();
   const viewer = await getChildForViewer(user.id, id);
   const child = viewer?.child;
@@ -32,8 +37,16 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
 
   const measurements = await listMeasurements(user.id, child.id, "asc");
 
+  // Saklar Fenton lewat URL, bukan kolom database: ini pilihan tampilan untuk
+  // satu kunjungan halaman, bukan sifat anaknya, dan URL-nya bisa dibagikan ke
+  // tenaga kesehatan apa adanya. Default menyala — Fenton memang reference yang
+  // tepat untuk bayi prematur selama PMA-nya masih tercakup.
+  const useFenton = fenton !== "off";
+
   // Perhitungan seluruhnya di server; komponen chart hanya menerima angka jadi.
-  const series = TYPES.map((type) => buildChartSeries(child, measurements, type));
+  const series = TYPES.map((type) =>
+    buildChartSeries({ ...child, useFenton }, measurements, type),
+  );
   const summaries = Object.fromEntries(
     series.map((s) => [s.measurementType, <GrowthSummary key={s.measurementType} series={s} />]),
   );
@@ -42,14 +55,6 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
 
   return (
     <div className="flex flex-col gap-4 pt-2">
-      <Link
-        href={`/children/${child.id}`}
-        className="text-muted-foreground hover:text-foreground text-body-sm inline-flex w-fit items-center gap-1"
-      >
-        <Icon name="arrow_back" className="text-[16px]" />
-        {child.name}
-      </Link>
-
       <ChildHero child={child} />
 
       {measurements.length === 0 ? (
@@ -61,6 +66,21 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
         />
       ) : (
         <>
+          {/*
+            Saklar hanya muncul untuk anak yang usia kehamilannya <= 37 minggu:
+            di atas itu Fenton tidak pernah terpilih, jadi saklarnya tidak akan
+            mengubah apa pun.
+          */}
+          {fentonEligible(child) && (
+            <FentonSwitch
+              basePath={`/children/${child.id}/growth`}
+              useFenton={useFenton}
+              ageBasis={series[0].ageBasis}
+              sex={child.sex}
+              gestationalAgeWeeks={child.gestationalAgeWeeks!}
+              gestationalAgeDays={child.gestationalAgeDays!}
+            />
+          )}
           <GrowthTabs series={series} summaries={summaries} />
           <MeasurementDialog
             childId={child.id}
@@ -75,11 +95,19 @@ export default async function GrowthPage({ params }: PageProps<"/children/[id]/g
         </>
       )}
 
+      {/*
+        Dibaca dari `ageBasis` hasil perhitungan, bukan dari `birthType`: koreksi
+        usia berhenti di 3 tahun (batas AAP), jadi anak prematur yang sudah lewat
+        batas itu dinilai dengan usia kronologis. Menyimpulkan dari birthType
+        membuat catatan ini berbohong tepat pada kasus tersebut.
+      */}
       <p className="text-muted-foreground text-label-sm">
         Kurva reference: {refName.name} ({refName.version}).{" "}
-        {child.birthType === "PRETERM"
-          ? "Usia yang dipakai adalah usia terkoreksi sesuai rekomendasi AAP."
-          : "Usia yang dipakai adalah usia kronologis."}
+        {series.some((s) => s.ageBasis === "postmenstrual")
+          ? "Usia yang dipakai adalah usia pascamenstruasi (PMA), sumbu grafik Fenton."
+          : series.some((s) => s.ageBasis === "corrected")
+            ? "Usia yang dipakai adalah usia terkoreksi sesuai rekomendasi AAP."
+            : "Usia yang dipakai adalah usia kronologis."}
       </p>
 
       <MedicalDisclaimer />

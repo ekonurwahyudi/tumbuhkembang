@@ -16,7 +16,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
 
   if (!share)
     return (
-      <main className="bg-surface flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+      <main className="bg-background flex min-h-dvh flex-col items-center justify-center px-6 text-center">
         <div className="bg-card flex size-16 items-center justify-center rounded-2xl shadow-sm">
           <Icon name="link" className="text-muted-foreground text-[32px]" />
         </div>
@@ -37,7 +37,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   const email = session.user.email;
   if (email.toLowerCase() !== share.inviteeEmail.toLowerCase()) {
     return (
-      <main className="bg-surface flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+      <main className="bg-background flex min-h-dvh flex-col items-center justify-center px-6 text-center">
         <div className="bg-card flex size-16 items-center justify-center rounded-2xl shadow-sm">
           <Icon name="alternate_email" className="text-muted-foreground text-[32px]" />
         </div>
@@ -59,7 +59,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
     await acceptAllPendingSharesFromOwner(share.ownerId, session.user.id, email);
 
   return (
-    <main className="bg-surface flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+    <main className="bg-background flex min-h-dvh flex-col items-center justify-center px-6 text-center">
       <div className="bg-card flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border p-6 shadow-sm">
         <div className="bg-accent text-primary flex size-14 items-center justify-center rounded-full">
           <Icon name="family_restroom" className="text-[28px]" />

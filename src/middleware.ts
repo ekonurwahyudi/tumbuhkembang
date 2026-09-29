@@ -4,10 +4,10 @@ import { authConfig } from "@/lib/auth/config";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/invite"];
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/invite", "/kado"];
 
 /** Paths accessible without auth that should NOT redirect logged-in users to dashboard. */
-const PUBLIC_NO_BOUNCE = ["/invite"];
+const PUBLIC_NO_BOUNCE = ["/invite", "/kado"];
 
 export default auth((req) => {
   const { pathname, search } = req.nextUrl;
@@ -31,6 +31,10 @@ export default auth((req) => {
     return NextResponse.redirect(new URL(target, req.nextUrl));
   }
 
+  // /admin sengaja TIDAK dijaga di sini. req.auth cuma punya klaim JWT yang terbit saat
+  // login dan hidup 30 hari, jadi admin yang baru dinaikkan perannya akan ditendang
+  // sampai login ulang — penjaga yang salah menolak. Penjaganya requireSuperadmin() di
+  // layout (admin) dan di setiap action admin; keduanya membaca peran dari DB.
   return NextResponse.next();
 });
 

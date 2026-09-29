@@ -1,4 +1,5 @@
 /** Formatter tampilan berbahasa Indonesia. Tidak ada logika medis di sini. */
+import { formatWeeksDays } from "./growth/corrected-age";
 
 const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   day: "numeric",
@@ -70,6 +71,21 @@ export function formatPercentile(p: number): string {
   if (p < 0.1) return "< 0,1";
   if (p > 99.9) return "> 99,9";
   return p.toLocaleString("id-ID", { maximumFractionDigits: 1 });
+}
+
+/**
+ * Label usia sesuai sumbunya.
+ *
+ * Sumbu PMA wajib ditulis dalam minggu: 230 hari PMA adalah "33 minggu", bukan
+ * "8 bulan" — bayinya baru berumur beberapa minggu, dan angka bulan di sini
+ * terbaca sebagai usia sejak lahir oleh siapa pun yang melihatnya.
+ */
+export function formatBasisAge(
+  basis: "chronological" | "corrected" | "postmenstrual",
+  days: number,
+): string {
+  if (basis === "postmenstrual") return formatWeeksDays(days);
+  return `${basis === "corrected" ? "usia terkoreksi" : "usia"} ${formatAgeDaysLong(days)}`;
 }
 
 /** Label usia panjang untuk tooltip dan ringkasan: "8 bulan", "2 tahun 6 bulan". */

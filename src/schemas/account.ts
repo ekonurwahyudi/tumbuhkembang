@@ -15,6 +15,14 @@ export const profileSchema = z.object({
   phone: phoneSchema.optional(),
 });
 
+/**
+ * Akun baru yang dibuat admin: profileSchema + kata sandi awal.
+ *
+ * `passwordSchema` sama dengan registrasi — akun buatan admin tidak boleh punya kata
+ * sandi yang lebih lemah daripada akun yang mendaftar sendiri.
+ */
+export const adminNewParentSchema = profileSchema.extend({ password: passwordSchema });
+
 // Aturan sama dengan register — kata sandi lewat halaman ini tidak boleh lebih
 // lemah daripada yang dibuat saat mendaftar.
 export const passwordChangeSchema = z

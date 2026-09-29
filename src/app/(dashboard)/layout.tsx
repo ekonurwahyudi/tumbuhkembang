@@ -12,7 +12,12 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <AppHeader name={session.user.name ?? "Pengguna"} email={session.user.email ?? ""} />
+      <AppHeader
+        name={session.user.name ?? "Pengguna"}
+        email={session.user.email ?? ""}
+        role={session.user.role}
+        photoKey={session.user.photoKey}
+      />
       {/* overflow-x-clip menahan slider yang sengaja "bleed" lewat -mx-4; relative
           memberi containing block agar label .sr-only (position:absolute) di dalam
           slider ikut terpotong, bukan melebarkan dokumen. */}

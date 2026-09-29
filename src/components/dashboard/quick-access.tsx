@@ -15,14 +15,26 @@ type Tile = {
   href?: string;
 };
 
-export function QuickAccess({ childId }: { childId: string }) {
+export function QuickAccess({
+  childId,
+  registryClaims = 0,
+}: {
+  childId: string;
+  /** Jumlah klaim kado masuk — jadi badge, satu-satunya kabar ke orang tua. */
+  registryClaims?: number;
+}) {
   const tiles: Tile[] = [
     { label: "Profil Anak", icon: "child_care", href: `/children/${childId}` },
     { label: "Jadwal Vaksin", icon: "vaccines", href: `/children/${childId}#vaksinasi` },
     { label: "Asupan ASI", icon: "water_bottle", href: `/children/${childId}/feeding` },
     { label: "Grafik WHO", icon: "analytics", href: `/children/${childId}/growth` },
     { label: "Shop Katalog", icon: "card_giftcard", badge: "Promo" },
-    { label: "MyRegistry", icon: "list_alt", badge: "Baru" },
+    {
+      label: "MyRegistry",
+      icon: "list_alt",
+      href: "/registry",
+      badge: registryClaims > 0 ? String(registryClaims) : undefined,
+    },
     { label: "Nakes Care", icon: "medical_services", badge: "Siaga" },
     { label: "Babysitter", icon: "family_restroom", badge: "Baru" },
   ];

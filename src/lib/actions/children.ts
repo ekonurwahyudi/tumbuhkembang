@@ -8,46 +8,14 @@ import {
   insertChild,
   setChildPhotoKey,
   updateChild,
-  type NewChild,
 } from "@/lib/data/children";
+import { parseChildForm, toChildRow } from "./child-form";
 import { todayYMD } from "@/lib/growth/age";
 import { deleteChildPhoto, photoStorageReady, putChildPhoto } from "@/lib/storage";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, MAX_UPLOAD_BYTES } from "@/lib/storage-limits";
 import { insertMeasurement, toMeasurementValues } from "@/lib/data/measurements";
-import { childSchema } from "@/schemas/child";
 import { measurementSchema } from "@/schemas/measurement";
 import { fail, fieldErrors, handleUnexpected, ok, type ActionResult } from "@/lib/action-result";
-
-/** Angka opsional dari FormData: "" -> null, selain itu Number. */
-function optionalInt(v: FormDataEntryValue | null): number | null | undefined {
-  if (v === null) return undefined;
-  const s = String(v).trim();
-  if (s === "") return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : Number.NaN; // NaN akan ditolak Zod
-}
-
-function parseChildForm(formData: FormData) {
-  return childSchema.safeParse({
-    name: formData.get("name"),
-    sex: formData.get("sex"),
-    dateOfBirth: formData.get("dateOfBirth"),
-    birthType: formData.get("birthType"),
-    gestationalAgeWeeks: optionalInt(formData.get("gestationalAgeWeeks")),
-    gestationalAgeDays: optionalInt(formData.get("gestationalAgeDays")),
-    birthWeightGrams: optionalInt(formData.get("birthWeightGrams")),
-  });
-}
-
-const toRow = (d: ReturnType<typeof childSchema.parse>): NewChild => ({
-  name: d.name,
-  sex: d.sex,
-  dateOfBirth: d.dateOfBirth,
-  birthType: d.birthType,
-  gestationalAgeWeeks: d.gestationalAgeWeeks ?? null,
-  gestationalAgeDays: d.gestationalAgeDays ?? null,
-  birthWeightGrams: d.birthWeightGrams ?? null,
-});
 
 /**
  * Pengukuran awal yang ikut form tambah anak. Seluruhnya opsional: bila ketiganya
@@ -79,7 +47,7 @@ export async function createChildAction(formData: FormData): Promise<ActionResul
     if (measurement && !measurement.success)
       return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(measurement.error.issues));
 
-    const row = await insertChild(user.id, toRow(parsed.data));
+    const row = await insertChild(user.id, toChildRow(parsed.data));
     if (measurement?.success)
       await insertMeasurement(row.id, toMeasurementValues(measurement.data));
 
@@ -101,7 +69,7 @@ export async function updateChildAction(
     if (!parsed.success)
       return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
 
-    const row = await updateChild(user.id, childId, toRow(parsed.data));
+    const row = await updateChild(user.id, childId, toChildRow(parsed.data));
     if (!row) return fail("NOT_FOUND", "Data anak tidak ditemukan.");
 
     revalidatePath("/dashboard");

@@ -1,8 +1,14 @@
 import "server-only";
 import { diffInDays } from "./age";
-import { evaluateMeasurement, referenceAge, referenceCurve, referenceMeta } from "./engine";
+import {
+  evaluateMeasurement,
+  referenceAge,
+  referenceCurve,
+  referenceMeta,
+  referenceRange,
+} from "./engine";
 import type { ChildContext, MeasurementInput } from "./engine";
-import { isGrowthResult, type MeasurementType } from "./types";
+import { isGrowthResult, type AgeBasis, type MeasurementType } from "./types";
 
 /**
  * Susun data siap-gambar untuk satu grafik pertumbuhan.
@@ -36,7 +42,7 @@ export type ChartSeries = {
     zScore: number;
     percentile: number;
   }[];
-  ageBasis: "chronological" | "corrected";
+  ageBasis: AgeBasis;
   reference: { name: string; version: string };
   /** Alasan grafik kosong, bila tidak ada satu pun titik anak yang dapat dinilai. */
   unavailable?: string;
@@ -69,8 +75,7 @@ export function buildChartSeries(
   const meta = META[type];
   const getValue = VALUE_OF[type];
 
-  const childPoints: ChartSeries["childPoints"] = [];
-  let basis: "chronological" | "corrected" = "chronological";
+  const scored: (ChartSeries["childPoints"][number] & { basis: AgeBasis })[] = [];
   let blockedReason: string | undefined;
 
   for (const m of measurements) {
@@ -84,19 +89,37 @@ export function buildChartSeries(
       continue;
     }
 
-    basis = outcome.ageBasis;
-    childPoints.push({
+    scored.push({
       ageDays: outcome.ageDays,
       measuredAt: m.measuredAt,
       value: outcome.value,
       zScore: outcome.zScore,
       percentile: outcome.percentile,
+      basis: outcome.ageBasis,
     });
   }
 
-  childPoints.sort((a, b) => a.ageDays - b.ageDays);
+  scored.sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
 
-  const refMeta = referenceMeta(type, child.sex);
+  // Satu grafik = satu sumbu usia. Bayi prematur berpindah dari Fenton (PMA) ke
+  // WHO (usia terkoreksi) di tengah riwayatnya, dan kedua sumbu itu terpaut satu
+  // usia gestasi penuh — menggambarnya berdampingan menghasilkan lintasan yang
+  // melompat mundur. Yang ditampilkan adalah sumbu pengukuran terbaru, yaitu
+  // reference yang berlaku untuk anak itu sekarang; pengukuran pada sumbu lama
+  // tetap punya z-score-nya sendiri di riwayat, hanya tidak ikut digambar di sini.
+  const basis: AgeBasis = scored.at(-1)?.basis ?? "chronological";
+  const childPoints: ChartSeries["childPoints"] = scored
+    .filter((p) => p.basis === basis)
+    .map((p) => ({
+      ageDays: p.ageDays,
+      measuredAt: p.measuredAt,
+      value: p.value,
+      zScore: p.zScore,
+      percentile: p.percentile,
+    }))
+    .sort((a, b) => a.ageDays - b.ageDays);
+
+  const refMeta = referenceMeta(type, child.sex, basis);
   const reference = { name: refMeta.name, version: refMeta.version };
 
   if (childPoints.length === 0) {
@@ -113,11 +136,20 @@ export function buildChartSeries(
     };
   }
 
-  // Rentang sumbu: dari lahir sampai sedikit setelah pengukuran terakhir,
-  // supaya lintasan anak tidak menempel di tepi kanan.
+  // Rentang sumbu: dari awal cakupan reference sampai sedikit setelah pengukuran
+  // terakhir, supaya lintasan anak tidak menempel di tepi kanan. Pada sumbu PMA
+  // awalnya bukan nol — Fenton mulai di ~23 minggu, bukan di hari lahir.
+  const { minDay } = referenceRange(type, child.sex, basis);
   const lastDay = childPoints.at(-1)!.ageDays;
-  const padding = Math.max(14, Math.round(lastDay * 0.08));
-  const curve = referenceCurve(type, child.sex, 0, lastDay + padding, stepFor(lastDay));
+  const padding = Math.max(14, Math.round((lastDay - minDay) * 0.08));
+  const curve = referenceCurve(
+    type,
+    child.sex,
+    minDay,
+    lastDay + padding,
+    stepFor(lastDay - minDay),
+    basis,
+  );
 
   const byAge = new Map<number, ChartPoint>();
   for (const c of curve) {
@@ -127,7 +159,7 @@ export function buildChartSeries(
   // Titik anak disisipkan pada usia persisnya; kurva reference di usia itu
   // diambil ulang agar garis SD tetap menyambung mulus.
   for (const p of childPoints) {
-    const exact = referenceCurve(type, child.sex, p.ageDays, p.ageDays, 1)[0];
+    const exact = referenceCurve(type, child.sex, p.ageDays, p.ageDays, 1, basis)[0];
     if (!exact) continue;
     byAge.set(p.ageDays, { ageDays: p.ageDays, child: p.value, ...pickSd(exact) });
   }
@@ -162,6 +194,7 @@ export function toChildContext(child: {
   birthType: "TERM" | "PRETERM";
   gestationalAgeWeeks: number | null;
   gestationalAgeDays: number | null;
+  useFenton?: boolean;
 }): ChildContext {
   return child;
 }

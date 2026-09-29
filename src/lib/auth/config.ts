@@ -25,6 +25,11 @@ export const authConfig = {
       }
       return token;
     },
+    /**
+     * Versi ini yang dipakai middleware (index.ts menimpanya untuk app). Sengaja tanpa
+     * `role`: middleware tidak punya akses DB, dan peran dari klaim JWT basi sampai user
+     * login ulang. Satu-satunya sumber peran adalah session() di index.ts yang baca DB.
+     */
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
       return session;

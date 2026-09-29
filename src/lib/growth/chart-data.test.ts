@@ -84,4 +84,65 @@ describe("buildChartSeries", () => {
     expect(s.reference.name).toBe("WHO Child Growth Standards");
     expect(s.reference.version).toBe("2006");
   });
+
+  it("memakai Fenton pada sumbu PMA sebelum bayi prematur mencapai term", () => {
+    // Budi lahir 32w4d: 52 hari prematuritas. Diukur 30 hari setelah lahir,
+    // usia terkoreksinya masih -22 hari — WHO tidak berlaku, Fenton berlaku.
+    const s = buildChartSeries(
+      BUDI,
+      [{ measuredAt: "2026-06-09", weightKg: "1.900", lengthHeightCm: null, headCircumferenceCm: null }],
+      "weight-for-age",
+    );
+    expect(s.ageBasis).toBe("postmenstrual");
+    expect(s.reference.name).toBe("Fenton Preterm Growth Chart");
+    // PMA = 228 hari gestasi + 30 hari kronologis = 258 hari (36w6d).
+    expect(s.childPoints[0].ageDays).toBe(258);
+    expect(s.points.some((p) => p.child !== null)).toBe(true);
+  });
+
+  it("menyatakan reference tidak tersedia bila Fenton dimatikan pengguna", () => {
+    const s = buildChartSeries(
+      { ...BUDI, useFenton: false },
+      [{ measuredAt: "2026-06-09", weightKg: "1.900", lengthHeightCm: null, headCircumferenceCm: null }],
+      "weight-for-age",
+    );
+    expect(s.childPoints).toHaveLength(0);
+    expect(s.points).toHaveLength(0);
+    expect(s.unavailable).toMatch(/pascamenstruasi/);
+  });
+
+  it("satu grafik memakai satu sumbu usia saja", () => {
+    // Riwayat yang melintasi batas: satu pengukuran di dalam cakupan Fenton,
+    // satu sesudahnya. Yang digambar adalah sumbu pengukuran terbaru.
+    const s = buildChartSeries(
+      BUDI,
+      [
+        { measuredAt: "2026-06-09", weightKg: "1.900", lengthHeightCm: null, headCircumferenceCm: null },
+        { measuredAt: "2026-09-05", weightKg: "3.200", lengthHeightCm: null, headCircumferenceCm: null },
+      ],
+      "weight-for-age",
+    );
+    expect(s.ageBasis).toBe("corrected");
+    expect(s.childPoints).toHaveLength(1);
+    expect(s.childPoints[0].ageDays).toBe(66);
+  });
+
+  it("prematur di atas batas koreksi AAP kembali ke usia kronologis", () => {
+    // Batas koreksi 3 tahun kronologis. Dua sisi batas, supaya bukan cuma
+    // "selalu corrected" yang lolos: footer halaman membaca ageBasis ini.
+    const early = buildChartSeries(
+      BUDI,
+      [{ measuredAt: "2027-05-10", weightKg: "9.500", lengthHeightCm: null, headCircumferenceCm: null }],
+      "weight-for-age",
+    );
+    expect(early.ageBasis).toBe("corrected");
+
+    const late = buildChartSeries(
+      BUDI,
+      [{ measuredAt: "2029-09-05", weightKg: "14.000", lengthHeightCm: null, headCircumferenceCm: null }],
+      "weight-for-age",
+    );
+    expect(late.ageBasis).toBe("chronological");
+    expect(late.childPoints).toHaveLength(1);
+  });
 });

@@ -87,3 +87,9 @@ export const deleteChildPhoto = deletePhoto;
 // User photo
 export const putUserPhoto = (userId: string, body: Uint8Array, ct: string) => putPhoto("users", userId, body, ct);
 export const getUserPhoto = (key: string) => getPhoto(key);
+
+// Foto item MyRegistry. Objeknya tetap privat seperti yang lain; yang membedakan
+// hanya route pembacanya, yang berotorisasi token registry alih-alih sesi.
+export const putRegistryPhoto = (itemId: string, body: Uint8Array, ct: string) =>
+  putPhoto("registry", itemId, body, ct);
+export const getRegistryPhoto = (key: string) => getPhoto(key);

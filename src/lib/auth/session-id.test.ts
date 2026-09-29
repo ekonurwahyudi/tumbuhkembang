@@ -10,6 +10,8 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { userIdByEmail, withDbUserId } from "@/lib/auth/db-user";
 
+type Token = { id?: unknown; name?: unknown };
+
 const email = `oauth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`;
 let dbId: string;
 
@@ -27,7 +29,7 @@ afterAll(async () => {
 
 describe("withDbUserId", () => {
   it("memakai users.id, bukan id karangan provider", async () => {
-    const token = await withDbUserId({} as { id?: unknown; name?: unknown }, {
+    const token = await withDbUserId({} as Token, {
       id: "11111111-1111-1111-1111-111111111111",
       name: "Oauth User",
       email,
@@ -36,14 +38,12 @@ describe("withDbUserId", () => {
   });
 
   it("cocok tanpa peduli besar-kecil huruf email", async () => {
-    const token = await withDbUserId({} as { id?: unknown; name?: unknown }, {
-      email: email.toUpperCase(),
-    });
+    const token = await withDbUserId({} as Token, { email: email.toUpperCase() });
     expect(token.id).toBe(dbId);
   });
 
   it("tidak menyimpan id bila barisnya tidak ada — requireUser() menolak", async () => {
-    const token = await withDbUserId({ id: "stale" } as { id?: unknown; name?: unknown }, {
+    const token = await withDbUserId({ id: "stale" } as Token, {
       id: "22222222-2222-2222-2222-222222222222",
       email: `nobody-${email}`,
     });
@@ -54,5 +54,9 @@ describe("withDbUserId", () => {
 describe("userIdByEmail", () => {
   it("null untuk email yang tidak terdaftar", async () => {
     expect(await userIdByEmail(`missing-${email}`)).toBeNull();
+  });
+
+  it("mengembalikan users.id untuk email terdaftar", async () => {
+    expect(await userIdByEmail(email)).toBe(dbId);
   });
 });

@@ -8,7 +8,7 @@
 export const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 /** Batas berkas pilihan pengguna, sebelum dikompresi. */
-export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 /**
  * Batas yang ditegakkan server, setelah kompresi di client.
@@ -18,7 +18,7 @@ export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
  * dibuat tanpa lewat form sama sekali. Ini pagar terakhir, bukan angka yang
  * dilihat pengguna.
  */
-export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 
 /** Sisi terpanjang hasil kompresi. Avatar terbesar di UI 64px (128px @2x). */
 export const PHOTO_MAX_DIMENSION = 512;

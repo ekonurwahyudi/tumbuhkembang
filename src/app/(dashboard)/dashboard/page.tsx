@@ -5,6 +5,7 @@ import { listChildrenWithLatestForViewer } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
 import { listVaccinations } from "@/lib/data/vaccinations";
 import { listReminders } from "@/lib/data/vaccine-reminders";
+import { registryClaimCount } from "@/lib/data/registry";
 import { listSkippedCatalogKeys } from "@/lib/data/vaccination-skips";
 import { evaluateMeasurement } from "@/lib/growth/engine";
 import { chronologicalAge, formatAgeDaysDetailed, formatAgeDetailed } from "@/lib/growth/age";
@@ -53,11 +54,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const child = active.child;
 
   // Hanya anak aktif yang ditarik detailnya — bukan semua anak di carousel.
-  const [measurements, vaccinations, skippedKeys, reminders] = await Promise.all([
+  const [measurements, vaccinations, skippedKeys, reminders, claimCount] = await Promise.all([
     listMeasurements(user.id, child.id, "desc"),
     listVaccinations(user.id, child.id),
     listSkippedCatalogKeys(user.id, child.id),
     listReminders(user.id, child.id),
+    registryClaimCount(user.id),
   ]);
 
   const latest = measurements[0];
@@ -108,7 +110,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         />
       )}
 
-      <QuickAccess childId={child.id} />
+      <QuickAccess childId={child.id} registryClaims={claimCount} />
 
       <VaccineSlider
         childId={child.id}

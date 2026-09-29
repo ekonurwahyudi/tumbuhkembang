@@ -29,14 +29,18 @@ export async function userIdByEmail(email: string) {
  *
  * Baris user dijamin ada oleh callback signIn(). Bila entah bagaimana tidak, token
  * dibiarkan tanpa id — requireUser() menolak, bukan menyimpan id palsu.
+ *
+ * `role` sengaja TIDAK disimpan di token: jwt() hanya jalan saat login dan token hidup
+ * 30 hari, jadi klaim peran akan basi persis saat dibutuhkan (admin yang baru dinaikkan
+ * perannya ditolak sampai login ulang). Peran selalu dibaca dari DB di session().
  */
 export async function withDbUserId<T extends { id?: unknown; name?: unknown }>(
   token: T,
   user: { id?: string; name?: string | null; email?: string | null },
 ) {
   token.name = user.name ?? token.name;
-  const dbId = user.email ? await userIdByEmail(user.email) : null;
-  if (dbId) token.id = dbId;
+  const id = user.email ? await userIdByEmail(user.email) : null;
+  if (id) token.id = id;
   else delete token.id;
   return token;
 }

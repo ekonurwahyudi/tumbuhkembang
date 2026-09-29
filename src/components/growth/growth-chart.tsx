@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatAgeDaysLong, formatPercentile } from "@/lib/format";
+import { formatBasisAge, formatPercentile } from "@/lib/format";
 import type { ChartSeries } from "@/lib/growth/chart-data";
 
 /**
@@ -102,8 +102,7 @@ export function GrowthChart({ series }: { series: ChartSeries }) {
               {latest.value.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {series.unit}
             </strong>
             <span className="text-muted-foreground">
-              ({series.ageBasis === "corrected" ? "usia terkoreksi" : "usia"}{" "}
-              {formatAgeDaysLong(latest.ageDays)})
+              ({formatBasisAge(series.ageBasis, latest.ageDays)})
             </span>
           </span>
           <span className="text-primary font-semibold tabular-nums">
@@ -314,7 +313,10 @@ function GrowthTooltip({
 
   return (
     <div className="bg-popover text-popover-foreground rounded-lg border px-3 py-2 text-xs shadow-md">
-      <p className="font-medium">Usia {formatAgeDaysLong(point.ageDays)}</p>
+      <p className="font-medium">
+        {series.ageBasis === "postmenstrual" ? "PMA " : ""}
+        {formatBasisAge(series.ageBasis, point.ageDays)}
+      </p>
       {childPoint ? (
         <dl className="mt-1 space-y-0.5">
           <div className="flex gap-3">

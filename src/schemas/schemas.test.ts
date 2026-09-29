@@ -4,6 +4,7 @@ import { measurementSchema } from "./measurement";
 import { registerSchema } from "./auth";
 import { vaccinationSchema } from "./vaccination";
 import { reminderSchema } from "./reminder";
+import { registryClaimSchema, registryItemSchema, registryTrackingSchema } from "./registry";
 import { isNotFuture, isValidYMD } from "./date";
 
 /**
@@ -287,5 +288,101 @@ describe("reminderSchema", () => {
   it("menormalkan catatan kosong jadi null", () => {
     expect(reminderSchema.parse({ ...base, notes: "   " }).notes).toBeNull();
     expect(reminderSchema.parse({ ...base, notes: " Posyandu " }).notes).toBe("Posyandu");
+  });
+});
+
+describe("registryItemSchema", () => {
+  const base = {
+    name: "Stroller kabin",
+    priority: "NORMAL",
+    category: "TRANSPORT",
+    desiredQty: "1",
+  };
+
+  it("menerima tautan dari toko yang sesuai, menolak host lain", () => {
+    const ok = registryItemSchema.parse({
+      ...base,
+      urlShopee: " https://shopee.co.id/product/1 ",
+      urlTokopedia: "https://www.tokopedia.com/toko/barang",
+      urlTiktok: "https://www.tiktok.com/@toko/video/1",
+    });
+    expect(ok.urlShopee).toBe("https://shopee.co.id/product/1");
+
+    // Inti aturannya: wishlist publik tidak boleh jadi papan tautan ke mana saja.
+    expect(
+      registryItemSchema.safeParse({ ...base, urlTokopedia: "https://google.com/cari" }).success,
+    ).toBe(false);
+    expect(registryItemSchema.safeParse({ ...base, urlShopee: "bukan-url" }).success).toBe(false);
+    expect(
+      registryItemSchema.safeParse({ ...base, urlTiktok: "javascript:alert(1)" }).success,
+    ).toBe(false);
+  });
+
+  it("menormalkan teks dan tautan kosong jadi null", () => {
+    const r = registryItemSchema.parse({ ...base, description: "  ", note: "", urlShopee: "" });
+    expect(r.description).toBeNull();
+    expect(r.note).toBeNull();
+    expect(r.urlShopee).toBeNull();
+  });
+
+  it("menolak harga maksimal yang lebih kecil dari minimal, pada field yang benar", () => {
+    const r = registryItemSchema.safeParse({ ...base, priceMin: "900000", priceMax: "500000" });
+    expect(r.success).toBe(false);
+    // Path harus sama dengan atribut name input, kalau tidak pesannya tidak muncul.
+    expect(r.success === false && r.error.issues[0].path[0]).toBe("priceMax");
+    expect(registryItemSchema.safeParse({ ...base, priceMin: "500000", priceMax: "900000" }).success).toBe(true);
+    // Satu sisi saja tetap boleh.
+    expect(registryItemSchema.safeParse({ ...base, priceMax: "900000" }).success).toBe(true);
+  });
+
+  it("membatasi jumlah diinginkan 1..99", () => {
+    expect(registryItemSchema.safeParse({ ...base, desiredQty: "0" }).success).toBe(false);
+    expect(registryItemSchema.safeParse({ ...base, desiredQty: "100" }).success).toBe(false);
+    expect(registryItemSchema.safeParse({ ...base, desiredQty: "1.5" }).success).toBe(false);
+    expect(registryItemSchema.parse({ ...base, desiredQty: "3" }).desiredQty).toBe(3);
+  });
+
+  it("checkbox yang tidak dikirim berarti false, bukan undefined", () => {
+    const r = registryItemSchema.parse(base);
+    expect(r.isPublic).toBe(false);
+    expect(r.allowGroup).toBe(false);
+    expect(registryItemSchema.parse({ ...base, isPublic: "on" }).isPublic).toBe(true);
+  });
+
+  it("menolak childId yang bukan uuid", () => {
+    expect(registryItemSchema.safeParse({ ...base, childId: "bukan-uuid" }).success).toBe(false);
+    expect(registryItemSchema.parse({ ...base, childId: "" }).childId).toBeNull();
+  });
+
+  it("membatasi panjang nama dan catatan", () => {
+    expect(registryItemSchema.safeParse({ ...base, name: "" }).success).toBe(false);
+    expect(registryItemSchema.safeParse({ ...base, name: "x".repeat(121) }).success).toBe(false);
+    expect(registryItemSchema.safeParse({ ...base, note: "x".repeat(301) }).success).toBe(false);
+  });
+});
+
+describe("registryClaimSchema", () => {
+  const base = { claimerName: "Tante Rina", qty: "1" };
+
+  it("menolak nomor resi dengan karakter aneh", () => {
+    expect(registryClaimSchema.parse({ ...base, trackingNumber: " JNE 012-345.6 " }).trackingNumber).toBe(
+      "JNE 012-345.6",
+    );
+    expect(registryClaimSchema.safeParse({ ...base, trackingNumber: "<script>" }).success).toBe(false);
+    expect(registryClaimSchema.safeParse({ ...base, trackingNumber: "x".repeat(51) }).success).toBe(false);
+    // Opsional: kosong berarti belum dikirim, bukan tidak valid.
+    expect(registryClaimSchema.parse({ ...base, trackingNumber: "" }).trackingNumber).toBeNull();
+  });
+
+  it("membatasi nama pengklaim — ini kiriman dari orang tanpa sesi", () => {
+    expect(registryClaimSchema.safeParse({ ...base, claimerName: "A" }).success).toBe(false);
+    expect(registryClaimSchema.safeParse({ ...base, claimerName: "x".repeat(81) }).success).toBe(false);
+    expect(registryClaimSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("registryTrackingSchema mewajibkan resi, berbeda dari saat klaim", () => {
+    expect(registryTrackingSchema.safeParse({ trackingNumber: "" }).success).toBe(false);
+    expect(registryTrackingSchema.safeParse({ trackingNumber: "ab" }).success).toBe(false);
+    expect(registryTrackingSchema.parse({ trackingNumber: " JNE 123 " }).trackingNumber).toBe("JNE 123");
   });
 });

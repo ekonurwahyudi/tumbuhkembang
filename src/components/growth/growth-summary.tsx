@@ -9,6 +9,13 @@ import {
 import { Icon } from "@/components/ui/icon";
 import type { ChartSeries } from "@/lib/growth/chart-data";
 import { formatDate, formatPercentile } from "@/lib/format";
+import type { AgeBasis } from "@/lib/growth/types";
+
+const BASIS_LABEL: Record<AgeBasis, string> = {
+  chronological: "usia kronologis",
+  corrected: "usia terkoreksi",
+  postmenstrual: "usia pascamenstruasi (PMA)",
+};
 
 /**
  * Padanan teks untuk grafik: ringkasan naratif + tabel nilai.
@@ -33,7 +40,7 @@ export function GrowthSummary({
   if (!latest) return null;
 
   const first = series.childPoints[0];
-  const basis = series.ageBasis === "corrected" ? "usia terkoreksi" : "usia kronologis";
+  const basis = BASIS_LABEL[series.ageBasis];
   const previous = series.childPoints.at(-2);
   const deltaZ = previous ? latest.zScore - previous.zScore : null;
 

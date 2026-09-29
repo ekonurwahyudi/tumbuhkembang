@@ -9,6 +9,7 @@ import { listVaccinations } from "@/lib/data/vaccinations";
 import { listReminders } from "@/lib/data/vaccine-reminders";
 import { listSkippedCatalogKeys } from "@/lib/data/vaccination-skips";
 import { buildChartSeries } from "@/lib/growth/chart-data";
+import { fentonEligible } from "@/lib/growth/engine";
 import type { MeasurementType } from "@/lib/growth/types";
 import { groupByDay, summarizeDay } from "@/lib/feeding/summary";
 import { todayLocalISO } from "@/schemas/date";
@@ -16,6 +17,7 @@ import { ChildHero } from "@/components/children/child-hero";
 import { DeleteChildButton } from "@/components/children/delete-child-button";
 import { FeedingDialog } from "@/components/feeding/feeding-dialog";
 import { FeedingEstimate } from "@/components/feeding/feeding-estimate";
+import { FentonSwitch } from "@/components/growth/fenton-switch";
 import { GrowthSummary } from "@/components/growth/growth-summary";
 import { GrowthTabs } from "@/components/growth/growth-tabs";
 import { ImmunizationList } from "@/components/immunization/immunization-list";
@@ -43,8 +45,12 @@ export async function generateMetadata({ params }: PageProps<"/children/[id]">):
   return { title: child?.name ?? "Anak" };
 }
 
-export default async function ChildProfilePage({ params }: PageProps<"/children/[id]">) {
+export default async function ChildProfilePage({
+  params,
+  searchParams,
+}: PageProps<"/children/[id]">) {
   const { id } = await params;
+  const { fenton } = await searchParams;
   const user = await requireUser();
   const viewer = await getChildForViewer(user.id, id);
   const child = viewer?.child;
@@ -63,9 +69,15 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
   const currentWeightGrams =
     latest?.weightKg != null ? Math.round(Number(latest.weightKg) * 1000) : child.birthWeightGrams;
 
+  // Saklar Fenton lewat URL, bukan kolom database: pilihan tampilan untuk satu
+  // kunjungan halaman, bukan sifat anaknya. Default menyala.
+  const useFenton = fenton !== "off";
+
   // Perhitungan kurva seluruhnya di server; komponen chart menerima angka jadi.
   // listMeasurements di sini desc (riwayat), buildChartSeries mengurut sendiri.
-  const series = TYPES.map((type) => buildChartSeries(child, measurements, type));
+  const series = TYPES.map((type) =>
+    buildChartSeries({ ...child, useFenton }, measurements, type),
+  );
   const summaries = Object.fromEntries(
     series.map((s) => [
       s.measurementType,
@@ -79,14 +91,6 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/children"
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
-      >
-        <Icon name="arrow_back" className="text-[16px]" />
-        Anak
-      </Link>
-
       <ChildHero
         child={child}
         action={
@@ -140,6 +144,20 @@ export default async function ChildProfilePage({ params }: PageProps<"/children/
               <Icon name="monitor_heart" className="text-primary" />
               Grafik Pertumbuhan
             </h2>
+            {/*
+              Saklar hanya muncul bila usia kehamilan <= 37 minggu: di atas itu
+              Fenton tidak pernah terpilih, jadi saklarnya tidak mengubah apa pun.
+            */}
+            {fentonEligible(child) && (
+              <FentonSwitch
+                basePath={`/children/${child.id}`}
+                useFenton={useFenton}
+                ageBasis={series[0].ageBasis}
+                sex={child.sex}
+                gestationalAgeWeeks={child.gestationalAgeWeeks!}
+                gestationalAgeDays={child.gestationalAgeDays!}
+              />
+            )}
             <GrowthTabs series={series} summaries={summaries} />
           </section>
 

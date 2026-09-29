@@ -165,7 +165,7 @@ describe("evaluateMeasurement", () => {
     expect(weight.reason).toBe("AGE_OUT_OF_RANGE");
   });
 
-  it("menyatakan reference belum tersedia untuk bayi yang belum mencapai term", () => {
+  it("memakai Fenton pada sumbu PMA untuk bayi yang belum mencapai term", () => {
     const preterm: ChildContext = {
       sex: "MALE",
       dateOfBirth: "2026-09-01",
@@ -175,6 +175,52 @@ describe("evaluateMeasurement", () => {
     };
     const out = evaluateMeasurement(preterm, {
       measuredAt: "2026-09-22", // corrected age masih negatif
+      weightKg: "1.5",
+      lengthHeightCm: null,
+      headCircumferenceCm: null,
+    });
+    const weight = out.find((o) => o.measurementType === "weight-for-age")!;
+    if (!isGrowthResult(weight)) throw new Error("harusnya menghasilkan angka");
+    expect(weight.ageBasis).toBe("postmenstrual");
+    expect(weight.ageDays).toBe(231); // 210 hari gestasi + 21 kronologis = 33w0d
+    expect(weight.reference).toBe("Fenton Preterm Growth Chart");
+  });
+
+  it("tidak memakai Fenton bila usia kehamilan di atas 37 minggu", () => {
+    // 37w0d masuk (batas atas), 37w1d tidak. Diperiksa dua sisi supaya bukan
+    // cuma "selalu Fenton" atau "selalu WHO" yang lolos.
+    const at = (weeks: number, days: number): ChildContext => ({
+      sex: "MALE",
+      dateOfBirth: "2026-09-01",
+      birthType: "PRETERM",
+      gestationalAgeWeeks: weeks,
+      gestationalAgeDays: days,
+    });
+    // 30 hari setelah lahir: PMA 37w0d masih di dalam Fenton (41w3d), dan usia
+    // terkoreksi 37w1d sudah positif — jadi kedua sisi benar-benar dapat dinilai
+    // dan yang diuji adalah pemilihan reference-nya, bukan usia di luar cakupan.
+    const measure = { measuredAt: "2026-10-01", weightKg: "3.000", lengthHeightCm: null, headCircumferenceCm: null };
+    const basisOf = (c: ChildContext) => {
+      const w = evaluateMeasurement(c, measure).find((o) => o.measurementType === "weight-for-age")!;
+      if (!isGrowthResult(w)) throw new Error("harusnya menghasilkan angka");
+      return w.ageBasis;
+    };
+
+    expect(basisOf(at(37, 0))).toBe("postmenstrual");
+    expect(basisOf(at(37, 1))).toBe("corrected");
+  });
+
+  it("menyatakan reference belum tersedia bila Fenton dimatikan pengguna", () => {
+    const preterm: ChildContext = {
+      sex: "MALE",
+      dateOfBirth: "2026-09-01",
+      birthType: "PRETERM",
+      gestationalAgeWeeks: 30,
+      gestationalAgeDays: 0,
+      useFenton: false,
+    };
+    const out = evaluateMeasurement(preterm, {
+      measuredAt: "2026-09-22",
       weightKg: "1.5",
       lengthHeightCm: null,
       headCircumferenceCm: null,
