@@ -48,7 +48,7 @@ export function BottomNav({
           className={cn(
             // 9px, bukan token --text-label-sm (11px): token itu dipakai di
             // banyak tempat lain, jadi ukurannya dipatok di sini saja.
-            "flex h-full flex-col items-center justify-center gap-1.5 text-[14px] tracking-tight transition-colors",
+            "flex h-full flex-col items-center justify-center gap-1.5 text-[13px] tracking-tight transition-colors",
             active ? "text-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
