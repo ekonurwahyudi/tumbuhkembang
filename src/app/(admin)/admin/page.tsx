@@ -6,6 +6,14 @@ import { Icon, type IconName } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Dashboard Superadmin" };
 
+/**
+ * Penjaganya ada di layout, dan layout dirender bersamaan dengan halaman ini — jadi
+ * tanpa flag ini Next mencoba mem-prerender halaman ini saat build dan adminStats()
+ * menembak DB dari mesin build. Di Docker DB itu tidak ada: build gagal dengan
+ * CONNECT_TIMEOUT. Angkanya juga berubah terus, jadi statis memang salah di sini.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const stats = await adminStats();
 
