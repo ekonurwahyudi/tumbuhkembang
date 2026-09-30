@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import {
   addRegistryItemPhoto,
   claimItem,
+  deleteRegistryClaim,
   deleteRegistryItem,
   ensureRegistryToken,
   findClaimByToken,
@@ -15,7 +16,9 @@ import {
   insertRegistryItem,
   removeRegistryItemPhoto,
   setRegistryPublic,
+  setShippingSettings,
   MAX_ITEM_PHOTOS,
+  setClaimPhotoKey,
   updateClaimTracking,
   updateRegistryItem,
 } from "@/lib/data/registry";
@@ -26,8 +29,9 @@ import {
   toRegistryItemRow,
 } from "./registry-form";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
-import { registryTrackingSchema } from "@/schemas/registry";
-import { deletePhoto, photoStorageReady, putRegistryPhoto } from "@/lib/storage";
+import { registryTrackingSchema, shippingSchema } from "@/schemas/registry";
+import { searchLokasi, type Lokasi } from "@/lib/lokasi";
+import { deletePhoto, photoStorageReady, putClaimPhoto, putRegistryPhoto } from "@/lib/storage";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, MAX_UPLOAD_BYTES } from "@/lib/storage-limits";
 import { fail, fieldErrors, handleUnexpected, ok, type ActionResult } from "@/lib/action-result";
 
@@ -183,6 +187,72 @@ export async function removeRegistryPhotoAction(
   }
 }
 
+/**
+ * Alamat kirim + rekening. Wajib bersesi: yang ditulis adalah baris `users`
+ * miliknya sendiri, dan `requireUser()` yang menentukan baris mana.
+ */
+export async function saveShippingAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const parsed = shippingSchema.safeParse({
+      shipName: formData.get("shipName"),
+      shipPhone: formData.get("shipPhone"),
+      shipProvince: formData.get("shipProvince"),
+      shipCity: formData.get("shipCity"),
+      shipDistrict: formData.get("shipDistrict"),
+      shipAddress: formData.get("shipAddress"),
+      bankPublic: formData.get("bankPublic") === "on",
+      bankName: formData.get("bankName"),
+      bankHolder: formData.get("bankHolder"),
+      bankAccount: formData.get("bankAccount"),
+    });
+    if (!parsed.success)
+      return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
+
+    const row = await setShippingSettings(user.id, parsed.data);
+    if (!row) return fail("NOT_FOUND", "Akun tidak ditemukan.");
+
+    await revalidateRegistry(user.id);
+    return ok(undefined);
+  } catch (err) {
+    return handleUnexpected("saveShippingAction", err);
+  }
+}
+
+/**
+ * Pencarian lokasi untuk dropdown alamat. Server action, bukan route handler:
+ * `lokasi.json` 376 KB tidak boleh ikut ke bundle klien, dan yang menyeberang
+ * cuma paling banyak 12 baris hasil.
+ *
+ * Bersesi karena hanya dipakai formulir alamat orang tua — daftar kecamatan bukan
+ * data rahasia, tapi endpoint tanpa sesi tetap sesuatu yang bisa dipukul terus.
+ */
+export async function searchLokasiAction(query: string): Promise<Lokasi[]> {
+  await requireUser();
+  return searchLokasi(typeof query === "string" ? query.slice(0, 60) : "");
+}
+
+/**
+ * Orang tua membatalkan klaim: ada yang iseng, atau yang berubah pikiran. Barisnya
+ * dihapus, bukan ditandai, jadi kuotanya benar-benar bebas dan barangnya bisa
+ * diklaim lagi. Kepemilikan diuji di dalam query `deleteRegistryClaim`.
+ */
+export async function deleteClaimAction(claimId: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const row = await deleteRegistryClaim(user.id, claimId);
+    if (!row) return fail("NOT_FOUND", "Klaim tidak ditemukan.");
+
+    // Baris dulu, objek menyusul: gagal hapus objek tidak menggagalkan aksi pengguna.
+    if (row.photoKey) await deletePhoto(row.photoKey);
+
+    await revalidateRegistry(user.id);
+    return ok(undefined);
+  } catch (err) {
+    return handleUnexpected("deleteClaimAction", err);
+  }
+}
+
 /** Menyalakan/mematikan tautan publik. Token dibuat sekali lalu dipakai ulang. */
 export async function shareRegistryAction(
   on: boolean,
@@ -258,10 +328,23 @@ export async function claimItemAction(
   }
 }
 
+/** Halaman yang ikut berubah setelah pengklaim memperbarui buktinya. */
+async function revalidateClaim(claimToken: string) {
+  const ctx = await findClaimByToken(claimToken);
+  if (ctx?.registryToken) revalidatePath(`/kado/${ctx.registryToken}`);
+  revalidatePath("/kado/[token]/barang/[itemId]", "page");
+  revalidatePath("/kado/[token]/klaim/[claimToken]", "page");
+  revalidatePath("/registry");
+  revalidatePath("/registry/[itemId]", "page");
+}
+
 /**
  * Juga tanpa sesi: pengklaim kembali lewat tautan pribadinya untuk menambahkan
- * nomor resi setelah barangnya dikirim. `claimToken` di URL adalah otorisasinya —
+ * bukti kirim setelah barangnya dikirim. `claimToken` di URL adalah otorisasinya —
  * hanya orang yang menyimpan tautan itu yang bisa mengubah klaim tersebut.
+ *
+ * Resi boleh kosong: buktinya bisa berupa foto barang (lihat
+ * `uploadClaimPhotoAction`), jadi mengosongkannya di sini berarti menghapus resi.
  */
 export async function updateClaimTrackingAction(
   claimToken: string,
@@ -284,12 +367,97 @@ export async function updateClaimTrackingAction(
     const row = await updateClaimTracking(claimToken, parsed.data.trackingNumber);
     if (!row) return fail("NOT_FOUND", "Klaim tidak ditemukan.");
 
-    const ctx = await findClaimByToken(claimToken);
-    if (ctx?.registryToken) revalidatePath(`/kado/${ctx.registryToken}`);
-    revalidatePath("/registry");
+    await revalidateClaim(claimToken);
     return ok(undefined);
   } catch (err) {
     return handleUnexpected("updateClaimTrackingAction", err);
+  }
+}
+
+/**
+ * Foto barang sebagai pengganti nomor resi. Tanpa sesi seperti dua action di atas:
+ * `claimToken` di URL satu-satunya otorisasinya, ditambah rate limit per IP.
+ *
+ * Batas kepercayaan: berkasnya datang dari orang tanpa akun, jadi tipe dan ukuran
+ * divalidasi di sini — `accept` di browser cuma kenyamanan. Key foto tidak pernah
+ * dibaca dari formData, hanya dari hasil unggah, dan objek lama dihapus setelah
+ * baris berhasil diperbarui supaya tidak ada objek yatim di R2.
+ */
+export async function uploadClaimPhotoAction(
+  claimToken: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    const limit = checkRateLimit(await clientKey("registry-claim-photo"));
+    if (!limit.allowed)
+      return fail(
+        "RATE_LIMITED",
+        `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(limit.retryAfterSec / 60)} menit.`,
+      );
+
+    if (!photoStorageReady())
+      return fail("VALIDATION_ERROR", "Penyimpanan foto belum dikonfigurasi di server.");
+
+    const file = formData.get("photo");
+    if (!(file instanceof File) || file.size === 0)
+      return fail("VALIDATION_ERROR", "Pilih berkas foto terlebih dahulu.", {
+        photo: "Pilih berkas foto terlebih dahulu.",
+      });
+
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number]))
+      return fail("VALIDATION_ERROR", "Format foto tidak didukung.", {
+        photo: "Gunakan berkas JPG, PNG, atau WebP.",
+      });
+
+    if (file.size > MAX_UPLOAD_BYTES)
+      return fail("VALIDATION_ERROR", "Ukuran foto terlalu besar.", {
+        photo: `Maksimal ${Math.round(MAX_PHOTO_BYTES / 1024 / 1024)} MB per foto.`,
+      });
+
+    // Klaimnya dipastikan ada sebelum objek ditulis.
+    const ctx = await findClaimByToken(claimToken);
+    if (!ctx) return fail("NOT_FOUND", "Klaim tidak ditemukan.");
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const key = await putClaimPhoto(ctx.claim.id, bytes, file.type);
+
+    const row = await setClaimPhotoKey(claimToken, key);
+    if (!row) {
+      await deletePhoto(key);
+      return fail("NOT_FOUND", "Klaim tidak ditemukan.");
+    }
+
+    // Satu foto per klaim: yang lama ditinggalkan setelah barisnya menunjuk yang baru.
+    if (ctx.claim.photoKey && ctx.claim.photoKey !== key) await deletePhoto(ctx.claim.photoKey);
+
+    await revalidateClaim(claimToken);
+    return ok(undefined);
+  } catch (err) {
+    return handleUnexpected("uploadClaimPhotoAction", err);
+  }
+}
+
+export async function removeClaimPhotoAction(claimToken: string): Promise<ActionResult> {
+  try {
+    const limit = checkRateLimit(await clientKey("registry-claim-photo"));
+    if (!limit.allowed)
+      return fail(
+        "RATE_LIMITED",
+        `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(limit.retryAfterSec / 60)} menit.`,
+      );
+
+    // Key dibaca sebelum dikosongkan: baris hasil update sudah tidak memuatnya.
+    const before = await findClaimByToken(claimToken);
+    const row = await setClaimPhotoKey(claimToken, null);
+    if (!row) return fail("NOT_FOUND", "Klaim tidak ditemukan.");
+
+    // Baris dulu, objek menyusul: gagal hapus objek tidak menggagalkan aksi orang.
+    if (before?.claim.photoKey) await deletePhoto(before.claim.photoKey);
+
+    await revalidateClaim(claimToken);
+    return ok(undefined);
+  } catch (err) {
+    return handleUnexpected("removeClaimPhotoAction", err);
   }
 }
 

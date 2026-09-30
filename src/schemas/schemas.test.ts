@@ -4,7 +4,13 @@ import { measurementSchema } from "./measurement";
 import { registerSchema } from "./auth";
 import { vaccinationSchema } from "./vaccination";
 import { reminderSchema } from "./reminder";
-import { registryClaimSchema, registryItemSchema, registryTrackingSchema } from "./registry";
+import {
+  registryClaimSchema,
+  registryItemSchema,
+  registryTrackingSchema,
+  shippingSchema,
+  tidyText,
+} from "./registry";
 import { isNotFuture, isValidYMD } from "./date";
 
 /**
@@ -380,9 +386,115 @@ describe("registryClaimSchema", () => {
     expect(registryClaimSchema.safeParse(base).success).toBe(true);
   });
 
-  it("registryTrackingSchema mewajibkan resi, berbeda dari saat klaim", () => {
-    expect(registryTrackingSchema.safeParse({ trackingNumber: "" }).success).toBe(false);
-    expect(registryTrackingSchema.safeParse({ trackingNumber: "ab" }).success).toBe(false);
+  it("registryTrackingSchema tidak mewajibkan resi — foto barang adalah bukti lain", () => {
+    // Kosong berarti "hapus resinya", bukan error: yang menjaga agar klaim tidak
+    // berakhir tanpa bukti apa pun adalah UI-nya, bukan schema ini.
+    expect(registryTrackingSchema.parse({ trackingNumber: "" }).trackingNumber).toBeNull();
     expect(registryTrackingSchema.parse({ trackingNumber: " JNE 123 " }).trackingNumber).toBe("JNE 123");
+    expect(registryTrackingSchema.safeParse({ trackingNumber: "<script>" }).success).toBe(false);
+  });
+});
+
+describe("shippingSchema", () => {
+  const base = {
+    shipName: "Ibu Rafa",
+    shipPhone: "081234567890",
+    shipProvince: "JAWA TENGAH",
+    shipCity: "KABUPATEN DEMAK",
+    shipDistrict: "WEDUNG",
+    shipAddress: "Jl. Melati No. 12, RT 03 / RW 05",
+  };
+
+  const errorPaths = (input: unknown) => {
+    const res = shippingSchema.safeParse(input);
+    if (res.success) return [];
+    return res.error.issues.map((i) => i.path.join("."));
+  };
+
+  it("alamat wajib lengkap — tiap bagian yang hilang menghasilkan errornya sendiri", () => {
+    expect(shippingSchema.safeParse(base).success).toBe(true);
+
+    for (const key of Object.keys(base) as (keyof typeof base)[]) {
+      expect(errorPaths({ ...base, [key]: "" })).toContain(key);
+    }
+  });
+
+  it("nomor HP harus nomor HP Indonesia, bukan sembarang angka", () => {
+    expect(shippingSchema.safeParse({ ...base, shipPhone: "0212345678" }).success).toBe(false);
+    expect(shippingSchema.safeParse({ ...base, shipPhone: "bukan angka" }).success).toBe(false);
+    expect(shippingSchema.safeParse({ ...base, shipPhone: "+6281234567890" }).success).toBe(true);
+  });
+
+  it("alamat terlalu pendek ditolak dan yang lolos dirapikan", () => {
+    expect(shippingSchema.safeParse({ ...base, shipAddress: "Jl. A" }).success).toBe(false);
+    expect(
+      shippingSchema.parse({ ...base, shipAddress: "Jl.   Melati  12\n\n\n\nRT 03" }).shipAddress,
+    ).toBe("Jl. Melati 12\n\nRT 03");
+  });
+
+  it("rekening opsional, kecuali dinyalakan — lalu ketiganya wajib", () => {
+    // Mati: rekening kosong tidak jadi masalah, dan tidak ada yang ditampilkan.
+    const off = shippingSchema.parse(base);
+    expect(off.bankPublic).toBe(false);
+    expect(off.bankName).toBeNull();
+
+    // Nyala tapi kosong: tiga error, satu per field, bukan satu error umum.
+    expect(errorPaths({ ...base, bankPublic: true })).toEqual(
+      expect.arrayContaining(["bankName", "bankHolder", "bankAccount"]),
+    );
+
+    const on = shippingSchema.parse({
+      ...base,
+      bankPublic: true,
+      bankName: "BCA",
+      bankHolder: "Ibu Rafa",
+      bankAccount: "123 456-7890",
+    });
+    expect(on.bankName).toBe("BCA");
+    expect(on.bankAccount).toBe("123 456-7890");
+
+    // Kode bank di luar daftar ditolak: yang dipakai BankChip adalah kunci BANKS.
+    expect(errorPaths({ ...base, bankPublic: true, bankName: "BANK PALSU", bankHolder: "A", bankAccount: "1" })).toContain(
+      "bankName",
+    );
+    // Rekening bukan tempat menaruh teks bebas.
+    expect(
+      errorPaths({ ...base, bankPublic: true, bankName: "BCA", bankHolder: "A", bankAccount: "<script>" }),
+    ).toContain("bankAccount");
+  });
+});
+
+describe("tidyText", () => {
+  it("meratakan spasi ganda dan tumpukan baris kosong, satu baris kosong tetap", () => {
+    expect(tidyText("Bahan   katun    premium")).toBe("Bahan katun premium");
+    expect(tidyText("  Judul  \n\n\n\n  Isi  \n  ")).toBe("Judul\n\nIsi");
+    // Satu baris kosong adalah pemisah paragraf yang dimaksud: dipertahankan.
+    expect(tidyText("Paragraf 1\n\nParagraf 2")).toBe("Paragraf 1\n\nParagraf 2");
+    // Baris tunggal berurutan tidak digabung — daftar butir tetap terbaca.
+    expect(tidyText("- satu\n- dua")).toBe("- satu\n- dua");
+    // CRLF dari tempelan Windows tidak menyisakan \r.
+    expect(tidyText("a\r\n\r\nb")).toBe("a\n\nb");
+    expect(tidyText("   \n  \n ")).toBe("");
+  });
+
+  it("deskripsi barang dirapikan saat disimpan, bukan saat dirender", () => {
+    const parsed = registryItemSchema.parse({
+      name: "Sterilizer",
+      description: "Kapasitas   6  botol\n\n\n\nGaransi 1 tahun",
+      priority: "NORMAL",
+      category: "OTHER",
+      desiredQty: "1",
+    });
+    expect(parsed.description).toBe("Kapasitas 6 botol\n\nGaransi 1 tahun");
+    // Teks yang isinya hanya spasi jadi null, bukan string kosong di DB.
+    expect(
+      registryItemSchema.parse({
+        name: "Sterilizer",
+        description: "   \n  ",
+        priority: "NORMAL",
+        category: "OTHER",
+        desiredQty: "1",
+      }).description,
+    ).toBeNull();
   });
 });

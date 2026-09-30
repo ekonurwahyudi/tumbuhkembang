@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ChildFace, ChildStack, type RegistryChild } from "./registry-shared";
+import { ChildFace, ChildStack, joinNames, type RegistryChild } from "./registry-shared";
 
 /**
  * Penyaring "untuk anak siapa" plus hero yang ikut berubah.
@@ -57,42 +57,52 @@ export function ChildFilter({
         </div>
       </div>
 
-      {/* Satu anak saja tidak butuh pilihan: headernya sudah menyebut anak itu. */}
-      {childList.length > 1 && (
-        <div
-          role="tablist"
-          aria-label="Saring menurut anak"
-          className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
-        >
-          <ChildPill
-            active={value === null}
-            onClick={() => onChange(null)}
-            label={`Semua Anak (${total})`}
-            avatar={<ChildStack childList={childList} max={2} size="sm" />}
-          />
-          {childList.map((c) => (
-            <ChildPill
-              key={c.id}
-              active={value === c.id}
-              onClick={() => onChange(c.id)}
-              label={`${c.name} (${c.count})`}
-              avatar={<ChildFace child={c} size="sm" />}
-            />
-          ))}
-        </div>
-      )}
+      <ChildPills childList={childList} value={value} onChange={onChange} total={total} />
     </section>
   );
 }
 
-/** "Aisyah & Rafa", atau "Aisyah, Rafa & 1 lainnya" bila lebih dari tiga. */
-function joinNames(childList: { name: string }[]): string {
-  const names = childList.map((c) => c.name);
-  if (names.length <= 3) {
-    const last = names.pop() as string;
-    return names.length === 0 ? last : `${names.join(", ")} & ${last}`;
-  }
-  return `${names.slice(0, 2).join(", ")} & ${names.length - 2} lainnya`;
+/**
+ * Deretan pil pemilih anak, tanpa hero. Dipakai halaman publik yang punya hero
+ * sendiri (bergradien, dengan panel status), supaya tidak ada dua hero bertumpuk.
+ */
+export function ChildPills({
+  childList,
+  value,
+  onChange,
+  total,
+}: {
+  childList: FilterChild[];
+  value: string | null;
+  onChange: (id: string | null) => void;
+  total: number;
+}) {
+  // Satu anak saja tidak butuh pilihan: heronya sudah menyebut anak itu.
+  if (childList.length < 2) return null;
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Saring menurut anak"
+      className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
+    >
+      <ChildPill
+        active={value === null}
+        onClick={() => onChange(null)}
+        label={`Semua Anak (${total})`}
+        avatar={<ChildStack childList={childList} max={2} size="sm" />}
+      />
+      {childList.map((c) => (
+        <ChildPill
+          key={c.id}
+          active={value === c.id}
+          onClick={() => onChange(c.id)}
+          label={`${c.name} (${c.count})`}
+          avatar={<ChildFace child={c} size="sm" />}
+        />
+      ))}
+    </div>
+  );
 }
 
 function ChildPill({

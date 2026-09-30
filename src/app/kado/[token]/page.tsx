@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
-import { findPublicRegistry, listPublicChildren, listPublicItems } from "@/lib/data/registry";
+import {
+  findPublicRegistry,
+  findPublicShipping,
+  listPublicChildren,
+  listPublicItems,
+} from "@/lib/data/registry";
 import { chronologicalAge, formatAge } from "@/lib/growth/age";
 import { requestOrigin } from "@/lib/request-origin";
 import { PublicRegistryList } from "@/components/registry/public-registry-list";
 import { toPublicRow } from "@/components/registry/registry-shared";
+import { ShippingPanel } from "@/components/registry/shipping-panel";
 import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Wishlist Kado" };
@@ -27,34 +33,42 @@ export default async function PublicRegistryPage({ params }: PageProps<"/kado/[t
 
   if (!registry) return <NotFoundCard />;
 
-  const [rows, childList, origin] = await Promise.all([
+  const [rows, childList, shipping, origin] = await Promise.all([
     listPublicItems(registry.userId),
     listPublicChildren(token),
+    findPublicShipping(token),
     requestOrigin(),
   ]);
 
-  // Umur dihitung di server; hanya labelnya yang menyeberang ke klien.
-  const filterChildren = childList
-    .map((c) => ({
-      id: c.id,
-      name: c.name,
-      photoSrc: c.photoKey ? `/kado/${token}/anak/${c.id}` : null,
-      age: formatAge(chronologicalAge(c.dateOfBirth)),
-      count: rows.filter((r) => r.item.childId === c.id).length,
-    }))
-    .filter((c) => c.count > 0);
+  /*
+    Umur dihitung di server; hanya labelnya yang menyeberang ke klien.
+
+    Barang tanpa anak ikut dihitung untuk setiap anak: itu kado untuk semua anak
+    yang terdaftar, bukan kado tanpa tujuan. Tanpa ini registry yang barangnya
+    tidak ditujukan ke anak tertentu tidak memunculkan nama anak sama sekali.
+  */
+  const shared = rows.filter((r) => r.item.childId === null).length;
+  const filterChildren = childList.map((c) => ({
+    id: c.id,
+    name: c.name,
+    photoSrc: c.photoKey ? `/kado/${token}/anak/${c.id}` : null,
+    age: formatAge(chronologicalAge(c.dateOfBirth)),
+    count: rows.filter((r) => r.item.childId === c.id).length + shared,
+  }));
 
   return (
     <main className="bg-background min-h-dvh px-4 pt-6 pb-10">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-        <header className="text-center">
-          <span className="bg-accent text-primary mx-auto grid size-14 place-items-center rounded-full">
-            <Icon name="card_giftcard" filled className="text-[28px]" />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+        <header className="flex items-center gap-2.5">
+          <span className="bg-accent text-primary grid size-10 shrink-0 place-items-center rounded-full">
+            <Icon name="card_giftcard" filled className="text-[22px]" />
           </span>
-          <h1 className="text-headline-lg mt-3">Wishlist {registry.ownerName}</h1>
-          <p className="text-muted-foreground text-body-sm mt-1">
-            Pilih satu barang yang ingin Anda hadiahi. Tidak perlu membuat akun.
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-headline-sm truncate">Wishlist {registry.ownerName}</h1>
+            <p className="text-muted-foreground text-label-sm">
+              Pilih barang yang ingin Anda hadiahi. Tidak perlu membuat akun.
+            </p>
+          </div>
         </header>
 
         {rows.length === 0 ? (
@@ -65,8 +79,10 @@ export default async function PublicRegistryPage({ params }: PageProps<"/kado/[t
           <PublicRegistryList
             rows={rows.map(toPublicRow)}
             childList={filterChildren}
+            ownerName={registry.ownerName}
             token={token}
             origin={origin}
+            shippingPanel={shipping ? <ShippingPanel shipping={shipping} /> : null}
           />
         )}
       </div>

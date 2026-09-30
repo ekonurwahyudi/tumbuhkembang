@@ -93,3 +93,8 @@ export const getUserPhoto = (key: string) => getPhoto(key);
 export const putRegistryPhoto = (itemId: string, body: Uint8Array, ct: string) =>
   putPhoto("registry", itemId, body, ct);
 export const getRegistryPhoto = (key: string) => getPhoto(key);
+
+// Foto bukti kirim dari pengklaim. Prefix sendiri supaya tidak tercampur dengan
+// foto barang milik orang tua — keduanya dihapus oleh pemilik yang berbeda.
+export const putClaimPhoto = (claimId: string, body: Uint8Array, ct: string) =>
+  putPhoto("claims", claimId, body, ct);

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   children,
@@ -250,6 +250,52 @@ export async function setRegistryPublic(userId: string, on: boolean) {
 }
 
 /**
+ * Alamat kirim + rekening sisi pemilik. Terpisah dari `getRegistrySettings`
+ * supaya halaman yang cuma butuh token tidak menarik alamat rumah orang.
+ */
+export async function getShippingSettings(userId: string) {
+  const [row] = await db
+    .select({
+      shipName: users.shipName,
+      shipPhone: users.shipPhone,
+      shipProvince: users.shipProvince,
+      shipCity: users.shipCity,
+      shipDistrict: users.shipDistrict,
+      shipAddress: users.shipAddress,
+      bankName: users.bankName,
+      bankHolder: users.bankHolder,
+      bankAccount: users.bankAccount,
+      bankPublic: users.bankPublic,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row;
+}
+
+export type ShippingValues = {
+  shipName: string;
+  shipPhone: string;
+  shipProvince: string;
+  shipCity: string;
+  shipDistrict: string;
+  shipAddress: string;
+  bankName: string | null;
+  bankHolder: string | null;
+  bankAccount: string | null;
+  bankPublic: boolean;
+};
+
+export async function setShippingSettings(userId: string, values: ShippingValues) {
+  const [row] = await db
+    .update(users)
+    .set({ ...values, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+  return row;
+}
+
+/**
  * Anak milik user untuk dropdown "Untuk:" dan rel penyaring. Foto dan tanggal
  * lahir ikut karena rel butuh avatar + umurnya; tetap bukan seluruh profil —
  * pengukuran, tipe kelahiran, dan sisanya tidak dibawa.
@@ -279,6 +325,68 @@ export async function findPublicRegistry(token: string): Promise<PublicRegistry 
     .where(and(eq(users.registryToken, token), eq(users.registryPublic, true)))
     .limit(1);
   return row;
+}
+
+/**
+ * Alamat kirim + rekening untuk halaman publik. Otorisasinya di dalam query, sama
+ * seperti `findPublicRegistry`: token cocok DAN registry masih dibagikan.
+ *
+ * Rekening hanya ikut bila `bankPublic` — itu saklar orang tuanya, dan diuji di
+ * sini supaya tidak ada halaman yang bisa lupa memeriksanya. Alamat ikut hanya bila
+ * lengkap; alamat setengah jadi tidak berguna untuk kurir dan tetap membocorkan
+ * tempat tinggal.
+ */
+export type PublicShipping = {
+  name: string;
+  phone: string;
+  province: string;
+  city: string;
+  district: string;
+  address: string;
+  bank: { name: string; holder: string; account: string } | null;
+};
+
+export async function findPublicShipping(token: string): Promise<PublicShipping | undefined> {
+  const [row] = await db
+    .select({
+      shipName: users.shipName,
+      shipPhone: users.shipPhone,
+      shipProvince: users.shipProvince,
+      shipCity: users.shipCity,
+      shipDistrict: users.shipDistrict,
+      shipAddress: users.shipAddress,
+      bankName: users.bankName,
+      bankHolder: users.bankHolder,
+      bankAccount: users.bankAccount,
+      bankPublic: users.bankPublic,
+    })
+    .from(users)
+    .where(and(eq(users.registryToken, token), eq(users.registryPublic, true)))
+    .limit(1);
+
+  if (
+    !row ||
+    !row.shipName ||
+    !row.shipPhone ||
+    !row.shipProvince ||
+    !row.shipCity ||
+    !row.shipDistrict ||
+    !row.shipAddress
+  )
+    return undefined;
+
+  return {
+    name: row.shipName,
+    phone: row.shipPhone,
+    province: row.shipProvince,
+    city: row.shipCity,
+    district: row.shipDistrict,
+    address: row.shipAddress,
+    bank:
+      row.bankPublic && row.bankName && row.bankHolder && row.bankAccount
+        ? { name: row.bankName, holder: row.bankHolder, account: row.bankAccount }
+        : null,
+  };
 }
 
 export async function listPublicItems(userId: string): Promise<ItemWithClaims[]> {
@@ -348,12 +456,21 @@ export async function findPublicItem(
 
 /**
  * Anak yang boleh ditampilkan ke pemegang tautan. Tiga syarat, semuanya di dalam
- * query: registry terbuka, anak milik pemilik registry, dan anak itu dirujuk
- * setidaknya satu barang publik.
+ * query: registry terbuka, anak milik pemilik registry, dan ada barang publik yang
+ * menjadikan anak itu tujuannya.
  *
- * Syarat terakhir yang menjaga batasnya: tautan wishlist tidak boleh berubah jadi
- * daftar seluruh anak di akun itu, hanya anak yang memang jadi tujuan kadonya.
+ * Syarat ketiga itu terpenuhi dua cara: barang yang menyebut anak itu, ATAU barang
+ * tanpa anak — barang tanpa anak adalah kado untuk semua anak yang terdaftar
+ * (kembar tidak perlu didaftar satu-satu). Yang tetap menjaga batasnya: registry
+ * yang belum dibagikan, atau yang seluruh barangnya privat, tidak memunculkan satu
+ * anak pun.
  */
+const publicChildItemJoin = and(
+  eq(registryItems.userId, children.userId),
+  eq(registryItems.isPublic, true),
+  or(eq(registryItems.childId, children.id), isNull(registryItems.childId)),
+);
+
 export async function listPublicChildren(token: string) {
   return db
     .selectDistinct({
@@ -364,10 +481,7 @@ export async function listPublicChildren(token: string) {
     })
     .from(children)
     .innerJoin(users, eq(users.id, children.userId))
-    .innerJoin(
-      registryItems,
-      and(eq(registryItems.childId, children.id), eq(registryItems.isPublic, true)),
-    )
+    .innerJoin(registryItems, publicChildItemJoin)
     .where(and(eq(users.registryToken, token), eq(users.registryPublic, true)));
 }
 
@@ -380,10 +494,7 @@ export async function findPublicChildPhotoKey(
     .selectDistinct({ photoKey: children.photoKey })
     .from(children)
     .innerJoin(users, eq(users.id, children.userId))
-    .innerJoin(
-      registryItems,
-      and(eq(registryItems.childId, children.id), eq(registryItems.isPublic, true)),
-    )
+    .innerJoin(registryItems, publicChildItemJoin)
     .where(
       and(
         eq(children.id, childId),
@@ -479,11 +590,75 @@ export async function findClaimByToken(claimToken: string) {
   return row;
 }
 
-export async function updateClaimTracking(claimToken: string, trackingNumber: string) {
+/** `null` mengosongkan resi — pengklaim yang beralih ke foto bukti boleh menghapusnya. */
+export async function updateClaimTracking(claimToken: string, trackingNumber: string | null) {
   const [row] = await db
     .update(registryClaims)
     .set({ trackingNumber, updatedAt: new Date() })
     .where(eq(registryClaims.claimToken, claimToken))
     .returning();
+  return row;
+}
+
+/** Foto bukti pengiriman. Otorisasinya `claimToken`, sama dengan resi. */
+export async function setClaimPhotoKey(claimToken: string, photoKey: string | null) {
+  const [row] = await db
+    .update(registryClaims)
+    .set({ photoKey, updatedAt: new Date() })
+    .where(eq(registryClaims.claimToken, claimToken))
+    .returning();
+  return row;
+}
+
+/**
+ * Key foto bukti untuk route sisi orang tua. Kepemilikan diuji DI DALAM query:
+ * klaim atas barang orang lain sama saja dengan tidak ada.
+ */
+export async function findClaimPhotoKey(
+  userId: string,
+  claimId: string,
+): Promise<string | undefined> {
+  const [row] = await db
+    .select({ photoKey: registryClaims.photoKey })
+    .from(registryClaims)
+    .innerJoin(registryItems, eq(registryItems.id, registryClaims.itemId))
+    .where(and(eq(registryClaims.id, claimId), eq(registryItems.userId, userId)))
+    .limit(1);
+  return row?.photoKey ?? undefined;
+}
+
+/**
+ * Orang tua membatalkan klaim — yang iseng, atau yang berubah pikiran. Tidak ada
+ * kolom status di `registry_claims`, jadi menghapus barisnya benar-benar
+ * membebaskan kuotanya dan barangnya bisa diklaim lagi.
+ *
+ * Kepemilikan diuji DI DALAM query lewat subquery `itemId IN (barang milik user)`:
+ * klaim atas barang orang lain sama saja dengan tidak ada. DELETE tidak bisa
+ * di-join di Postgres, jadi subquery — bukan cek terpisah di action, yang bisa
+ * dilupakan.
+ *
+ * `photoKey` dikembalikan supaya objeknya di R2 ikut dibersihkan pemanggilnya.
+ */
+export async function deleteRegistryClaim(userId: string, claimId: string) {
+  const [row] = await db
+    .delete(registryClaims)
+    .where(
+      and(
+        eq(registryClaims.id, claimId),
+        inArray(
+          registryClaims.itemId,
+          db
+            .select({ id: registryItems.id })
+            .from(registryItems)
+            .where(eq(registryItems.userId, userId)),
+        ),
+      ),
+    )
+    .returning({
+      id: registryClaims.id,
+      itemId: registryClaims.itemId,
+      photoKey: registryClaims.photoKey,
+      claimerName: registryClaims.claimerName,
+    });
   return row;
 }

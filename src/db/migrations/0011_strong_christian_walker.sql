@@ -1,0 +1,1 @@
+ALTER TABLE "registry_claims" ADD COLUMN "photo_key" text;

@@ -52,6 +52,29 @@ export const users = pgTable(
     // registryPublic dimatikan tanpa mengganti token, jadi tautannya bisa dihidupkan lagi.
     registryToken: text("registry_token"),
     registryPublic: boolean("registry_public").notNull().default(false),
+    /*
+      Alamat pengiriman kado. Nullable walau UI mewajibkannya: kolom NOT NULL
+      akan menolak setiap akun yang sudah ada, dan alamat memang baru dibutuhkan
+      saat wishlist dibagikan — bukan saat mendaftar.
+
+      `shipProvince/City/District` datang dari satu baris lokasi.json yang dipecah
+      di server, jadi ketiganya selalu konsisten satu sama lain.
+    */
+    shipName: text("ship_name"),
+    shipPhone: text("ship_phone"),
+    shipProvince: text("ship_province"),
+    shipCity: text("ship_city"),
+    shipDistrict: text("ship_district"),
+    shipAddress: text("ship_address"),
+    /*
+      Rekening untuk yang memilih mengirim uang alih-alih barang. Ditampilkan ke
+      publik HANYA bila `bankPublic` true — nomor rekening di halaman yang bisa
+      diteruskan siapa saja adalah keputusan orang tuanya, bukan bawaan.
+    */
+    bankName: text("bank_name"),
+    bankHolder: text("bank_holder"),
+    bankAccount: text("bank_account"),
+    bankPublic: boolean("bank_public").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -283,8 +306,9 @@ export const registryItems = pgTable(
  * sesi. Otorisasinya cuma dua token: `users.registry_token` untuk membuat klaim, dan
  * `claim_token` di sini supaya pengklaim bisa kembali mengisi nomor resinya.
  *
- * Tidak ada kolom status: `tracking_number IS NULL` berarti belum dikirim, terisi
- * berarti sedang dikirim. Nama kurir sudah muat di teks resinya.
+ * Tidak ada kolom status: barang dianggap sudah dikirim bila `tracking_number`
+ * ATAU `photo_key` terisi — bukan semua orang membeli lewat kurir berresi, jadi
+ * foto barangnya adalah bukti yang sama sahnya. Nama kurir muat di teks resinya.
  */
 export const registryClaims = pgTable(
   "registry_claims",
@@ -297,6 +321,12 @@ export const registryClaims = pgTable(
     qty: integer("qty").notNull().default(1),
     message: text("message"),
     trackingNumber: text("tracking_number"),
+    /**
+     * Foto barang yang dikirim pengklaim — pengganti resi bagi yang membeli
+     * offline atau tidak punya nomor resi. Objeknya privat di R2 seperti foto
+     * lain; hanya orang tua dan pengklaim itu sendiri yang punya route bacanya.
+     */
+    photoKey: text("photo_key"),
     claimToken: text("claim_token").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
 import {
   getRegistrySettings,
+  getShippingSettings,
   listRegistryChildren,
   listRegistryClaims,
   listRegistryItems,
@@ -13,6 +14,8 @@ import { chronologicalAge, formatAge } from "@/lib/growth/age";
 import { EmptyState } from "@/components/empty-state";
 import { RegistryList } from "@/components/registry/registry-list";
 import { RegistryShareCard } from "@/components/registry/registry-share-card";
+import { titled } from "@/components/registry/registry-shared";
+import { ShippingDialog } from "@/components/registry/shipping-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 
@@ -20,10 +23,11 @@ export const metadata: Metadata = { title: "MyRegistry" };
 
 export default async function RegistryPage() {
   const user = await requireUser();
-  const [rows, claims, settings, childList, origin] = await Promise.all([
+  const [rows, claims, settings, shipping, childList, origin] = await Promise.all([
     listRegistryItems(user.id),
     listRegistryClaims(user.id),
     getRegistrySettings(user.id),
+    getShippingSettings(user.id),
     listRegistryChildren(user.id),
     requestOrigin(),
   ]);
@@ -31,10 +35,27 @@ export default async function RegistryPage() {
   const summary = registrySummary(rows);
 
   /*
-    Umur dihitung di server dengan fungsi yang sama seperti child-hero.tsx, jadi
-    tanggal lahirnya tidak perlu menyeberang ke klien — hanya labelnya. Anak yang
-    belum punya barang tidak dapat pil penyaring.
+    Kolomnya nullable supaya akun lama tidak ditolak migrasi, jadi "lengkap" diuji
+    di sini — aturan yang sama dengan `findPublicShipping`: alamat separuh tidak
+    berguna bagi kurir dan tetap membocorkan tempat tinggal orang.
   */
+  const addressComplete = Boolean(
+    shipping?.shipName &&
+      shipping.shipPhone &&
+      shipping.shipProvince &&
+      shipping.shipCity &&
+      shipping.shipDistrict &&
+      shipping.shipAddress,
+  );
+
+  /*
+    Umur dihitung di server dengan fungsi yang sama seperti child-hero.tsx, jadi
+    tanggal lahirnya tidak perlu menyeberang ke klien — hanya labelnya.
+
+    Barang tanpa anak ikut dihitung untuk setiap anak: itu kado untuk semua anak
+    yang terdaftar. Anak yang tidak dapat barang apa pun tidak dapat pil penyaring.
+  */
+  const shared = rows.filter((r) => r.item.childId === null).length;
   const filterChildren = childList
     .map((c) => ({
       id: c.id,
@@ -43,7 +64,7 @@ export default async function RegistryPage() {
         ? `/children/${c.id}/photo?v=${encodeURIComponent(c.photoKey)}`
         : null,
       age: formatAge(chronologicalAge(c.dateOfBirth)),
-      count: rows.filter((r) => r.item.childId === c.id).length,
+      count: rows.filter((r) => r.item.childId === c.id).length + shared,
     }))
     .filter((c) => c.count > 0);
 
@@ -70,7 +91,34 @@ export default async function RegistryPage() {
         ownerName={user.name}
         origin={origin}
         summary={summary}
+        shippingAction={<ShippingDialog current={shipping ?? null} complete={addressComplete} />}
       />
+
+      {/*
+        Alamat wajib, tapi tidak bisa dipaksa lewat kolom NOT NULL — akun yang sudah
+        ada akan ditolak. Jadi diingatkan di sini, di tempat orang tua membagikan
+        tautannya: tanpa alamat, yang mengklaim kado tidak punya tujuan kirim.
+      */}
+      {!addressComplete ? (
+        <p className="bg-muted text-body-sm flex items-start gap-2 rounded-2xl p-3">
+          <Icon name="info" className="mt-0.5 shrink-0 text-[16px]" />
+          <span>
+            <strong>Alamat pengiriman belum lengkap.</strong> Pemberi hadiah tidak tahu ke mana
+            kadonya dikirim. Isi lewat tombol <strong>Isi Alamat Kirim</strong> di kartu di atas.
+          </span>
+        </p>
+      ) : (
+        <p className="bg-accent text-primary text-body-sm flex items-start gap-2 rounded-2xl p-3">
+          <Icon name="check_circle" filled className="mt-0.5 shrink-0 text-[16px]" />
+          <span>
+            Kado dikirim ke <strong>{shipping?.shipName}</strong> —{" "}
+            {titled(shipping?.shipDistrict ?? "")}, {titled(shipping?.shipCity ?? "")}
+            {shipping?.bankPublic
+              ? ". Nomor rekening Anda juga tampil di halaman publik."
+              : ". Nomor rekening tidak ditampilkan."}
+          </span>
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState

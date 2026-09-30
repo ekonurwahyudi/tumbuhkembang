@@ -52,13 +52,16 @@ import {
   MAX_ITEM_PHOTOS,
   addRegistryItemPhoto,
   claimItem,
+  deleteRegistryClaim,
   deleteRegistryItem,
   ensureRegistryToken,
   findClaimByToken,
+  findClaimPhotoKey,
   findPublicChildPhotoKey,
   findPublicItem,
   findPublicItemPhotoKey,
   findPublicRegistry,
+  findPublicShipping,
   getRegistryItem,
   getRegistryItemWithClaims,
   insertRegistryItem,
@@ -70,7 +73,9 @@ import {
   registrySummary,
   remainingQty,
   removeRegistryItemPhoto,
+  setClaimPhotoKey,
   setRegistryPublic,
+  setShippingSettings,
   updateClaimTracking,
   updateRegistryItem,
 } from "@/lib/data/registry";
@@ -805,6 +810,9 @@ describe("registry publik", () => {
       trackingNumber: "JNE 123",
     });
 
+    // null mengosongkan resi: pengklaim yang beralih ke foto bukti boleh menghapusnya.
+    expect(await updateClaimTracking(claimToken, null)).toMatchObject({ trackingNumber: null });
+
     const ctx = await findClaimByToken(claimToken);
     expect(ctx).toMatchObject({ itemName: baseItem.name, registryToken: token });
     expect(await findClaimByToken("token-asing")).toBeUndefined();
@@ -905,6 +913,37 @@ describe("registry publik", () => {
     await deleteRegistryItem(alice, hidden.id);
   });
 
+  it("foto bukti klaim: claim_token yang menulis, hanya orang tua yang membacanya", async () => {
+    const token = await ensureRegistryToken(alice);
+    await setRegistryPublic(alice, true);
+
+    const item = await insertRegistryItem(alice, baseItem);
+    const res = await claimItem(token!, item.id, {
+      claimerName: "Om Andi",
+      qty: 1,
+      message: null,
+      trackingNumber: null,
+    });
+    if (!res || !("claim" in res)) throw new Error("klaim gagal dibuat");
+    const { claimToken, id: claimId } = res.claim;
+
+    expect(await setClaimPhotoKey("token-asing", "claims/x/1.webp")).toBeUndefined();
+    expect(await setClaimPhotoKey(claimToken, "claims/a/1.webp")).toMatchObject({
+      photoKey: "claims/a/1.webp",
+    });
+
+    // Bacanya sisi orang tua: klaim atas barang orang lain sama saja tidak ada.
+    expect(await findClaimPhotoKey(bob, claimId)).toBeUndefined();
+    expect(await findClaimPhotoKey(alice, claimId)).toBe("claims/a/1.webp");
+
+    // null mengosongkannya, dan halaman pengklaim ikut kehilangan fotonya.
+    expect(await setClaimPhotoKey(claimToken, null)).toMatchObject({ photoKey: null });
+    expect(await findClaimPhotoKey(alice, claimId)).toBeUndefined();
+
+    await deleteRegistryItem(alice, item.id);
+    await setRegistryPublic(alice, false);
+  });
+
   it("anak hanya tampil di sisi publik bila punya barang publik", async () => {
     const token = await ensureRegistryToken(alice);
     const child = await insertChild(alice, {
@@ -936,7 +975,6 @@ describe("registry publik", () => {
     expect((await listPublicChildren(token!)).map((c) => c.id)).toEqual([child.id]);
     expect(await findPublicChildPhotoKey(token!, child.id)).toBe("children/rafa/1.webp");
 
-    // Anak Bob tidak bisa diraih dengan token Alice.
     const bobChild = await insertChild(bob, {
       name: "Anak Bob",
       sex: "MALE",
@@ -945,15 +983,107 @@ describe("registry publik", () => {
       gestationalAgeWeeks: null,
       gestationalAgeDays: null,
     });
+    // Anak Bob tidak bisa diraih dengan token Alice.
+    expect(await findPublicChildPhotoKey(token!, bobChild.id)).toBeUndefined();
+
+    /*
+      Barang publik TANPA anak juga memunculkan anaknya: itu kado untuk semua anak
+      yang terdaftar (kembar tidak perlu didaftar satu-satu). Barang anak tadi
+      dihapus dulu, supaya yang membuat anaknya tampil benar-benar barang itu.
+    */
+    await deleteRegistryItem(alice, open.id);
+    expect(await listPublicChildren(token!)).toHaveLength(0);
+
+    const forAll = await insertRegistryItem(alice, { ...baseItem, childId: null });
+    expect((await listPublicChildren(token!)).map((c) => c.id)).toContain(child.id);
+    expect(await findPublicChildPhotoKey(token!, child.id)).toBe("children/rafa/1.webp");
+    // Tetap hanya anak PEMILIK registry — barang tanpa anak bukan pintu ke akun lain.
+    expect((await listPublicChildren(token!)).map((c) => c.id)).not.toContain(bobChild.id);
     expect(await findPublicChildPhotoKey(token!, bobChild.id)).toBeUndefined();
 
     await setRegistryPublic(alice, false);
     expect(await listPublicChildren(token!)).toHaveLength(0);
     expect(await findPublicChildPhotoKey(token!, child.id)).toBeUndefined();
 
-    await deleteRegistryItem(alice, open.id);
+    await deleteRegistryItem(alice, forAll.id);
     await deleteRegistryItem(alice, hidden.id);
     await deleteChild(alice, child.id);
     await deleteChild(bob, bobChild.id);
+  });
+
+  it("hapus klaim: Bob tidak bisa, Alice bisa dan kuotanya terbuka lagi", async () => {
+    const token = await ensureRegistryToken(alice);
+    await setRegistryPublic(alice, true);
+
+    const item = await insertRegistryItem(alice, baseItem);
+    const res = await claimItem(token!, item.id, {
+      claimerName: "Orang Iseng",
+      qty: 1,
+      message: null,
+      trackingNumber: null,
+    });
+    if (!res || !("claim" in res)) throw new Error("klaim gagal dibuat");
+    const { id: claimId, claimToken } = res.claim;
+
+    const values = { claimerName: "Yang Serius", qty: 1, message: null, trackingNumber: null };
+    // Kuotanya penuh selama klaim iseng itu masih ada.
+    expect(await claimItem(token!, item.id, values)).toEqual({ over: 0 });
+
+    // Klaim atas barang orang lain sama saja tidak ada.
+    expect(await deleteRegistryClaim(bob, claimId)).toBeUndefined();
+    expect((await listRegistryClaims(alice)).map((c) => c.id)).toContain(claimId);
+
+    expect(await deleteRegistryClaim(alice, claimId)).toMatchObject({ id: claimId });
+    // Tidak ada kolom status: barisnya hilang, jadi kuotanya benar-benar bebas.
+    expect(await findClaimByToken(claimToken)).toBeUndefined();
+    expect(await claimItem(token!, item.id, values)).toHaveProperty("claim");
+
+    // Hapus dua kali tidak menghasilkan apa-apa, bukan error.
+    expect(await deleteRegistryClaim(alice, claimId)).toBeUndefined();
+
+    await deleteRegistryItem(alice, item.id);
+    await setRegistryPublic(alice, false);
+  });
+
+  it("alamat publik: hanya lengkap, hanya token sendiri, rekening hanya bila dinyalakan", async () => {
+    const token = await ensureRegistryToken(alice);
+    const complete = {
+      shipName: "Alice Ibu Rafa",
+      shipPhone: "081234567890",
+      shipProvince: "JAWA TENGAH",
+      shipCity: "KABUPATEN DEMAK",
+      shipDistrict: "WEDUNG",
+      shipAddress: "Jl. Melati No. 12, RT 03 / RW 05",
+      bankName: "BCA",
+      bankHolder: "Alice",
+      bankAccount: "1234567890",
+      bankPublic: false,
+    };
+
+    // Registry belum dibagikan: alamat lengkap pun belum terbaca.
+    await setShippingSettings(alice, complete);
+    expect(await findPublicShipping(token!)).toBeUndefined();
+
+    await setRegistryPublic(alice, true);
+    // bankPublic mati → alamat tampil, rekening tidak. Opt-in, bukan bawaan.
+    expect(await findPublicShipping(token!)).toMatchObject({
+      name: "Alice Ibu Rafa",
+      district: "WEDUNG",
+      bank: null,
+    });
+
+    await setShippingSettings(alice, { ...complete, bankPublic: true });
+    expect(await findPublicShipping(token!)).toMatchObject({
+      bank: { name: "BCA", holder: "Alice", account: "1234567890" },
+    });
+
+    // Token asing tidak membuka alamat siapa pun.
+    expect(await findPublicShipping("token-asing")).toBeUndefined();
+
+    // Alamat separuh: tidak berguna bagi kurir dan tetap membocorkan tempat tinggal.
+    await setShippingSettings(alice, { ...complete, shipAddress: "", bankPublic: true });
+    expect(await findPublicShipping(token!)).toBeUndefined();
+
+    await setRegistryPublic(alice, false);
   });
 });

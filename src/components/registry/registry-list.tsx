@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { deleteRegistryItemAction } from "@/lib/actions/registry";
+import { deleteClaimAction, deleteRegistryItemAction } from "@/lib/actions/registry";
 import { REGISTRY_CATEGORIES } from "@/schemas/registry";
 import { cn } from "@/lib/utils";
 import {
@@ -23,11 +23,13 @@ import { Icon } from "@/components/ui/icon";
 import { ChildFilter, type FilterChild } from "./child-rail";
 import {
   CATEGORY_LABEL,
+  ChildStack,
   ChildTag,
   ClaimProgress,
   ItemPhoto,
   StoreLinks,
   formatPriceRange,
+  joinNames,
 } from "./registry-shared";
 import { SORT_LABEL, sortRows, type SortKey } from "./sort";
 import type { RegistryCategory, RegistryClaim, RegistryItem } from "@/db/schema";
@@ -60,7 +62,10 @@ export function RegistryList({
   const [sort, setSort] = useState<SortKey>("priority");
 
   const done = (r: ListRow) => r.claimedQty >= r.item.desiredQty;
-  const byChild = rows.filter((r) => (childId ? r.item.childId === childId : true));
+  // Barang tanpa anak ikut di tiap pilihan anak — kado untuk semua anak.
+  const byChild = rows.filter(
+    (r) => !childId || r.item.childId === childId || r.item.childId === null,
+  );
   const byStatus = byChild.filter((r) =>
     status === "all" ? true : status === "done" ? done(r) : !done(r),
   );
@@ -146,6 +151,7 @@ export function RegistryList({
               key={row.item.id}
               row={row}
               child={row.item.childId ? (childById.get(row.item.childId) ?? null) : null}
+              allChildren={childList}
             />
           ))}
         </ul>
@@ -154,7 +160,16 @@ export function RegistryList({
   );
 }
 
-function ItemCard({ row, child }: { row: ListRow; child: FilterChild | null }) {
+function ItemCard({
+  row,
+  child,
+  allChildren,
+}: {
+  row: ListRow;
+  child: FilterChild | null;
+  /** Dipakai bila barangnya tidak menyebut anak: kadonya untuk mereka semua. */
+  allChildren: FilterChild[];
+}) {
   const { item, claims, claimedQty } = row;
   const price = formatPriceRange(item.priceMinIdr, item.priceMaxIdr);
   const fulfilled = claimedQty >= item.desiredQty;
@@ -184,7 +199,15 @@ function ItemCard({ row, child }: { row: ListRow; child: FilterChild | null }) {
           </div>
           {price && <p className="text-metric text-primary tabular-nums">{price}</p>}
           <div className="flex flex-wrap items-center gap-2">
-            {child && <ChildTag child={child} />}
+            {/* Tanpa anak tertentu: satu chip untuk semuanya, bukan satu chip per anak. */}
+            {child ? (
+              <ChildTag child={child} />
+            ) : allChildren.length > 0 ? (
+              <span className="bg-muted text-label-sm inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 font-bold">
+                <ChildStack childList={allChildren} max={2} size="sm" />
+                Untuk {joinNames(allChildren)}
+              </span>
+            ) : null}
             <span className="text-muted-foreground text-label-sm">
               Dibutuhkan {item.desiredQty} unit
             </span>
@@ -203,36 +226,57 @@ function ItemCard({ row, child }: { row: ListRow; child: FilterChild | null }) {
           <ClaimProgress claimed={claimedQty} desired={item.desiredQty} />
         )}
 
+        {/*
+          Baris klaim netral, bukan biru. Sebelumnya barang yang sudah terpenuhi
+          diberi `bg-accent text-primary` — biru merek yang terbaca sebagai "ini
+          yang penting", padahal justru sebaliknya: yang sudah ada tidak butuh
+          perhatian lagi. Statusnya tetap terbaca dari ikon dan teksnya sendiri.
+        */}
         {claims.length > 0 && (
           <ul className="space-y-1.5">
             {claims.map((c) => (
               <li
                 key={c.id}
-                className={cn(
-                  "text-body-sm flex items-start gap-2 rounded-xl p-2.5",
-                  fulfilled ? "bg-accent text-primary" : "bg-muted",
-                )}
+                className="bg-muted/60 text-body-sm flex items-start gap-2 rounded-xl p-2.5"
               >
-                <Icon name="check_circle" filled className="mt-0.5 text-[16px]" />
-                <span className="min-w-0">
+                <Icon
+                  name="check_circle"
+                  filled
+                  className={cn(
+                    "mt-0.5 text-[16px]",
+                    c.trackingNumber || c.photoKey ? "text-primary" : "text-muted-foreground",
+                  )}
+                />
+                <span className="min-w-0 flex-1">
                   <strong>{c.claimerName}</strong>
                   {c.qty > 1 && ` (${c.qty} unit)`}
                   {" — "}
-                  {c.trackingNumber ? `resi ${c.trackingNumber}` : "menunggu dikirim"}
+                  {/* Resi ATAU foto barangnya; rincian fotonya ada di halaman detail. */}
+                  {c.trackingNumber
+                    ? `resi ${c.trackingNumber}`
+                    : c.photoKey
+                      ? "sudah dikirim, ada fotonya"
+                      : "menunggu dikirim"}
                 </span>
+                <DeleteClaimButton claimId={c.id} claimerName={c.claimerName} />
               </li>
             ))}
           </ul>
         )}
 
-        <div className="flex justify-end gap-1">
-          <Button asChild variant="ghost" size="sm">
+        {/*
+          Tombol seperti di halaman detail: Detail dan Ubah sebagai `outline` pil,
+          Hapus sebagai ikon di ujung. Sebelumnya ketiganya `ghost` tanpa batas, jadi
+          tiga tautan teks mengambang di sudut kartu tanpa terbaca sebagai tombol.
+        */}
+        <div className="flex items-center gap-2 border-t pt-3">
+          <Button asChild variant="outline" size="sm" className="flex-1 rounded-full">
             <Link href={`/registry/${item.id}`}>
               <Icon name="visibility" className="text-[16px]" />
               Detail
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="outline" size="sm" className="flex-1 rounded-full">
             <Link href={`/registry/${item.id}/edit`}>
               <Icon name="edit" className="text-[16px]" />
               Ubah
@@ -268,7 +312,13 @@ export function DeleteItemButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Hapus ${name}`}>
+        {/* size-9: sejajar dengan tombol `sm` di sebelahnya; `size="icon"` 44px tidak. */}
+        <Button
+          variant="outline"
+          size="icon"
+          className="text-destructive hover:bg-destructive/10 size-9 shrink-0 rounded-full"
+          aria-label={`Hapus ${name}`}
+        >
           <Icon name="delete" className="text-[16px]" />
         </Button>
       </AlertDialogTrigger>
@@ -300,6 +350,71 @@ export function DeleteItemButton({
             }}
           >
             {pending ? "Menghapus..." : "Hapus"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/**
+ * Batalkan klaim: yang iseng, atau yang berubah pikiran. Tidak ada kolom status di
+ * `registry_claims`, jadi menghapus barisnya benar-benar membebaskan kuotanya dan
+ * barangnya bisa diklaim lagi — itulah yang dijanjikan teks konfirmasinya.
+ *
+ * Kepemilikan diuji di dalam query `deleteRegistryClaim`, bukan di sini.
+ */
+export function DeleteClaimButton({
+  claimId,
+  claimerName,
+}: {
+  claimId: string;
+  claimerName: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground -mt-1 -mr-1 size-8 shrink-0"
+          aria-label={`Hapus klaim ${claimerName}`}
+        >
+          <Icon name="close" className="text-[16px]" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Hapus klaim {claimerName}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Barang ini akan terbuka lagi untuk diklaim orang lain. Pesan dan foto bukti pengiriman
+            dari {claimerName} ikut terhapus dan tidak bisa dikembalikan. Tautan klaim yang sudah
+            dikirim ke {claimerName} juga tidak berlaku lagi.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Batal</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={pending}
+            onClick={(e) => {
+              e.preventDefault();
+              startTransition(async () => {
+                const res = await deleteClaimAction(claimId);
+                if (res.success) {
+                  toast.success("Klaim dihapus — barangnya bisa diklaim lagi.");
+                  setOpen(false);
+                  router.refresh();
+                } else {
+                  toast.error(res.error.message);
+                }
+              });
+            }}
+          >
+            {pending ? "Menghapus..." : "Hapus Klaim"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

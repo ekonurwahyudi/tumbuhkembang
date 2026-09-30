@@ -3,12 +3,13 @@ import { findClaimByToken } from "@/lib/data/registry";
 import { TrackingForm } from "@/components/registry/tracking-form";
 import { Icon } from "@/components/ui/icon";
 
-export const metadata: Metadata = { title: "Nomor Resi Kado" };
+export const metadata: Metadata = { title: "Bukti Pengiriman Kado" };
 
 /**
- * Pengklaim mengisi/mengubah nomor resinya. `claimToken` di URL adalah satu-satunya
- * otorisasinya — tidak ada akun untuk diperiksa. Token yang tidak dikenal dijawab
- * halaman ramah, sama seperti halaman publiknya.
+ * Pengklaim mengirim bukti pengirimannya — nomor resi atau foto barangnya.
+ * `claimToken` di URL adalah satu-satunya otorisasinya — tidak ada akun untuk
+ * diperiksa. Token yang tidak dikenal dijawab halaman ramah, sama seperti halaman
+ * publiknya.
  */
 export default async function ClaimTrackingPage({
   params,
@@ -47,17 +48,30 @@ export default async function ClaimTrackingPage({
           </p>
         </header>
 
-        {claim.trackingNumber && (
+        {/* Satu ringkasan untuk kedua bentuk bukti, supaya tidak ada dua kotak sejenis. */}
+        {(claim.trackingNumber || claim.photoKey) && (
           <p className="bg-accent text-primary text-body-sm flex items-start gap-2 rounded-xl p-3">
             <Icon name="check_circle" filled className="mt-0.5 text-[16px]" />
             <span>
-              Resi tersimpan: <strong>{claim.trackingNumber}</strong>. Anda masih bisa
-              memperbaikinya di bawah.
+              Bukti tersimpan
+              {claim.trackingNumber ? (
+                <>
+                  : resi <strong>{claim.trackingNumber}</strong>
+                </>
+              ) : (
+                ": foto barangnya"
+              )}
+              . Anda masih bisa memperbaikinya di bawah.
             </span>
           </p>
         )}
 
-        <TrackingForm claimToken={claimToken} current={claim.trackingNumber} />
+        <TrackingForm
+          token={token}
+          claimToken={claimToken}
+          current={claim.trackingNumber}
+          hasPhoto={claim.photoKey !== null}
+        />
 
         <p className="text-muted-foreground text-xs">
           Simpan tautan halaman ini. Kami tidak punya akun Anda, jadi tidak bisa mengirimkannya

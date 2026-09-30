@@ -19,6 +19,7 @@ export function RegistryShareCard({
   ownerName,
   origin,
   summary,
+  shippingAction,
 }: {
   token: string | null;
   isPublic: boolean;
@@ -26,6 +27,12 @@ export function RegistryShareCard({
   origin: string;
   /** Tiga penghitung + progres, dari registrySummary() di server. */
   summary: { listed: number; gifted: number; waiting: number };
+  /**
+   * Tombol alamat kirim. Node, bukan impor: dirender halaman supaya kartu ini tidak
+   * ikut tahu bentuk data alamat. Duduk di baris yang sama dengan Salin Link —
+   * alamat adalah bagian dari "wishlist ini siap dibagikan".
+   */
+  shippingAction?: React.ReactNode;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -119,17 +126,22 @@ export function RegistryShareCard({
         </>
       )}
 
-      <Button
-        type="button"
-        variant={isPublic ? "outline" : "default"}
-        size="sm"
-        disabled={pending}
-        onClick={() => toggle(!isPublic)}
-        className="self-start rounded-full"
-      >
-        <Icon name={isPublic ? "visibility_off" : "visibility"} className="text-[16px]" />
-        {isPublic ? "Jadikan Privat" : "Bagikan ke Publik"}
-      </Button>
+      {/* Alamat kirim tampil baik wishlist sudah publik maupun belum: diisi lebih
+          dulu berarti halaman publiknya lengkap sejak dibagikan pertama kali. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant={isPublic ? "outline" : "default"}
+          size="sm"
+          disabled={pending}
+          onClick={() => toggle(!isPublic)}
+          className="rounded-full"
+        >
+          <Icon name={isPublic ? "visibility_off" : "visibility"} className="text-[16px]" />
+          {isPublic ? "Jadikan Privat" : "Bagikan ke Publik"}
+        </Button>
+        {shippingAction}
+      </div>
     </section>
   );
 }
