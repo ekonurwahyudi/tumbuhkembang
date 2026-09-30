@@ -525,13 +525,18 @@ export async function claimItem(
   token: string,
   itemId: string,
   values: ClaimValues,
-): Promise<{ claim: RegistryClaim } | { over: number } | undefined> {
+): Promise<
+  { claim: RegistryClaim; ownerId: string; itemName: string } | { over: number } | undefined
+> {
   return db.transaction(async (tx) => {
     const [item] = await tx
       .select({
         id: registryItems.id,
         desiredQty: registryItems.desiredQty,
         allowGroup: registryItems.allowGroup,
+        // Untuk memberi tahu orang tuanya; diambil di sini supaya tidak ada query kedua.
+        ownerId: registryItems.userId,
+        name: registryItems.name,
       })
       .from(registryItems)
       .innerJoin(users, eq(users.id, registryItems.userId))
@@ -570,7 +575,7 @@ export async function claimItem(
         claimToken: randomBytes(24).toString("base64url"),
       })
       .returning();
-    return { claim };
+    return { claim, ownerId: item.ownerId, itemName: item.name };
   });
 }
 
@@ -581,6 +586,8 @@ export async function findClaimByToken(claimToken: string) {
       claim: registryClaims,
       itemName: registryItems.name,
       registryToken: users.registryToken,
+      // Pemilik wishlist — yang diberi tahu saat kadonya diklaim atau buktinya masuk.
+      ownerId: registryItems.userId,
     })
     .from(registryClaims)
     .innerJoin(registryItems, eq(registryItems.id, registryClaims.itemId))

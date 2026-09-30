@@ -9,13 +9,12 @@
  * Mutasi offline (antrean tulis) belum diaktifkan: strategi konflik/sync-nya
  * harus ditentukan lebih dulu sebelum catatan medis boleh ditulis tanpa jaringan.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `tk-static-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE = [
   OFFLINE_URL,
-  "/icons/icon.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",
@@ -100,6 +99,55 @@ self.addEventListener("fetch", (event) => {
       }),
     );
   }
+});
+
+/**
+ * Push masuk. Isinya sudah jadi dari server (judul, badan, url) — service worker
+ * TIDAK pernah mengambil data anak dari jaringan untuk melengkapinya, dan tidak
+ * pernah menyimpan payload ini ke cache. Yang tampil di layar kunci hanya kalimat
+ * yang sudah diputuskan server.
+ *
+ * `tag` membuat pemberitahuan sejenis saling menimpa, bukan menumpuk: satu jadwal
+ * vaksin yang sama tidak berubah jadi lima baris di panel notifikasi.
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data?.json() ?? {};
+  } catch {
+    // Payload bukan JSON (uji coba dari luar) — tampilkan seadanya.
+    data = { body: event.data?.text() ?? "" };
+  }
+
+  const title = data.title || "Tumbuh Kembang";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      tag: data.tag || undefined,
+      data: { url: data.url || "/dashboard" },
+    }),
+  );
+});
+
+/**
+ * Klik pemberitahuan: fokuskan tab yang sudah terbuka bila ada, baru buka yang
+ * baru. Tanpa ini, tiap klik melahirkan satu tab baru aplikasi.
+ */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/dashboard";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (new URL(c.url).origin === self.location.origin && "focus" in c) {
+          return c.focus().then(() => c.navigate(url));
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
 });
 
 /**

@@ -20,29 +20,30 @@ import { cn } from "@/lib/utils";
 type Kind = "measurement" | "feeding" | "vaccination";
 type QuickChild = { id: string; name: string; dateOfBirth: string; photoKey: string | null };
 
-const CHOICES: { kind: Kind; title: string; description: string; icon: IconName; tone: string }[] = [
-  {
-    kind: "measurement",
-    title: "Ukur Berat & Tinggi Badan",
-    description: "Timbang BB, ukur panjang badan, dan lingkar kepala",
-    icon: "straighten",
-    tone: "bg-accent text-primary",
-  },
-  {
-    kind: "feeding",
-    title: "Catat Asupan ASI / Susu",
-    description: "Log durasi menyusu atau volume perah / formula",
-    icon: "water_bottle",
-    tone: "bg-[var(--color-butter-pastel)] text-[var(--color-on-butter)]",
-  },
-  {
-    kind: "vaccination",
-    title: "Catat Imunisasi Baru",
-    description: "Input vaksinasi sesuai jadwal IDAI & Kemenkes RI",
-    icon: "vaccines",
-    tone: "bg-accent text-primary",
-  },
-];
+const CHOICES: { kind: Kind; title: string; description: string; icon: IconName; tone: string }[] =
+  [
+    {
+      kind: "measurement",
+      title: "Ukur Berat & Tinggi Badan",
+      description: "Timbang BB, ukur panjang badan, dan lingkar kepala",
+      icon: "straighten",
+      tone: "bg-accent text-primary",
+    },
+    {
+      kind: "feeding",
+      title: "Catat Asupan ASI / Susu",
+      description: "Log durasi menyusu atau volume perah / formula",
+      icon: "water_bottle",
+      tone: "bg-[var(--color-butter-pastel)] text-[var(--color-on-butter)]",
+    },
+    {
+      kind: "vaccination",
+      title: "Catat Imunisasi Baru",
+      description: "Input vaksinasi sesuai jadwal IDAI & Kemenkes RI",
+      icon: "vaccines",
+      tone: "bg-accent text-primary",
+    },
+  ];
 
 /** Pemilih anak di dalam form: catatan bisa dialihkan tanpa menutup dialog. */
 function ChildPicker({
@@ -116,9 +117,7 @@ export function QuickRecordSheet({ childrenList }: { childrenList: QuickChild[] 
   // Anak bisa terhapus dari halaman lain selagi sheet terpasang; jatuh kembali
   // ke anak pertama agar form tidak pernah menunjuk id yang sudah tidak ada.
   const child = childrenList.find((c) => c.id === childId) ?? childrenList[0];
-  const picker = (
-    <ChildPicker childrenList={childrenList} selected={child} onSelect={setChildId} />
-  );
+  const picker = <ChildPicker childrenList={childrenList} selected={child} onSelect={setChildId} />;
 
   return (
     <>

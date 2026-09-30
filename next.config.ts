@@ -9,6 +9,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Navigasi dan server action yang gagal karena jaringan ditahan, bukan dilempar
+  // sebagai error, lalu dijalankan sendiri begitu koneksi kembali. Ini yang membuat
+  // orang tua tetap bisa mencatat tanpa internet — menggantikan antrean tulis buatan
+  // sendiri, yang butuh kunci dedupe di basis data lebih dulu.
+  experimental: { useOffline: true },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

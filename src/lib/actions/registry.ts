@@ -32,6 +32,7 @@ import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { registryTrackingSchema, shippingSchema } from "@/schemas/registry";
 import { searchLokasi, type Lokasi } from "@/lib/lokasi";
 import { deletePhoto, photoStorageReady, putClaimPhoto, putRegistryPhoto } from "@/lib/storage";
+import { notify } from "@/lib/push";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, MAX_UPLOAD_BYTES } from "@/lib/storage-limits";
 import { fail, fieldErrors, handleUnexpected, ok, type ActionResult } from "@/lib/action-result";
 
@@ -317,25 +318,57 @@ export async function claimItemAction(
         { qty: res.over > 0 ? `Maksimal ${res.over}` : "Sudah dihadiahi" },
       );
 
+    /*
+      Orang tuanya diberi tahu. Tidak di-await bersama revalidate karena push yang
+      gagal tidak boleh membatalkan klaim yang sudah tersimpan — `notify` sendiri
+      sudah menelan galat pengirimannya, jadi yang tersisa di sini hanya galat DB.
+    */
+    await notify(res.ownerId, {
+      kind: "REGISTRY_CLAIM",
+      title: "Kado diklaim 🎁",
+      body: `${res.claim.claimerName} akan menghadiahi ${res.itemName}.`,
+      url: `/registry/${itemId}`,
+    }).catch(() => {});
+
     revalidatePath(`/kado/${token}`);
     revalidatePath("/kado/[token]/barang/[itemId]", "page");
     revalidatePath("/registry");
     revalidatePath("/registry/[itemId]", "page");
     revalidatePath("/dashboard");
+    revalidatePath("/notifikasi");
     return ok({ claimToken: res.claim.claimToken });
   } catch (err) {
     return handleUnexpected("claimItemAction", err);
   }
 }
 
-/** Halaman yang ikut berubah setelah pengklaim memperbarui buktinya. */
-async function revalidateClaim(claimToken: string) {
+/**
+ * Halaman yang ikut berubah setelah pengklaim memperbarui buktinya.
+ *
+ * `proof` memberi tahu orang tuanya bahwa kadonya sudah dikirim. Ikut di sini,
+ * bukan di pemanggilnya, karena konteks klaimnya sudah terambil sekali di baris
+ * pertama — memisahkannya berarti query kedua untuk data yang sama. Menghapus
+ * resi atau foto memanggilnya tanpa `proof`: itu bukan kabar baik yang perlu
+ * membunyikan HP.
+ */
+async function revalidateClaim(claimToken: string, proof?: "resi" | "foto") {
   const ctx = await findClaimByToken(claimToken);
   if (ctx?.registryToken) revalidatePath(`/kado/${ctx.registryToken}`);
   revalidatePath("/kado/[token]/barang/[itemId]", "page");
   revalidatePath("/kado/[token]/klaim/[claimToken]", "page");
   revalidatePath("/registry");
   revalidatePath("/registry/[itemId]", "page");
+
+  if (proof && ctx) {
+    revalidatePath("/dashboard");
+    revalidatePath("/notifikasi");
+    await notify(ctx.ownerId, {
+      kind: "REGISTRY_PROOF",
+      title: "Kado sudah dikirim 📦",
+      body: `${ctx.claim.claimerName} mengirim ${proof === "resi" ? "nomor resi" : "foto barang"} untuk ${ctx.itemName}.`,
+      url: `/registry/${ctx.claim.itemId}`,
+    }).catch(() => {});
+  }
 }
 
 /**
@@ -367,7 +400,8 @@ export async function updateClaimTrackingAction(
     const row = await updateClaimTracking(claimToken, parsed.data.trackingNumber);
     if (!row) return fail("NOT_FOUND", "Klaim tidak ditemukan.");
 
-    await revalidateClaim(claimToken);
+    // Mengosongkan resi berarti menghapusnya — bukan kabar kado yang baru dikirim.
+    await revalidateClaim(claimToken, parsed.data.trackingNumber ? "resi" : undefined);
     return ok(undefined);
   } catch (err) {
     return handleUnexpected("updateClaimTrackingAction", err);
@@ -430,7 +464,7 @@ export async function uploadClaimPhotoAction(
     // Satu foto per klaim: yang lama ditinggalkan setelah barisnya menunjuk yang baru.
     if (ctx.claim.photoKey && ctx.claim.photoKey !== key) await deletePhoto(ctx.claim.photoKey);
 
-    await revalidateClaim(claimToken);
+    await revalidateClaim(claimToken, "foto");
     return ok(undefined);
   } catch (err) {
     return handleUnexpected("uploadClaimPhotoAction", err);

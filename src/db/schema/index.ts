@@ -25,6 +25,15 @@ export const feedingTypeEnum = pgEnum("feeding_type", [
   "FORMULA",
 ]);
 export const registryPriorityEnum = pgEnum("registry_priority", ["HIGH", "NORMAL", "EXTRA"]);
+/**
+ * Jenis pemberitahuan. Enum, bukan teks bebas: ikon dan warna tiap jenis dipetakan
+ * di UI, dan jenis yang salah ketik akan diam-diam jatuh ke ikon default.
+ */
+export const notificationKindEnum = pgEnum("notification_kind", [
+  "REGISTRY_CLAIM",
+  "REGISTRY_PROOF",
+  "VACCINE_DUE",
+]);
 export const registryCategoryEnum = pgEnum("registry_category", [
   "NUTRITION",
   "CLOTHING",
@@ -357,6 +366,72 @@ export const usersRelations = relations(users, ({ many }) => ({
 }));
 
 /**
+ * Riwayat pemberitahuan milik satu akun: kado diklaim, bukti kirim masuk, jadwal
+ * vaksin mendekat. Baris di sini adalah sumber untuk lonceng di aplikasi; push ke
+ * HP hanyalah salinannya yang dikirim keluar (lihat `pushSubscriptions`).
+ *
+ * `body` disimpan jadi, bukan dirakit ulang saat dibaca: isinya menceritakan apa
+ * yang terjadi SAAT ITU ("Tante Rina mengklaim Sterilizer"). Barangnya bisa diubah
+ * atau dihapus sesudahnya, dan pemberitahuan yang ikut berubah jadi bohong.
+ *
+ * `url` sengaja relatif — tautan absolut mengunci host, sedangkan aplikasi ini
+ * hidup di beberapa origin (lokal, pratinjau, produksi).
+ */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: notificationKindEnum("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    url: text("url"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    /**
+     * Penanda kejadian untuk mencegah kembar — misalnya `vaccine:<childId>:<key>:<tanggal>`.
+     * Pengingat vaksin diperiksa setiap kali dashboard dibuka, jadi tanpa ini satu
+     * jadwal yang sama akan melahirkan baris baru tiap muat halaman.
+     */
+    dedupeKey: text("dedupe_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("notifications_user_created_idx").on(t.userId, t.createdAt),
+    uniqueIndex("notifications_dedupe_unique").on(t.userId, t.dedupeKey),
+  ],
+);
+
+/**
+ * Langganan Web Push milik satu perangkat. Satu akun bisa punya beberapa baris —
+ * HP, tablet, dan laptop masing-masing punya endpoint sendiri.
+ *
+ * `p256dh` dan `auth` adalah kunci enkripsi milik browser, bukan rahasia server:
+ * tanpa keduanya payload tidak bisa dienkripsi untuk perangkat itu. Endpoint yang
+ * ditolak push service (404/410) dihapus barisnya — langganan mati tidak pernah
+ * hidup lagi.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Endpoint itu global-unik per browser; perangkat yang sama tidak boleh ganda.
+    uniqueIndex("push_subscriptions_endpoint_unique").on(t.endpoint),
+    index("push_subscriptions_user_id_idx").on(t.userId),
+  ],
+);
+
+/**
  * Undangan "Akses Pasangan": pemilik anak membagikan satu anak lewat link ber-token.
  * Link ditujukan ke email tertentu — hanya akun dengan email yang sama yang bisa
  * menerima. ACCEPTED = inviteeUserId terisi dan akun itu punya akses ke anak.
@@ -437,3 +512,6 @@ export type RegistryClaim = typeof registryClaims.$inferSelect;
 /** Satu-satunya sumber nilai prioritas/kategori — jangan tulis literalnya lagi. */
 export type RegistryPriority = (typeof registryPriorityEnum.enumValues)[number];
 export type RegistryCategory = (typeof registryCategoryEnum.enumValues)[number];
+export type Notification = typeof notifications.$inferSelect;
+export type NotificationKind = (typeof notificationKindEnum.enumValues)[number];
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

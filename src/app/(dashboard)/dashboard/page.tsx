@@ -11,6 +11,7 @@ import { evaluateMeasurement } from "@/lib/growth/engine";
 import { chronologicalAge, formatAgeDaysDetailed, formatAgeDetailed } from "@/lib/growth/age";
 import { correctedAge } from "@/lib/growth/corrected-age";
 import { upcomingVaccines, vaccineSchedule } from "@/lib/immunization/schedule";
+import { syncVaccineNotifications } from "@/lib/notifications/vaccine-sync";
 import { ChildSwitcher } from "@/components/dashboard/child-switcher";
 import { GrowthHighlight } from "@/components/dashboard/growth-highlight";
 import { QuickAccess } from "@/components/dashboard/quick-access";
@@ -31,8 +32,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   if (items.length === 0)
     return (
       <div className="flex flex-col gap-4 pt-2">
-        <Greeting name={user.name} />
         <InstallPrompt />
+        <Greeting name={user.name} />
         <EmptyState
           icon="child_care"
           title="Belum ada data anak."
@@ -67,8 +68,15 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     latest?.weightKg != null ? Math.round(Number(latest.weightKg) * 1000) : child.birthWeightGrams;
   const schedule = vaccineSchedule({ child, vaccinations, skippedKeys, currentWeightGrams });
 
+  // Jadwal vaksin tidak punya pemicu waktu di aplikasi ini; pemberitahuannya lahir
+  // dari jadwal yang baru saja dihitung. Aman diulang: dedupeKey berisi tanggal
+  // target, jadi satu dosis menghasilkan tepat satu pemberitahuan.
+  await syncVaccineNotifications(user.id, child.name, child.id, schedule);
+
   return (
     <div className="flex flex-col gap-4 pt-2">
+      <InstallPrompt />
+
       <Greeting name={user.name} />
 
       <ChildSwitcher
@@ -83,8 +91,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       />
 
       <AgeBand child={child} />
-
-      <InstallPrompt />
 
       {latest ? (
         <GrowthHighlight
@@ -154,13 +160,14 @@ function AgeBand({
     child.birthType === "PRETERM" &&
     child.gestationalAgeWeeks !== null &&
     child.gestationalAgeDays !== null
-      ? { gestationalAgeWeeks: child.gestationalAgeWeeks, gestationalAgeDays: child.gestationalAgeDays }
+      ? {
+          gestationalAgeWeeks: child.gestationalAgeWeeks,
+          gestationalAgeDays: child.gestationalAgeDays,
+        }
       : null;
   const args = ga ? { dateOfBirth: child.dateOfBirth, ...ga } : null;
   const corrected =
-    args && correctedAge(args).applicable
-      ? formatAgeDaysDetailed(correctedAge(args).days)
-      : null;
+    args && correctedAge(args).applicable ? formatAgeDaysDetailed(correctedAge(args).days) : null;
 
   return (
     <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[var(--color-sky-tint)] to-[var(--color-sky-tint)]/40 px-3.5 py-3 text-[var(--color-accent-foreground)] shadow-sm">

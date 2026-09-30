@@ -120,17 +120,19 @@ export default async function SettingsPage() {
             <p className="text-muted-foreground text-body-sm">Belum ada profil anak.</p>
           </div>
         ) : (
-          children.map(({ child, latestWeightKg, latestLengthHeightCm, latestHeadCircumferenceCm }) => (
-            <SettingsChildCard
-              key={child.id}
-              child={child}
-              latest={{
-                weightKg: latestWeightKg,
-                lengthHeightCm: latestLengthHeightCm,
-                headCircumferenceCm: latestHeadCircumferenceCm,
-              }}
-            />
-          ))
+          children.map(
+            ({ child, latestWeightKg, latestLengthHeightCm, latestHeadCircumferenceCm }) => (
+              <SettingsChildCard
+                key={child.id}
+                child={child}
+                latest={{
+                  weightKg: latestWeightKg,
+                  lengthHeightCm: latestLengthHeightCm,
+                  headCircumferenceCm: latestHeadCircumferenceCm,
+                }}
+              />
+            ),
+          )
         )}
       </section>
 
@@ -143,7 +145,9 @@ export default async function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <span className="text-body-md font-bold block">Standar Kurva Pertumbuhan</span>
-              <p className="text-muted-foreground text-body-sm">Standar Baku WHO &amp; Kurva Fenton Preterm</p>
+              <p className="text-muted-foreground text-body-sm">
+                Standar Baku WHO &amp; Kurva Fenton Preterm
+              </p>
             </div>
             <Icon name="chevron_right" className="text-muted-foreground text-[20px]" />
           </div>
@@ -153,7 +157,9 @@ export default async function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <span className="text-body-md font-bold block">Jadwal Imunisasi Acuan</span>
-              <p className="text-muted-foreground text-body-sm">Jadwal Resmi IDAI 2024 &amp; Kemenkes RI</p>
+              <p className="text-muted-foreground text-body-sm">
+                Jadwal Resmi IDAI 2024 &amp; Kemenkes RI
+              </p>
             </div>
             <Icon name="chevron_right" className="text-muted-foreground text-[20px]" />
           </div>
@@ -169,9 +175,15 @@ export default async function SettingsPage() {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-body-md font-bold">Status PWA</span>
-              <span className="bg-accent text-primary text-label-sm rounded px-1.5 py-0.5 font-bold">Aktif</span>
+              <span className="bg-accent text-primary text-label-sm rounded px-1.5 py-0.5 font-bold">
+                Aktif
+              </span>
             </div>
-            <p className="text-muted-foreground text-body-sm mt-0.5">Bekerja penuh secara offline di perangkat</p>
+            {/* Kalimat lamanya menjanjikan "bekerja penuh secara offline", dan itu
+                tidak pernah benar: memuat ulang halaman tanpa koneksi tetap gagal. */}
+            <p className="text-muted-foreground text-body-sm mt-0.5">
+              Catatan yang disimpan tanpa koneksi terkirim otomatis saat internet kembali
+            </p>
           </div>
 
           <div className="bg-border h-px" />
@@ -200,8 +212,8 @@ export default async function SettingsPage() {
                 medis.
               </p>
               <p>
-                Perhitungan usia mengikuti AAP, <em>Age Terminology During the Perinatal Period</em>,
-                Pediatrics 2004;114(5):1362–1364.
+                Perhitungan usia mengikuti AAP, <em>Age Terminology During the Perinatal Period</em>
+                , Pediatrics 2004;114(5):1362–1364.
               </p>
             </div>
           </div>

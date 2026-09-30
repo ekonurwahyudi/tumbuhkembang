@@ -27,10 +27,13 @@ export function AppHeader({
   email,
   role,
   photoKey,
+  unread = 0,
   admin = false,
 }: {
   name: string;
   email: string;
+  /** Jumlah pemberitahuan belum terbaca; 0 berarti lonceng tanpa titik. */
+  unread?: number;
   /** Item "Superadmin" hanya muncul untuk SUPERADMIN. */
   role?: UserRole;
   /**
@@ -56,9 +59,7 @@ export function AppHeader({
             className="shadow-xs size-8 shrink-0 rounded-xl object-contain"
           />
           <span className="flex min-w-0 flex-col leading-none">
-            <span className="text-muted-foreground text-label-sm font-medium">
-              Tumbuh Kembang
-            </span>
+            <span className="text-muted-foreground text-label-sm font-medium">Tumbuh Kembang</span>
             <span className="text-headline-sm mt-0.5 truncate tracking-tight">
               {admin ? "Superadmin" : "Buku KIA Digital"}
             </span>
@@ -66,7 +67,10 @@ export function AppHeader({
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
-          {!admin && <TopNav />}
+          {/* Lonceng terpisah dihapus: tab "Notifikasi" di nav sudah jadi pintu
+              masuknya, dan dua tautan ke halaman yang sama hanya membingungkan.
+              Jumlah belum terbaca ikut ke nav, di desktop maupun di HP. */}
+          {!admin && <TopNav unread={unread} />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menu akun">

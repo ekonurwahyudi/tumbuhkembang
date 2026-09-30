@@ -19,6 +19,30 @@ export function formatDateTime(value: Date): string {
   return `${dateFormatter.format(value)}, ${timeFormatter.format(value)}`;
 }
 
+const relativeFormatter = new Intl.RelativeTimeFormat("id-ID", { numeric: "auto" });
+
+/**
+ * "2 jam lalu", "kemarin". Dihitung di server dan dikirim sebagai string supaya
+ * tidak ada selisih antara render server dan klien.
+ */
+export function formatRelative(value: Date, now: Date = new Date()): string {
+  const seconds = Math.round((value.getTime() - now.getTime()) / 1000);
+  const abs = Math.abs(seconds);
+  if (abs < 60) return "baru saja";
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["minute", 60],
+    ["hour", 3600],
+    ["day", 86400],
+    ["week", 604800],
+    ["month", 2629800],
+    ["year", 31557600],
+  ];
+  // Unit terbesar yang masih menghasilkan angka >= 1; mundur ke tahun bila semuanya lewat.
+  let chosen = units[0];
+  for (const u of units) if (abs >= u[1]) chosen = u;
+  return relativeFormatter.format(Math.round(seconds / chosen[1]), chosen[0]);
+}
+
 /** numeric dari Postgres datang sebagai string; tampilkan apa adanya dengan koma desimal. */
 export function formatDecimal(value: string | null, unit: string, digits = 2): string {
   if (value === null) return "—";
