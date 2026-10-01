@@ -31,6 +31,7 @@ import {
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { registryTrackingSchema, shippingSchema } from "@/schemas/registry";
 import { searchLokasi, type Lokasi } from "@/lib/lokasi";
+import { fetchStorePreview } from "@/lib/store-preview";
 import { deletePhoto, photoStorageReady, putClaimPhoto, putRegistryPhoto } from "@/lib/storage";
 import { notify } from "@/lib/push";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, MAX_UPLOAD_BYTES } from "@/lib/storage-limits";
@@ -119,7 +120,9 @@ export async function uploadRegistryPhotoAction(
     if (!photoStorageReady())
       return fail("VALIDATION_ERROR", "Penyimpanan foto belum dikonfigurasi di server.");
 
-    const files = formData.getAll("photo").filter((f): f is File => f instanceof File && f.size > 0);
+    const files = formData
+      .getAll("photo")
+      .filter((f): f is File => f instanceof File && f.size > 0);
     if (files.length === 0)
       return fail("VALIDATION_ERROR", "Pilih berkas foto terlebih dahulu.", {
         photo: "Pilih berkas foto terlebih dahulu.",
@@ -217,6 +220,64 @@ export async function saveShippingAction(formData: FormData): Promise<ActionResu
     return ok(undefined);
   } catch (err) {
     return handleUnexpected("saveShippingAction", err);
+  }
+}
+
+/**
+ * Isi otomatis dari tautan toko: nama barang, foto utama, dan harga bila tokonya
+ * menyajikannya (Tokopedia ya, Shopee tidak).
+ *
+ * Bersesi dan ber-rate-limit karena ini membuat server menembak jaringan luar atas
+ * perintah isian orang — tanpa keduanya, endpoint ini jadi proxy gratis. Daftar host
+ * yang boleh dituju, dan alasan TikTok tidak ikut, ada di `store-preview.ts`.
+ *
+ * Foto dikembalikan sebagai bytes, bukan langsung ditulis ke R2: saat form "barang
+ * baru" dipakai, barangnya belum punya id untuk dijadikan key — dan pola itu sudah
+ * berlaku untuk foto yang dipilih orang tua sendiri (lihat RegistryPhotoPicker).
+ */
+export async function fetchStorePreviewAction(
+  url: string,
+): Promise<
+  ActionResult<{ name: string; photo: { dataUrl: string } | null; priceIdr: number | null }>
+> {
+  try {
+    await requireUser();
+
+    // Divalidasi sebelum menyentuh rate limit: tautan yang jelas salah bentuk tidak
+    // menembak jaringan, jadi tidak ada alasan ia menghabiskan kuota orangnya.
+    if (typeof url !== "string" || url.length > 500)
+      return fail("VALIDATION_ERROR", "Tautan tidak valid.");
+
+    // 20, bukan 5 bawaannya: mengisi wishlist beberapa barang sekali duduk itu
+    // pemakaian normal, bukan serangan.
+    const limit = checkRateLimit(await clientKey("store-preview"), 20);
+    if (!limit.allowed)
+      return fail(
+        "RATE_LIMITED",
+        `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(limit.retryAfterSec / 60)} menit.`,
+      );
+
+    const preview = await fetchStorePreview(url);
+    if (!preview)
+      return fail(
+        "VALIDATION_ERROR",
+        "Tidak bisa membaca tautan itu. Pastikan tautannya halaman barang di Shopee atau Tokopedia, atau isi datanya manual.",
+      );
+
+    // Data URL, bukan Uint8Array: yang terakhir tidak menyeberang batas server
+    // action utuh, dan bentuk ini bisa langsung dijadikan File di klien lewat
+    // fetch(dataUrl).blob() — jalur yang sama dengan foto pilihan sendiri.
+    return ok({
+      name: preview.name,
+      photo: preview.image
+        ? {
+            dataUrl: `data:${preview.image.type};base64,${Buffer.from(preview.image.bytes).toString("base64")}`,
+          }
+        : null,
+      priceIdr: preview.priceIdr,
+    });
+  } catch (err) {
+    return handleUnexpected("fetchStorePreviewAction", err);
   }
 }
 

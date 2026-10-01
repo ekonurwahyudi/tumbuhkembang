@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   createRegistryItemAction,
+  fetchStorePreviewAction,
   updateRegistryItemAction,
   uploadRegistryPhotoAction,
 } from "@/lib/actions/registry";
@@ -21,17 +22,43 @@ import { cn } from "@/lib/utils";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RegistryPhotoPicker } from "./registry-photo-field";
+import { MAX_PHOTOS, RegistryPhotoPicker } from "./registry-photo-field";
+import { STORE_BRAND, StoreMark } from "./registry-shared";
 import type { RegistryItem } from "@/db/schema";
 
-/** Tiga marketplace; nama field sama dengan registryItemSchema. */
+/**
+ * Tiga marketplace; nama field sama dengan registryItemSchema.
+ *
+ * `autofill` di Shopee dan Tokopedia, tidak di TikTok: `tiktok.com/robots.txt`
+ * melarang `/shop/view/product/` — path halaman produknya — untuk semua bot.
+ * Alasan lengkapnya di `store-preview.ts`.
+ */
 const STORES = [
-  { name: "urlShopee", label: "Shopee", placeholder: "https://shopee.co.id/..." },
-  { name: "urlTokopedia", label: "Tokopedia", placeholder: "https://www.tokopedia.com/..." },
-  { name: "urlTiktok", label: "TikTok Shop", placeholder: "https://www.tiktok.com/..." },
+  {
+    name: "urlShopee",
+    brand: "shopee",
+    label: "Shopee",
+    placeholder: "https://shopee.co.id/... atau s.shopee.co.id/...",
+    autofill: true,
+  },
+  {
+    name: "urlTokopedia",
+    brand: "tokopedia",
+    label: "Tokopedia",
+    placeholder: "https://www.tokopedia.com/toko/nama-barang",
+    autofill: true,
+  },
+  {
+    name: "urlTiktok",
+    brand: "tiktok",
+    label: "TikTok Shop",
+    placeholder: "https://www.tiktok.com/...",
+  },
 ] as const;
 
 /**
@@ -84,6 +111,60 @@ export function RegistryItemForm({
   const [photos, setPhotos] = useState<File[]>([]);
   const [noteLen, setNoteLen] = useState(item?.note?.length ?? 0);
 
+  // Isi otomatis menulis ke input lewat ref, bukan lewat state: field-field di form ini
+  // uncontrolled (defaultValue), dan mengubahnya jadi controlled hanya untuk satu tombol
+  // akan menyeret field-field lain ikut punya state.
+  const nameRef = useRef<HTMLInputElement>(null);
+  const priceMinRef = useRef<HTMLInputElement>(null);
+  // Tombol mana yang sedang menunggu; null berarti tidak ada. Bukan boolean karena dua
+  // toko punya tombol sendiri dan hanya yang ditekan yang boleh berubah label.
+  const [fetchingFor, setFetchingFor] = useState<string | null>(null);
+  const [, startFetch] = useTransition();
+
+  const autofillFromStore = (field: string, label: string, url: string) => {
+    setFetchingFor(field);
+    startFetch(async () => {
+      try {
+        const res = await fetchStorePreviewAction(url);
+        if (!res.success) {
+          toast.error(res.error.message);
+          return;
+        }
+
+        const { name, photo, priceIdr } = res.data;
+        if (nameRef.current) nameRef.current.value = name;
+
+        // Harga hanya ditulis kalau kolomnya masih kosong: kalau orang tua sudah
+        // mengisi anggarannya sendiri, angka toko tidak boleh menimpanya.
+        const filledPrice = Boolean(priceIdr && priceMinRef.current && !priceMinRef.current.value);
+        if (filledPrice) priceMinRef.current!.value = String(priceIdr);
+
+        if (photo) {
+          // Foto lewat jalur yang sama dengan foto pilihan sendiri: jadi File, lalu
+          // ditambahkan ke daftar. Tidak melewati pickPhoto() karena bytes-nya sudah
+          // divalidasi tipe dan ukurannya di server.
+          const blob = await fetch(photo.dataUrl).then((r) => r.blob());
+          const ext =
+            blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
+          setPhotos((prev) =>
+            prev.length >= MAX_PHOTOS
+              ? prev
+              : [...prev, new File([blob], `${field}.${ext}`, { type: blob.type })],
+          );
+        }
+
+        const dapat = ["Nama", photo && "foto", filledPrice && "harga"].filter(Boolean);
+        toast.success(
+          `${dapat.join(", ")} terisi dari ${label}.` +
+            (photo ? "" : " Fotonya tidak terbaca — unggah sendiri ya.") +
+            (filledPrice || !photo ? "" : " Harga tetap diisi manual."),
+        );
+      } finally {
+        setFetchingFor(null);
+      }
+    });
+  };
+
   const { action, fields, formError, values } = useFormAction(
     (formData) =>
       item ? updateRegistryItemAction(item.id, formData) : createRegistryItemAction(formData),
@@ -130,6 +211,7 @@ export function RegistryItemForm({
           <Input
             id="name"
             name="name"
+            ref={nameRef}
             required
             maxLength={120}
             placeholder="Stroller ringan kabin"
@@ -234,6 +316,7 @@ export function RegistryItemForm({
             <Input
               id="priceMin"
               name="priceMin"
+              ref={priceMinRef}
               type="number"
               inputMode="numeric"
               min={0}
@@ -273,20 +356,77 @@ export function RegistryItemForm({
           Opsional. Tautan harus dari toko yang sesuai supaya pemberi hadiah tidak diarahkan ke
           situs lain.
         </p>
-        {STORES.map(({ name, label, placeholder }) => (
-          <div key={name} className="space-y-2">
-            <Label htmlFor={name}>{label}</Label>
-            <Input
-              id={name}
-              name={name}
-              type="url"
-              inputMode="url"
-              placeholder={placeholder}
-              defaultValue={values[name] ?? item?.[name] ?? ""}
-              aria-invalid={!!fields?.[name]}
-              aria-describedby={fields?.[name] ? `${name}-error` : undefined}
-            />
-            <FieldError id={`${name}-error`} message={fields?.[name]} />
+        {STORES.map((store) => (
+          <div key={store.name} className="space-y-2">
+            <Label htmlFor={store.name} className="gap-1.5">
+              {/* Lambang merek dalam kepingan berwarna tokonya — label tetap tertulis,
+                  jadi warna bukan satu-satunya penanda. */}
+              <span
+                className={cn(
+                  "grid size-5 shrink-0 place-items-center rounded-full",
+                  STORE_BRAND[store.brand].bg,
+                )}
+              >
+                <StoreMark brand={store.brand} className="size-3" />
+              </span>
+              {store.label}
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id={store.name}
+                name={store.name}
+                type="url"
+                inputMode="url"
+                placeholder={store.placeholder}
+                defaultValue={values[store.name] ?? item?.[store.name] ?? ""}
+                aria-invalid={!!fields?.[store.name]}
+                aria-describedby={
+                  fields?.[store.name]
+                    ? `${store.name}-error`
+                    : "autofill" in store
+                      ? `${store.name}-hint`
+                      : undefined
+                }
+              />
+              {"autofill" in store && (
+                <Button
+                  type="button"
+                  // Warna tokonya, bukan outline: tombol ini mengambil data DARI toko
+                  // itu, dan warnanya mengikat tombol ke baris yang tepat.
+                  className={cn(
+                    "shrink-0",
+                    STORE_BRAND[store.brand].bg,
+                    STORE_BRAND[store.brand].hover,
+                  )}
+                  // Hanya tombol yang ditekan yang nonaktif: dua toko boleh diisi
+                  // berurutan tanpa tombol satunya ikut mati.
+                  disabled={fetchingFor !== null}
+                  onClick={() => {
+                    const el = document.getElementById(store.name) as HTMLInputElement | null;
+                    const url = el?.value.trim();
+                    if (!url) {
+                      toast.error(`Tempel tautan ${store.label}-nya dulu.`);
+                      return;
+                    }
+                    autofillFromStore(store.name, store.label, url);
+                  }}
+                >
+                  <Icon
+                    name={fetchingFor === store.name ? "sync" : "download"}
+                    className="text-[16px]"
+                  />
+                  {fetchingFor === store.name ? "Mengambil..." : "Ambil"}
+                </Button>
+              )}
+            </div>
+            {"autofill" in store && !fields?.[store.name] && (
+              <p id={`${store.name}-hint`} className="text-muted-foreground text-xs">
+                Tempel tautan halaman barang lalu tekan <strong>Ambil</strong> untuk mengisi nama
+                dan foto otomatis
+                {store.name === "urlTokopedia" ? ", termasuk harganya" : " (harga diisi sendiri)"}.
+              </p>
+            )}
+            <FieldError id={`${store.name}-error`} message={fields?.[store.name]} />
           </div>
         ))}
       </fieldset>

@@ -19,7 +19,7 @@ import type { RegistryItem } from "@/db/schema";
  * Batasnya disalin dari MAX_ITEM_PHOTOS di data/registry.ts — server tetap yang
  * menegakkan; angka di sini supaya tombolnya mati sebelum unggahan ditolak.
  */
-const MAX_PHOTOS = 5;
+export const MAX_PHOTOS = 5;
 const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
 const HINT = `Opsional, sampai ${MAX_PHOTOS} foto (maksimal ${MB} MB per foto, JPG/PNG/WebP). Foto pertama jadi foto utama. Foto ini terlihat oleh siapa pun yang membuka tautan wishlist Anda.`;
 
@@ -46,7 +46,11 @@ function Thumbs({
         <li key={src} className="relative">
           <span className="bg-accent ring-accent block size-16 overflow-hidden rounded-xl ring-2">
             {/* eslint-disable-next-line @next/next/no-img-element -- blob lokal / route foto, bukan aset yang bisa dioptimalkan next/image */}
-            <img src={src} alt={`Pratinjau foto barang ${i + 1}`} className="size-full object-cover" />
+            <img
+              src={src}
+              alt={`Pratinjau foto barang ${i + 1}`}
+              className="size-full object-cover"
+            />
           </span>
           {i === 0 && (
             <span className="bg-primary text-primary-foreground absolute bottom-0 left-0 rounded-br-xl rounded-tl-none px-1.5 text-[10px] font-bold">

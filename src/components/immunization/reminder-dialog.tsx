@@ -81,8 +81,8 @@ export function ReminderDialog({
         <DialogHeader>
           <DialogTitle>Ingatkan Saya</DialogTitle>
           <DialogDescription>
-            Pilih tanggal dan jam untuk vaksin {vaccineName}. Pengingat ini juga bisa
-            dimasukkan ke aplikasi kalender di HP Anda.
+            Pilih tanggal dan jam untuk vaksin {vaccineName}. Pengingat ini juga bisa dimasukkan ke
+            aplikasi kalender di HP Anda.
           </DialogDescription>
         </DialogHeader>
 
@@ -145,8 +145,9 @@ export function ReminderDialog({
         {reminder && (
           <div className="space-y-2 border-t pt-4">
             <p className="text-muted-foreground text-label-sm">
-              Notifikasi dibunyikan aplikasi kalender di HP Anda, 30 menit sebelum jam
-              tersebut. Tambahkan sekali ke salah satu kalender di bawah.
+              Aplikasi ini mengirim notifikasi ke HP Anda pada jam tersebut, asalkan pemberitahuan
+              sudah dinyalakan di halaman Notifikasi. Ingin masuk ke kalender juga? Tambahkan lewat
+              salah satu tombol di bawah.
             </p>
             <div className="flex flex-col gap-2">
               <Button variant="outline" asChild>
