@@ -3,17 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { MoreDropdown, isMorePath } from "./more-menu";
 import { cn } from "@/lib/utils";
 
+/** Pil keempat bukan tautan melainkan pembuka "Lainnya" — sama dengan nav bawah. */
 const ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/registry", label: "My Kado", icon: "card_giftcard" },
   { href: "/notifikasi", label: "Notifikasi", icon: "notifications" },
-  { href: "/settings", label: "Profil", icon: "person" },
 ];
 
 export function TopNav({ unread = 0 }: { unread?: number }) {
   const pathname = usePathname();
+
+  /* Dipakai pil tautan DAN pembuka "Lainnya": keduanya harus sebentuk. */
+  const pillClass = (active: boolean) =>
+    cn(
+      // text-label-sm (11px), seragam dengan nav bawah.
+      "text-label-sm flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 font-bold transition-colors",
+      active ? "text-primary bg-card shadow-sm" : "text-muted-foreground hover:text-foreground",
+    );
+
   return (
     <nav aria-label="Navigasi utama" className="hidden md:block">
       <ul className="bg-muted flex items-center gap-1 rounded-full p-1">
@@ -26,13 +36,7 @@ export function TopNav({ unread = 0 }: { unread?: number }) {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 aria-label={badge > 0 ? `${label}, ${badge} belum dibaca` : undefined}
-                className={cn(
-                  // text-label-sm (11px), seragam dengan nav bawah.
-                  "text-label-sm flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 font-bold transition-colors",
-                  active
-                    ? "text-primary bg-card shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
+                className={pillClass(active)}
               >
                 <Icon name={icon} filled={active} className="text-[20px]" />
                 {label}
@@ -47,6 +51,17 @@ export function TopNav({ unread = 0 }: { unread?: number }) {
             </li>
           );
         })}
+
+        <li>
+          <MoreDropdown
+            trigger={
+              <button type="button" className={pillClass(isMorePath(pathname))}>
+                <Icon name="apps" filled={isMorePath(pathname)} className="text-[20px]" />
+                Lainnya
+              </button>
+            }
+          />
+        </li>
       </ul>
     </nav>
   );

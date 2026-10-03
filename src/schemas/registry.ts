@@ -115,7 +115,7 @@ export const BANK_CODES = Object.keys(BANKS) as [BankCode, ...BankCode[]];
 
 export const MAX_NOTE_CHARS = 300;
 export const MAX_QTY = 99;
-const MAX_PRICE_IDR = 100_000_000;
+export const MAX_PRICE_IDR = 100_000_000;
 
 /**
  * Rapikan teks yang ditempel orang: deskripsi yang disalin dari halaman
@@ -136,15 +136,20 @@ export function tidyText(raw: string): string {
     .trim();
 }
 
-/** Teks opsional: "" dari input kosong jadi null, bukan string kosong di DB. */
-const optionalText = (max: number, label: string) =>
+/**
+ * Teks opsional: "" dari input kosong jadi null, bukan string kosong di DB.
+ *
+ * Tiga builder di bawah ini diekspor karena schemas/shop.ts memakainya apa adanya —
+ * menyalinnya ke sana berarti dua definisi "teks opsional" yang bisa berbeda.
+ */
+export const optionalText = (max: number, label: string) =>
   z
     .union([z.string(), z.null()])
     .optional()
     .transform((v) => (typeof v === "string" ? tidyText(v) || null : null))
     .refine((v) => v === null || v.length <= max, `${label} maksimal ${max} karakter`);
 
-const optionalInt = (max: number, label: string) =>
+export const optionalInt = (max: number, label: string) =>
   z
     .union([z.string(), z.number(), z.null()])
     .optional()
@@ -159,7 +164,7 @@ const optionalInt = (max: number, label: string) =>
  * wishlist yang bisa memuat URL sembarang jadi papan tautan untuk orang asing
  * yang membuka halaman publiknya.
  */
-const storeUrl = (needle: string, label: string) =>
+export const storeUrl = (needle: string, label: string) =>
   z
     .union([z.string(), z.null()])
     .optional()
@@ -177,7 +182,11 @@ const storeUrl = (needle: string, label: string) =>
 
 export const registryItemSchema = z
   .object({
-    name: z.string().trim().min(1, "Nama barang wajib diisi").max(120, "Nama maksimal 120 karakter"),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Nama barang wajib diisi")
+      .max(120, "Nama maksimal 120 karakter"),
     description: optionalText(1000, "Deskripsi"),
     priority: z.enum(REGISTRY_PRIORITIES, { message: "Prioritas wajib dipilih" }),
     category: z.enum(REGISTRY_CATEGORIES, { message: "Kategori wajib dipilih" }),
@@ -198,8 +207,14 @@ export const registryItemSchema = z
       .optional()
       .transform((v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null))
       .refine((v) => v === null || z.uuid().safeParse(v).success, "Anak tidak valid"),
-    allowGroup: z.coerce.boolean().optional().transform((v) => v === true),
-    isPublic: z.coerce.boolean().optional().transform((v) => v === true),
+    allowGroup: z.coerce
+      .boolean()
+      .optional()
+      .transform((v) => v === true),
+    isPublic: z.coerce
+      .boolean()
+      .optional()
+      .transform((v) => v === true),
   })
   .superRefine((d, ctx) => {
     if (d.priceMin !== null && d.priceMax !== null && d.priceMax < d.priceMin) {
@@ -255,7 +270,10 @@ const requiredPhone = z
   .string()
   .trim()
   .min(1, "No. HP wajib diisi")
-  .refine((v) => /^(\+62|62|0)8[1-9]\d{6,11}$/.test(v), "No. HP tidak valid (contoh: 0812-3456-7890)");
+  .refine(
+    (v) => /^(\+62|62|0)8[1-9]\d{6,11}$/.test(v),
+    "No. HP tidak valid (contoh: 0812-3456-7890)",
+  );
 
 /**
  * Alamat pengiriman kado — WAJIB lengkap. Tanpa alamat, orang yang mengklaim kado
@@ -285,7 +303,10 @@ export const shippingSchema = z
       .min(10, "Alamat lengkap minimal 10 karakter — sertakan jalan, nomor, RT/RW")
       .max(300, "Alamat maksimal 300 karakter")
       .transform(tidyText),
-    bankPublic: z.coerce.boolean().optional().transform((v) => v === true),
+    bankPublic: z.coerce
+      .boolean()
+      .optional()
+      .transform((v) => v === true),
     bankName: z
       .union([z.string(), z.null()])
       .optional()

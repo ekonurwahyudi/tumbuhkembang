@@ -4,17 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { QuickRecordSheet } from "./quick-record-sheet";
+import { MoreMenu, isMorePath } from "./more-menu";
 import { cn } from "@/lib/utils";
 
+/**
+ * Tiga tab tautan; slot keempat bukan tautan melainkan pembuka menu "Lainnya".
+ * "Profil" dulu menempatinya, dan nama itu menyembunyikan Pengaturan di balik kata
+ * yang tidak menyebutkannya — sementara Bantuan dan Shop Katalog tidak punya jalan
+ * masuk sama sekali selain dari beranda.
+ */
 const ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/registry", label: "List Kado", icon: "card_giftcard" },
   { href: "/notifikasi", label: "Notifikasi", icon: "notifications" },
-  { href: "/settings", label: "Profil", icon: "person" },
 ];
 
 /**
- * Nav bawah ala template: dua tab, tombol catat melayang, dua tab.
+ * Nav bawah ala template: dua tab, tombol catat melayang, satu tab, lalu "Lainnya".
  *
  * Tombol tengah hanya muncul bila sudah ada anak — tanpa anak, tidak ada yang
  * bisa dicatat, dan tombol yang mengarah ke halaman kosong lebih membingungkan
@@ -36,6 +42,16 @@ export function BottomNav({
   const pathname = usePathname();
   const [left, right] = [ITEMS.slice(0, 2), ITEMS.slice(2)];
 
+  /* Dipakai tab tautan DAN pembuka "Lainnya": keduanya harus setinggi dan sebesar sama,
+     kalau tidak slot keempat terbaca sebagai sesuatu yang bukan tab. */
+  const tabClass = (active: boolean) =>
+    cn(
+      // 13px, bukan token --text-label-sm (11px): token itu dipakai di
+      // banyak tempat lain, jadi ukurannya dipatok di sini saja.
+      "flex h-full w-full flex-col items-center justify-center gap-1.5 text-[13px] tracking-tight transition-colors",
+      active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+    );
+
   const tab = ({ href, label, icon }: (typeof ITEMS)[number]) => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
     const badge = href === "/notifikasi" ? unread : 0;
@@ -45,12 +61,7 @@ export function BottomNav({
           href={href}
           aria-current={active ? "page" : undefined}
           aria-label={badge > 0 ? `${label}, ${badge} belum dibaca` : undefined}
-          className={cn(
-            // 9px, bukan token --text-label-sm (11px): token itu dipakai di
-            // banyak tempat lain, jadi ukurannya dipatok di sini saja.
-            "flex h-full flex-col items-center justify-center gap-1.5 text-[13px] tracking-tight transition-colors",
-            active ? "text-primary" : "text-muted-foreground hover:text-foreground",
-          )}
+          className={tabClass(active)}
         >
           {/* flex+leading-none: <span> pembungkus badge kalau tidak akan membawa
               line-height teks dan menambah ruang mati di bawah ikon. */}
@@ -96,6 +107,22 @@ export function BottomNav({
         )}
 
         {right.map(tab)}
+
+        {/* Slot keempat: pembuka lembar, bukan tautan. Dibuat aktif saat halaman yang
+            sedang dibuka ada di dalam menunya — kalau tidak, membuka /settings membuat
+            seluruh nav terlihat tanpa tab aktif. */}
+        <li className="flex-1">
+          <MoreMenu
+            trigger={
+              <button type="button" className={tabClass(isMorePath(pathname))}>
+                <span className="flex leading-none">
+                  <Icon name="apps" filled={isMorePath(pathname)} className="text-[26px]" />
+                </span>
+                <span className="leading-none whitespace-nowrap">Lainnya</span>
+              </button>
+            }
+          />
+        </li>
       </ul>
     </nav>
   );

@@ -28,7 +28,7 @@ export function QuickAccess({
     { label: "Jadwal Vaksin", icon: "vaccines", href: `/children/${childId}#vaksinasi` },
     { label: "Asupan ASI", icon: "water_bottle", href: `/children/${childId}/feeding` },
     { label: "Grafik WHO", icon: "analytics", href: `/children/${childId}/growth` },
-    { label: "Shop Katalog", icon: "card_giftcard", badge: "Promo" },
+    { label: "Shop Katalog", icon: "card_giftcard", href: "/shop" },
     {
       label: "MyRegistry",
       icon: "list_alt",

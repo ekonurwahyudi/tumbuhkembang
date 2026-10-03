@@ -41,7 +41,14 @@ export default auth((req) => {
 export const config = {
   // Aset publik PWA dilewatkan: semuanya harus dapat diambil tanpa sesi, termasuk
   // oleh service worker dan oleh browser saat memasang aplikasi.
+  //
+  // `stores` (lambang marketplace) wajib ada di sini meski `_next/image` sudah
+  // dilewatkan: yang dilewatkan itu permintaan browser ke pengoptimalnya, sedangkan
+  // pengoptimal lalu mengambil berkas sumbernya lewat permintaan server-ke-server
+  // SENDIRI — tanpa cookie sesi. Permintaan itu kena middleware, dialihkan ke /login,
+  // dan gambarnya gagal dioptimalkan. `brand-logo.png` sudah ada di sini karena alasan
+  // yang sama persis.
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|fonts|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
+    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|fonts|stores|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
   ],
 };

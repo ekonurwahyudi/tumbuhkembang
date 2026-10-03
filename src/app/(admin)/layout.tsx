@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { requireSuperadmin } from "@/lib/auth";
-import { AdminNav } from "@/components/admin/admin-nav";
 import { AppHeader } from "@/components/layout/app-header";
 
 /**
@@ -8,8 +7,9 @@ import { AppHeader } from "@/components/layout/app-header";
  * pencabutan langsung berlaku. Middleware sengaja tidak menjaga rute ini — peran di
  * klaim JWT basi sampai user login ulang.
  *
- * Tanpa <BottomNav>: nav bawah berisi menu anak sendiri, bukan urusan admin. Modul
- * admin pakai <AdminNav> yang bisa di-scroll — jumlahnya melewati empat tab.
+ * Tanpa <BottomNav>: nav bawah berisi menu anak sendiri, bukan urusan admin. Nav
+ * modulnya ada DI DALAM <AppHeader> (prop `admin`), satu baris dengan avatar —
+ * sepuluh modul tidak muat jadi tab, jadi bentuknya dropdown.
  */
 export default async function AdminLayout({ children }: LayoutProps<"/">) {
   let user;
@@ -28,8 +28,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
         photoKey={user.photoKey}
         admin
       />
-      <AdminNav />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 pt-4 pb-10">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-10">{children}</main>
     </div>
   );
 }

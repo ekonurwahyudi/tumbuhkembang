@@ -88,6 +88,25 @@ import {
   adminStats,
 } from "@/lib/data/admin";
 
+import {
+  addShopProductPhoto,
+  adminGetShopProduct,
+  adminListShopProducts,
+  deleteShopProduct,
+  getShopProduct,
+  getShopProductPhotoKey,
+  insertShopProduct,
+  listShopProducts,
+  setShopProductPublished,
+} from "@/lib/data/shop";
+import {
+  addFavorite,
+  listFavoriteIds,
+  listFavoriteProducts,
+  removeFavorite,
+} from "@/lib/data/shop-favorites";
+import { MAX_SHOP_PHOTOS } from "@/schemas/shop";
+
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 let alice: string;
 let bob: string;
@@ -465,9 +484,9 @@ describe("akses pasangan (share)", () => {
     expect(await findShareByToken(share.token)).toBeDefined();
     expect(await getChildForViewer(bob, aliceChild)).toBeUndefined();
     expect(await assertChildAccessible(bob, aliceChild)).toBe(false);
-    expect(
-      (await listChildrenForViewer(bob)).some(({ child }) => child.id === aliceChild),
-    ).toBe(false);
+    expect((await listChildrenForViewer(bob)).some(({ child }) => child.id === aliceChild)).toBe(
+      false,
+    );
   });
 
   it("setelah diterima, Bob melihat dan mencatat, tapi tetap bukan pemilik", async () => {
@@ -482,9 +501,9 @@ describe("akses pasangan (share)", () => {
     expect(viewer?.role).toBe("PARTNER");
     expect(await assertChildAccessible(bob, aliceChild)).toBe(true);
     expect(await assertChildOwned(bob, aliceChild)).toBe(false);
-    expect(
-      (await listChildrenForViewer(bob)).some(({ child }) => child.id === aliceChild),
-    ).toBe(true);
+    expect((await listChildrenForViewer(bob)).some(({ child }) => child.id === aliceChild)).toBe(
+      true,
+    );
 
     // Jalur catat terbuka untuk partner.
     const m = await insertMeasurement(aliceChild, {
@@ -498,14 +517,16 @@ describe("akses pasangan (share)", () => {
 
     // Mutasi profil anak tetap owner-only.
     expect(await deleteChild(bob, aliceChild)).toBeUndefined();
-    expect(await updateChild(bob, aliceChild, {
-      name: "Diretas",
-      sex: "MALE",
-      dateOfBirth: "2026-01-15",
-      birthType: "TERM",
-      gestationalAgeWeeks: null,
-      gestationalAgeDays: null,
-    })).toBeUndefined();
+    expect(
+      await updateChild(bob, aliceChild, {
+        name: "Diretas",
+        sex: "MALE",
+        dateOfBirth: "2026-01-15",
+        birthType: "TERM",
+        gestationalAgeWeeks: null,
+        gestationalAgeDays: null,
+      }),
+    ).toBeUndefined();
   });
 
   it("undangan kedaluwarsa dan email salah tidak diterima", async () => {
@@ -641,7 +662,9 @@ describe("registry publik", () => {
     expect(await listRegistryItems(bob)).toHaveLength(0);
 
     // Jalur tulis juga, bukan hanya baca.
-    expect(await updateRegistryItem(bob, item.id, { ...baseItem, name: "Dibajak" })).toBeUndefined();
+    expect(
+      await updateRegistryItem(bob, item.id, { ...baseItem, name: "Dibajak" }),
+    ).toBeUndefined();
     expect(await deleteRegistryItem(bob, item.id)).toBeUndefined();
     expect(await addRegistryItemPhoto(bob, item.id, "registry/x/1.webp")).toBeUndefined();
     expect(await removeRegistryItemPhoto(bob, item.id, null)).toBeUndefined();
@@ -667,7 +690,11 @@ describe("registry publik", () => {
 
   it("listPublicItems menyembunyikan barang privat, listRegistryItems memuatnya", async () => {
     const open = await insertRegistryItem(alice, baseItem);
-    const hidden = await insertRegistryItem(alice, { ...baseItem, name: "Rahasia", isPublic: false });
+    const hidden = await insertRegistryItem(alice, {
+      ...baseItem,
+      name: "Rahasia",
+      isPublic: false,
+    });
 
     const mine = await listRegistryItems(alice);
     expect(mine.map((r) => r.item.id)).toEqual(expect.arrayContaining([open.id, hidden.id]));
@@ -1085,5 +1112,196 @@ describe("registry publik", () => {
     expect(await findPublicShipping(token!)).toBeUndefined();
 
     await setRegistryPublic(alice, false);
+  });
+});
+
+/**
+ * Katalog Shop. Yang diuji bukan kepemilikan — katalognya memang milik bersama — tapi
+ * batas `is_published`: draf adalah satu-satunya hal di modul ini yang boleh disembunyikan
+ * dari orang tua, dan sisi bacanya harus menyembunyikannya di dalam query, bukan di UI.
+ *
+ * `shop_products` tidak punya FK ke `users`, jadi cascade penghapusan user di afterAll
+ * tidak menolong — barisnya dihapus eksplisit di sini.
+ */
+describe("katalog shop", () => {
+  const created: string[] = [];
+
+  const makeProduct = async (name: string, isPublished: boolean) => {
+    const row = await insertShopProduct({
+      name: `${name} ${suffix}`,
+      description: null,
+      category: "MOM_NURSING",
+      priceIdr: 750_000,
+      priceOriginalIdr: 850_000,
+      urlShopee: null,
+      urlTokopedia: null,
+      urlTiktok: null,
+      isPublished,
+      sortOrder: 0,
+    });
+    created.push(row.id);
+    return row;
+  };
+
+  afterAll(async () => {
+    for (const id of created) await deleteShopProduct(id);
+  });
+
+  it("draf tidak terlihat di sisi baca tapi terlihat di sisi admin", async () => {
+    const draft = await makeProduct("Draf Pompa ASI", false);
+    const live = await makeProduct("Terbit Pompa ASI", true);
+
+    const published = await listShopProducts();
+    expect(published.map((p) => p.id)).toContain(live.id);
+    expect(published.map((p) => p.id)).not.toContain(draft.id);
+
+    const all = await adminListShopProducts(suffix);
+    expect(all.map((p) => p.id)).toEqual(expect.arrayContaining([draft.id, live.id]));
+  });
+
+  it("produk draf tidak bisa dibuka lewat id, fotonya pun tidak", async () => {
+    const draft = await makeProduct("Draf Tersembunyi", false);
+    await addShopProductPhoto(draft.id, "shop/draft/foto.webp");
+
+    // Sisi baca: id yang asing dan id draf menghasilkan hasil yang sama persis.
+    expect(await getShopProduct(draft.id)).toBeUndefined();
+    expect(await getShopProductPhotoKey(draft.id, 0)).toBeUndefined();
+    // Sisi admin tetap melihatnya — itulah gunanya draf.
+    expect(await adminGetShopProduct(draft.id)).toBeDefined();
+
+    // Diterbitkan: keduanya terbuka, tanpa perubahan lain apa pun.
+    await setShopProductPublished(draft.id, true);
+    expect(await getShopProduct(draft.id)).toBeDefined();
+    expect(await getShopProductPhotoKey(draft.id, 0)).toBe("shop/draft/foto.webp");
+    // Indeks di luar rentang tetap undefined, jadi jumlah fotonya tidak bisa diraba.
+    expect(await getShopProductPhotoKey(draft.id, 99)).toBeUndefined();
+  });
+
+  it("id yang bukan uuid dijawab undefined, bukan melempar", async () => {
+    expect(await getShopProduct("bukan-uuid")).toBeUndefined();
+    expect(await getShopProductPhotoKey("bukan-uuid", 0)).toBeUndefined();
+    expect(await adminGetShopProduct("bukan-uuid")).toBeUndefined();
+  });
+
+  it("foto ke-7 ditolak dan array-nya tetap 6", async () => {
+    const p = await makeProduct("Kuota Foto", true);
+    for (let i = 0; i < MAX_SHOP_PHOTOS; i++) {
+      expect(await addShopProductPhoto(p.id, `shop/${p.id}/${i}.webp`)).toMatchObject({
+        keys: expect.any(Array),
+      });
+    }
+    expect(await addShopProductPhoto(p.id, "shop/lebih.webp")).toEqual({ full: true });
+    expect((await adminGetShopProduct(p.id))?.photoKeys).toHaveLength(MAX_SHOP_PHOTOS);
+  });
+
+  it("constraint menolak harga asli di bawah harga jual", async () => {
+    await expect(
+      insertShopProduct({
+        name: `Harga Terbalik ${suffix}`,
+        description: null,
+        category: "OTHER",
+        priceIdr: 900_000,
+        priceOriginalIdr: 100_000,
+        urlShopee: null,
+        urlTokopedia: null,
+        urlTiktok: null,
+        isPublished: true,
+        sortOrder: 0,
+      }),
+    ).rejects.toThrow();
+  });
+
+  /**
+   * Favorit. Katalognya milik bersama, favoritnya tidak — yang diuji di sini adalah
+   * bahwa `userId` benar-benar menyempitkan setiap query, dan bahwa draf tetap
+   * tersembunyi lewat jalur ini juga.
+   */
+  it("favorit satu orang tidak terlihat oleh orang lain", async () => {
+    const p = await makeProduct("Favorit Alice", true);
+    await addFavorite(alice, p.id);
+
+    expect(await listFavoriteIds(alice)).toContain(p.id);
+    expect(await listFavoriteIds(bob)).not.toContain(p.id);
+    expect((await listFavoriteProducts(alice)).map((x) => x.id)).toContain(p.id);
+    expect((await listFavoriteProducts(bob)).map((x) => x.id)).not.toContain(p.id);
+  });
+
+  it("produk yang ditarik dari peredaran hilang dari daftar favorit", async () => {
+    const p = await makeProduct("Favorit Lalu Draf", true);
+    await addFavorite(alice, p.id);
+    expect((await listFavoriteProducts(alice)).map((x) => x.id)).toContain(p.id);
+
+    await setShopProductPublished(p.id, false);
+    expect((await listFavoriteProducts(alice)).map((x) => x.id)).not.toContain(p.id);
+    // Barisnya tetap ada — menariknya dari peredaran bukan menghapus pilihan orang.
+    expect(await listFavoriteIds(alice)).toContain(p.id);
+  });
+
+  /**
+   * Kotak cari dan filter kategori terlihat di tab Favorit juga, jadi keduanya harus
+   * benar-benar menyaring daftarnya — bukan diabaikan. Yang dijaga di sini: penyaringan
+   * itu tidak melonggarkan batas `userId` dan `is_published`.
+   */
+  it("cari dan kategori menyaring daftar favorit tanpa melonggarkan batasnya", async () => {
+    const cocok = await makeProduct("Favorit Gendongan", true);
+    const lain = await makeProduct("Favorit Bantal", true);
+    const milikBob = await makeProduct("Favorit Gendongan Bob", true);
+    await addFavorite(alice, cocok.id);
+    await addFavorite(alice, lain.id);
+    await addFavorite(bob, milikBob.id);
+
+    const byTerm = await listFavoriteProducts(alice, { q: "Gendongan" });
+    expect(byTerm.map((x) => x.id)).toEqual([cocok.id]);
+    // Favorit Bob cocok dengan termnya, tapi bukan miliknya Alice.
+    expect(byTerm.map((x) => x.id)).not.toContain(milikBob.id);
+
+    // Fixture-nya semua MOM_NURSING, jadi kategori lain mengosongkannya.
+    expect(await listFavoriteProducts(alice, { categories: ["BABY_SLEEP"] })).toEqual([]);
+    expect(
+      (await listFavoriteProducts(alice, { categories: ["MOM_NURSING"] })).map((x) => x.id),
+    ).toContain(cocok.id);
+
+    // Draf tetap tersembunyi walau termnya cocok.
+    await setShopProductPublished(cocok.id, false);
+    expect(await listFavoriteProducts(alice, { q: "Gendongan" })).toEqual([]);
+  });
+
+  it("favorit kedua kalinya melanggar unique index, bukan menambah baris", async () => {
+    const p = await makeProduct("Favorit Dobel", true);
+    await addFavorite(alice, p.id);
+    // Action-nya yang menerjemahkan ini jadi ok() lewat isDuplicateKey; di lapisan
+    // data ia memang harus melempar, kalau tidak unique index-nya tidak bekerja.
+    await expect(addFavorite(alice, p.id)).rejects.toThrow();
+  });
+
+  it("hapus favorit idempoten dan hanya mengenai milik sendiri", async () => {
+    const p = await makeProduct("Favorit Hapus", true);
+    await addFavorite(alice, p.id);
+
+    expect(await removeFavorite(bob, p.id)).toBe(false);
+    expect(await listFavoriteIds(alice)).toContain(p.id);
+    expect(await removeFavorite(alice, p.id)).toBe(true);
+    expect(await removeFavorite(alice, p.id)).toBe(false);
+  });
+
+  it("produk yang dihapus membawa baris favoritnya ikut hilang", async () => {
+    const p = await insertShopProduct({
+      name: `Favorit Cascade ${suffix}`,
+      description: null,
+      category: "OTHER",
+      priceIdr: 50_000,
+      priceOriginalIdr: null,
+      urlShopee: null,
+      urlTokopedia: null,
+      urlTiktok: null,
+      isPublished: true,
+      sortOrder: 0,
+    });
+    await addFavorite(alice, p.id);
+    expect(await listFavoriteIds(alice)).toContain(p.id);
+
+    // Tidak lewat `created`: barisnya dihapus di sini, jadi afterAll tidak boleh mengulang.
+    await deleteShopProduct(p.id);
+    expect(await listFavoriteIds(alice)).not.toContain(p.id);
   });
 });

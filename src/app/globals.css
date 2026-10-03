@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-onest), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-chart-5: var(--chart-5);
@@ -55,7 +55,7 @@
   --color-status-alert-text: #dc2626;
   --color-on-butter: #6e4900;
 
-  /* Skala tipografi template (Inter). Tailwind default tidak punya 11/13/17/20/22px. */
+  /* Skala tipografi template (Onest). Tailwind default tidak punya 11/13/17/20/22px. */
   --text-label-sm: 0.6875rem;
   --text-label-sm--line-height: 0.875rem;
   --text-body-sm: 0.8125rem;

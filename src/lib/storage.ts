@@ -1,5 +1,10 @@
 import "server-only";
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 /**
  * Penyimpanan objek (Cloudflare R2, S3-compatible) untuk foto anak & user.
@@ -53,13 +58,18 @@ async function putPhoto(prefix: string, id: string, body: Uint8Array, contentTyp
   return key;
 }
 
-async function getPhoto(key: string): Promise<{ body: ReadableStream; contentType: string } | null> {
+async function getPhoto(
+  key: string,
+): Promise<{ body: ReadableStream; contentType: string } | null> {
   const c = s3();
   if (!c) return null;
   try {
     const r = await c.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
     if (!r.Body) return null;
-    return { body: r.Body.transformToWebStream(), contentType: r.ContentType ?? "application/octet-stream" };
+    return {
+      body: r.Body.transformToWebStream(),
+      contentType: r.ContentType ?? "application/octet-stream",
+    };
   } catch {
     return null;
   }
@@ -80,12 +90,14 @@ export async function deletePhoto(key: string): Promise<void> {
 }
 
 // Child photo
-export const putChildPhoto = (childId: string, body: Uint8Array, ct: string) => putPhoto("children", childId, body, ct);
+export const putChildPhoto = (childId: string, body: Uint8Array, ct: string) =>
+  putPhoto("children", childId, body, ct);
 export const getChildPhoto = (key: string) => getPhoto(key);
 export const deleteChildPhoto = deletePhoto;
 
 // User photo
-export const putUserPhoto = (userId: string, body: Uint8Array, ct: string) => putPhoto("users", userId, body, ct);
+export const putUserPhoto = (userId: string, body: Uint8Array, ct: string) =>
+  putPhoto("users", userId, body, ct);
 export const getUserPhoto = (key: string) => getPhoto(key);
 
 // Foto item MyRegistry. Objeknya tetap privat seperti yang lain; yang membedakan
@@ -98,3 +110,9 @@ export const getRegistryPhoto = (key: string) => getPhoto(key);
 // foto barang milik orang tua — keduanya dihapus oleh pemilik yang berbeda.
 export const putClaimPhoto = (claimId: string, body: Uint8Array, ct: string) =>
   putPhoto("claims", claimId, body, ct);
+
+// Foto produk katalog Shop. Objeknya tetap privat; route pembacanya hanya menuntut
+// ada sesi — katalognya milik bersama, tidak ada pemilik untuk dibandingkan.
+export const putShopPhoto = (productId: string, body: Uint8Array, ct: string) =>
+  putPhoto("shop", productId, body, ct);
+export const getShopPhoto = (key: string) => getPhoto(key);

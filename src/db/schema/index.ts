@@ -42,6 +42,27 @@ export const registryCategoryEnum = pgEnum("registry_category", [
   "TRANSPORT",
   "OTHER",
 ]);
+/**
+ * Kategori katalog Shop — lebih luas dari registry_category: mencakup kebutuhan ibu
+ * (hamil, menyusui, pasca-lahir), bukan hanya barang bayi. Enum tersendiri, bukan
+ * perluasan registry_category: nilai baru di sana akan muncul sebagai pilihan di
+ * form wishlist yang tidak membutuhkannya.
+ */
+export const shopCategoryEnum = pgEnum("shop_category", [
+  "MOM_PREGNANCY",
+  "MOM_NURSING",
+  "MOM_CARE",
+  "BABY_NUTRITION",
+  "BABY_DIAPERING",
+  "BABY_BATH",
+  "BABY_CLOTHING",
+  "BABY_SLEEP",
+  "BABY_TRANSPORT",
+  "CHILD_TOYS",
+  "CHILD_LEARNING",
+  "HEALTH_DEVICE",
+  "OTHER",
+]);
 
 export const users = pgTable(
   "users",
@@ -156,8 +177,14 @@ export const growthMeasurements = pgTable(
   (t) => [
     index("growth_measurements_child_measured_idx").on(t.childId, t.measuredAt),
     check("growth_measurements_weight_positive", sql`${t.weightKg} IS NULL OR ${t.weightKg} > 0`),
-    check("growth_measurements_length_positive", sql`${t.lengthHeightCm} IS NULL OR ${t.lengthHeightCm} > 0`),
-    check("growth_measurements_head_positive", sql`${t.headCircumferenceCm} IS NULL OR ${t.headCircumferenceCm} > 0`),
+    check(
+      "growth_measurements_length_positive",
+      sql`${t.lengthHeightCm} IS NULL OR ${t.lengthHeightCm} > 0`,
+    ),
+    check(
+      "growth_measurements_head_positive",
+      sql`${t.headCircumferenceCm} IS NULL OR ${t.headCircumferenceCm} > 0`,
+    ),
     // Minimal satu nilai terisi — record kosong tidak berguna.
     check(
       "growth_measurements_at_least_one_value",
@@ -307,6 +334,83 @@ export const registryItems = pgTable(
       "registry_items_price_range",
       sql`${t.priceMinIdr} IS NULL OR ${t.priceMaxIdr} IS NULL OR ${t.priceMaxIdr} >= ${t.priceMinIdr}`,
     ),
+  ],
+);
+
+/**
+ * Katalog Shop: produk pilihan yang diisi superadmin dan dibaca semua orang tua.
+ *
+ * Tanpa `userId` — dan itu yang membedakannya dari registry_items: wishlist milik
+ * satu orang tua, katalog ini milik bersama. Yang menggantikan kepemilikan:
+ * requireSuperadmin() untuk menulis, sesi login apa pun untuk membaca.
+ */
+export const shopProducts = pgTable(
+  "shop_products",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    description: text("description"),
+    /**
+     * Beberapa foto per produk, yang pertama jadi foto utama. Kolom array dengan
+     * alasan yang sama seperti registry_items: key-nya selalu dibaca bersama
+     * produknya dan tidak pernah dicari sendiri.
+     */
+    photoKeys: text("photo_keys").array().notNull().default([]),
+    category: shopCategoryEnum("category").notNull().default("OTHER"),
+    /**
+     * Harga jual dan harga asli, rupiah utuh — integer, bukan numeric: tidak ada sen.
+     *
+     * Dulu `price_min_idr`/`price_max_idr`, sebuah kisaran, yang tidak pernah bisa
+     * menunjukkan diskon. Persen diskonnya DIHITUNG dari keduanya dan tidak disimpan:
+     * satu angka turunan yang disimpan pasti suatu saat tidak cocok dengan dua angka
+     * sumbernya. (registry_items di atas tetap memakai kisaran — di sana harganya
+     * ditebak orang tua, bukan dibaca dari halaman toko.)
+     */
+    priceIdr: integer("price_idr"),
+    priceOriginalIdr: integer("price_original_idr"),
+    urlShopee: text("url_shopee"),
+    urlTokopedia: text("url_tokopedia"),
+    urlTiktok: text("url_tiktok"),
+    /** Draf tidak terlihat orang tua — admin bisa menyiapkan produk setengah jadi. */
+    isPublished: boolean("is_published").notNull().default(false),
+    /** Urutan tampil; kecil lebih dulu. Menonjolkan produk tanpa mengakali createdAt. */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Daftar orang tua selalu memfilter is_published lalu mengurutkan — indeksnya ikut keduanya.
+    index("shop_products_published_idx").on(t.isPublished, t.sortOrder),
+    check(
+      "shop_products_price_discount",
+      sql`${t.priceIdr} IS NULL OR ${t.priceOriginalIdr} IS NULL OR ${t.priceOriginalIdr} >= ${t.priceIdr}`,
+    ),
+  ],
+);
+
+/**
+ * Favorit produk katalog, per orang tua. Baris, bukan kolom di shop_products:
+ * katalognya milik bersama, favoritnya milik satu orang.
+ *
+ * PK uuid surrogate + unique index pada pasangannya — konvensi vaccination_skips
+ * di atas, bukan PK gabungan. Dua FK cascade: akun atau produk yang hilang
+ * membawa favoritnya ikut hilang, tanpa baris yatim.
+ */
+export const shopFavorites = pgTable(
+  "shop_favorites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => shopProducts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("shop_favorites_user_id_idx").on(t.userId),
+    uniqueIndex("shop_favorites_user_product_unique").on(t.userId, t.productId),
   ],
 );
 
@@ -497,6 +601,11 @@ export const vaccineRemindersRelations = relations(vaccineReminders, ({ one }) =
   child: one(children, { fields: [vaccineReminders.childId], references: [children.id] }),
 }));
 
+export const shopFavoritesRelations = relations(shopFavorites, ({ one }) => ({
+  user: one(users, { fields: [shopFavorites.userId], references: [users.id] }),
+  product: one(shopProducts, { fields: [shopFavorites.productId], references: [shopProducts.id] }),
+}));
+
 export type User = typeof users.$inferSelect;
 /** Satu-satunya sumber nilai peran — jangan tulis literalnya lagi di tempat lain. */
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
@@ -512,6 +621,9 @@ export type RegistryClaim = typeof registryClaims.$inferSelect;
 /** Satu-satunya sumber nilai prioritas/kategori — jangan tulis literalnya lagi. */
 export type RegistryPriority = (typeof registryPriorityEnum.enumValues)[number];
 export type RegistryCategory = (typeof registryCategoryEnum.enumValues)[number];
+export type ShopProduct = typeof shopProducts.$inferSelect;
+export type ShopCategory = (typeof shopCategoryEnum.enumValues)[number];
+export type ShopFavorite = typeof shopFavorites.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type NotificationKind = (typeof notificationKindEnum.enumValues)[number];
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

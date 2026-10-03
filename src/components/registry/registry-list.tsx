@@ -31,6 +31,7 @@ import {
   formatPriceRange,
   joinNames,
 } from "./registry-shared";
+import { PRICE_TONE } from "@/components/shop/shop-price";
 import { SORT_LABEL, sortRows, type SortKey } from "./sort";
 import type { RegistryCategory, RegistryClaim, RegistryItem } from "@/db/schema";
 
@@ -49,13 +50,7 @@ const STATUS_LABEL: Record<Status, string> = {
   done: "Sudah Ada",
 };
 
-export function RegistryList({
-  rows,
-  childList,
-}: {
-  rows: ListRow[];
-  childList: FilterChild[];
-}) {
+export function RegistryList({ rows, childList }: { rows: ListRow[]; childList: FilterChild[] }) {
   const [status, setStatus] = useState<Status>("all");
   const [category, setCategory] = useState<RegistryCategory | null>(null);
   const [childId, setChildId] = useState<string | null>(null);
@@ -197,7 +192,10 @@ function ItemCard({
             <h3 className="text-headline-sm min-w-0">{item.name}</h3>
             <Icon name="chevron_right" className="text-muted-foreground mt-0.5 text-[18px]" />
           </div>
-          {price && <p className="text-metric text-primary tabular-nums">{price}</p>}
+          {/* Seukuran judulnya di atas, bukan `text-metric` yang 20px — harga yang lebih
+              besar daripada nama barangnya terbaca sebagai judul kartu. Warnanya yang
+              membedakan, lewat `PRICE_TONE` yang sama dengan kartu Shop Katalog. */}
+          {price && <p className={cn("text-headline-sm", PRICE_TONE)}>{price}</p>}
           <div className="flex flex-wrap items-center gap-2">
             {/* Tanpa anak tertentu: satu chip untuk semuanya, bukan satu chip per anak. */}
             {child ? (

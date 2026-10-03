@@ -2,22 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import {
-  getRegistryItemWithClaims,
-  listRegistryChildren,
-  remainingQty,
-} from "@/lib/data/registry";
+import { getRegistryItemWithClaims, listRegistryChildren, remainingQty } from "@/lib/data/registry";
 import { chronologicalAge, formatAge } from "@/lib/growth/age";
 import { formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { PRICE_TONE } from "@/components/shop/shop-price";
 import { DeleteClaimButton, DeleteItemButton } from "@/components/registry/registry-list";
 import {
+  BuyBox,
   CategoryBadge,
   ChildStack,
   ChildTag,
   ClaimProgress,
   ItemGallery,
   PriorityBadge,
-  StoreLinks,
   formatPriceRange,
   joinNames,
 } from "@/components/registry/registry-shared";
@@ -36,6 +34,11 @@ export async function generateMetadata({
 /**
  * Detail barang sisi pemilik. Di sini semuanya terlihat — termasuk pesan pribadi
  * pengklaim dan nomor resinya, yang tidak ditampilkan di halaman publik.
+ *
+ * Bentuk halamannya sama dengan `/shop/[productId]`: galeri `lg:sticky` di kiri,
+ * keterangan + `BuyBox` di kanan, lalu section selebar halaman di bawah. Sebelumnya
+ * halaman ini satu kolom memanjang dan tautan tokonya telanjang tanpa kartu, jadi
+ * dua halaman detail di aplikasi yang sama terasa dua aplikasi berbeda.
  *
  * Barang milik orang lain sama saja dengan tidak ada: 404, bukan pesan lain.
  */
@@ -58,9 +61,7 @@ export default async function RegistryItemPage({ params }: PageProps<"/registry/
   const faces = (await listRegistryChildren(user.id)).map((c) => ({
     id: c.id,
     name: c.name,
-    photoSrc: c.photoKey
-      ? `/children/${c.id}/photo?v=${encodeURIComponent(c.photoKey)}`
-      : null,
+    photoSrc: c.photoKey ? `/children/${c.id}/photo?v=${encodeURIComponent(c.photoKey)}` : null,
     age: formatAge(chronologicalAge(c.dateOfBirth)),
   }));
   const target = item.childId ? faces.filter((c) => c.id === item.childId) : faces;
@@ -75,53 +76,69 @@ export default async function RegistryItemPage({ params }: PageProps<"/registry/
         Kembali ke MyRegistry
       </Link>
 
-      <ItemGallery count={item.photoKeys.length} src={photoSrc} name={item.name} />
+      {/* Dua kolom di layar lebar: foto di kiri, keterangan + tombol tokonya di kanan. */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
+        <div className="lg:sticky lg:top-6">
+          <ItemGallery count={item.photoKeys.length} src={photoSrc} name={item.name} />
+        </div>
 
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <PriorityBadge priority={item.priority} />
-          <CategoryBadge category={item.category} />
-          {!item.isPublic && (
-            <span className="text-muted-foreground text-label-sm inline-flex items-center gap-1 rounded-full border px-2 py-1 font-bold">
-              <Icon name="visibility_off" className="text-[14px]" />
-              Privat
-            </span>
+        <div className="space-y-4">
+          <header className="space-y-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <PriorityBadge priority={item.priority} />
+              <CategoryBadge category={item.category} />
+              {!item.isPublic && (
+                <span className="text-muted-foreground text-label-sm inline-flex items-center gap-1 rounded-full border px-2 py-1 font-bold">
+                  <Icon name="visibility_off" className="text-[14px]" />
+                  Privat
+                </span>
+              )}
+            </div>
+            <h1 className="text-headline-lg">{item.name}</h1>
+            {/* Satu nada harga dengan halaman detail Shop Katalog (`ShopPrice size="detail"`). */}
+            {price && <p className={cn("text-metric", PRICE_TONE)}>{price}</p>}
+            <div className="flex flex-wrap items-center gap-2">
+              {target.length === 1 ? (
+                <ChildTag child={target[0]} />
+              ) : target.length > 1 ? (
+                <span className="bg-muted text-label-sm inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 font-bold">
+                  <ChildStack childList={target} max={3} size="sm" />
+                  Untuk {joinNames(target)}
+                </span>
+              ) : null}
+              <span className="text-muted-foreground text-label-sm">
+                Dibutuhkan {item.desiredQty} unit
+                {target.length > 0 && ` · ${target.map((c) => c.age).join(", ")}`}
+              </span>
+            </div>
+          </header>
+
+          {item.note && (
+            <p className="bg-muted text-body-sm rounded-xl p-3 italic">&ldquo;{item.note}&rdquo;</p>
           )}
-        </div>
-        <h1 className="text-headline-lg">{item.name}</h1>
-        {price && <p className="text-metric text-primary tabular-nums">{price}</p>}
-        <div className="flex flex-wrap items-center gap-2">
-          {target.length === 1 ? (
-            <ChildTag child={target[0]} />
-          ) : target.length > 1 ? (
-            <span className="bg-muted text-label-sm inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 font-bold">
-              <ChildStack childList={target} max={3} size="sm" />
-              Untuk {joinNames(target)}
-            </span>
-          ) : null}
-          <span className="text-muted-foreground text-label-sm">
-            Dibutuhkan {item.desiredQty} unit
-            {target.length > 0 && ` · ${target.map((c) => c.age).join(", ")}`}
-          </span>
-        </div>
-      </header>
 
-      {/* `whitespace-pre-line`: tidyText menyisakan satu baris kosong sebagai pemisah paragraf. */}
+          <BuyBox shopee={item.urlShopee} tokopedia={item.urlTokopedia} tiktok={item.urlTiktok} />
+        </div>
+      </div>
+
+      {/*
+        Deskripsi di bawah, selebar halaman — sama dengan detail katalog: teks panjang
+        di kolom selebar setengah layar jadi tiang sempit yang memanjangkan halaman.
+      */}
       {item.description && (
-        <p className="text-body-md whitespace-pre-line">{item.description}</p>
+        <section className="space-y-2.5 pt-1" aria-labelledby="deskripsi-barang">
+          <h2 id="deskripsi-barang" className="text-headline-sm">
+            Deskripsi
+          </h2>
+          <div className="bg-card rounded-2xl border p-4 shadow-sm sm:p-5">
+            {/* `whitespace-pre-line`: tidyText menyisakan satu baris kosong sebagai pemisah paragraf. */}
+            <p className="text-body-md whitespace-pre-line">{item.description}</p>
+          </div>
+        </section>
       )}
-
-      {item.note && (
-        <p className="bg-muted text-body-sm rounded-xl p-3 italic">&ldquo;{item.note}&rdquo;</p>
-      )}
-
-      <StoreLinks shopee={item.urlShopee} tokopedia={item.urlTokopedia} tiktok={item.urlTiktok} />
 
       <section className="space-y-2.5" aria-labelledby="pemenuhan">
-        <h2
-          id="pemenuhan"
-          className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase"
-        >
+        <h2 id="pemenuhan" className="text-headline-sm">
           Pemenuhan
         </h2>
         <div className="bg-card space-y-3 rounded-2xl border p-4 shadow-sm">
@@ -136,10 +153,7 @@ export default async function RegistryItemPage({ params }: PageProps<"/registry/
       </section>
 
       <section className="space-y-2.5" aria-labelledby="pengklaim">
-        <h2
-          id="pengklaim"
-          className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase"
-        >
+        <h2 id="pengklaim" className="text-headline-sm">
           Pemberi Hadiah ({claims.length})
         </h2>
 

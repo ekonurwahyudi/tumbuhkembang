@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanStoreTitle, extractName, extractPriceIdr } from "./store-preview";
+import { cleanStoreTitle, extractName, extractPriceIdr, storeBrandOf } from "./store-preview";
 
 /**
  * Yang diuji di sini cuma pengurai teksnya — satu-satunya logika di modul ini yang
@@ -110,5 +110,34 @@ describe("extractPriceIdr", () => {
           ld({ "@type": "Product", offers: { price: 27500 } }),
       ),
     ).toBe(27500);
+  });
+});
+
+/**
+ * `storeBrandOf` adalah penjaga, bukan kenyamanan: satu kolom input berarti servernya
+ * yang memutuskan host mana yang boleh dituju `fetch` dan kolom tautan mana yang terisi.
+ * Yang membuat tes ini ada artinya adalah tiga kasus penolakan di bawah, bukan tiga
+ * kasus pengenalan di atasnya.
+ */
+describe("storeBrandOf", () => {
+  it("mengenali host resmi ketiga toko", () => {
+    expect(storeBrandOf("https://s.shopee.co.id/60S055iVg8")).toBe("shopee");
+    expect(storeBrandOf("https://shopee.co.id/product/123/456")).toBe("shopee");
+    expect(storeBrandOf("https://www.tokopedia.com/toko/barang")).toBe("tokopedia");
+    expect(storeBrandOf("https://vt.tiktok.com/XXX")).toBe("tiktok");
+  });
+
+  it("menolak subdomain penipu yang lolos dari endsWith", () => {
+    // Inilah alasan pencocokannya Set.has(), bukan endsWith/includes.
+    expect(storeBrandOf("https://shopee.co.id.evil.com/x")).toBeNull();
+    expect(storeBrandOf("https://evil.com/shopee.co.id")).toBeNull();
+    expect(storeBrandOf("https://tokopedia.com.attacker.net/p")).toBeNull();
+  });
+
+  it("menolak alamat internal dan masukan yang bukan URL", () => {
+    expect(storeBrandOf("http://169.254.169.254/")).toBeNull();
+    expect(storeBrandOf("http://localhost:3000/")).toBeNull();
+    expect(storeBrandOf("bukan-url")).toBeNull();
+    expect(storeBrandOf("")).toBeNull();
   });
 });

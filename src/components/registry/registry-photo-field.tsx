@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { removeRegistryPhotoAction, uploadRegistryPhotoAction } from "@/lib/actions/registry";
 import { MAX_PHOTO_BYTES } from "@/lib/storage-limits";
+import type { ActionResult } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { PhotoRow, formatSize, pickPhoto } from "@/components/children/child-photo-field";
@@ -18,10 +19,39 @@ import type { RegistryItem } from "@/db/schema";
  *
  * Batasnya disalin dari MAX_ITEM_PHOTOS di data/registry.ts — server tetap yang
  * menegakkan; angka di sini supaya tombolnya mati sebelum unggahan ditolak.
+ *
+ * Sejak katalog Shop ada, action/URL/batas/label disuntik lewat prop, bukan
+ * di-hardcode: dua modul memakai komponen ini, dan kompresi + validasi + petak
+ * thumbnail-nya tetap satu sumber kebenaran. Default-nya tetap registry supaya
+ * pemanggil lamanya tidak berubah.
  */
 export const MAX_PHOTOS = 5;
 const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
 const HINT = `Opsional, sampai ${MAX_PHOTOS} foto (maksimal ${MB} MB per foto, JPG/PNG/WebP). Foto pertama jadi foto utama. Foto ini terlihat oleh siapa pun yang membuka tautan wishlist Anda.`;
+
+/** Apa yang membedakan satu modul dari modul lain — tidak lebih dari ini. */
+export type PhotoOwner = {
+  id: string;
+  photoKeys: string[];
+  upload: (id: string, fd: FormData) => Promise<ActionResult<{ id: string }>>;
+  remove: (id: string, key: string) => Promise<ActionResult>;
+  /** Route foto berotorisasi modul itu. */
+  src: (id: string, index: number) => string;
+  max: number;
+  label: string;
+  hint: string;
+};
+
+const registryOwner = (item: RegistryItem): PhotoOwner => ({
+  id: item.id,
+  photoKeys: item.photoKeys,
+  upload: uploadRegistryPhotoAction,
+  remove: removeRegistryPhotoAction,
+  src: (id, i) => `/registry/${id}/photo?i=${i}`,
+  max: MAX_PHOTOS,
+  label: "Foto Barang Impian",
+  hint: HINT,
+});
 
 /** Petak foto: satu tombol hapus per foto, plus penanda "Utama" di yang pertama. */
 function Thumbs({
@@ -76,17 +106,22 @@ function Thumbs({
 
 /** Mode barang yang sudah ada: unggahan langsung berlaku. */
 export function RegistryPhotoField({ item }: { item: RegistryItem }) {
+  return <PhotoField owner={registryOwner(item)} />;
+}
+
+/** Mode baris yang sudah ada, modul apa pun: unggahan langsung berlaku. */
+export function PhotoField({ owner }: { owner: PhotoOwner }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const keys = item.photoKeys;
-  const full = keys.length >= MAX_PHOTOS;
+  const keys = owner.photoKeys;
+  const full = keys.length >= owner.max;
 
   const onFiles = (files: File[]) =>
     startTransition(async () => {
-      const room = MAX_PHOTOS - keys.length;
+      const room = owner.max - keys.length;
       if (files.length > room) {
         setError(`Sisa kuota ${room} foto lagi. Hapus foto lain dulu atau pilih lebih sedikit.`);
         return;
@@ -107,7 +142,7 @@ export function RegistryPhotoField({ item }: { item: RegistryItem }) {
       }
       setError(null);
 
-      const res = await uploadRegistryPhotoAction(item.id, fd);
+      const res = await owner.upload(owner.id, fd);
       if (res.success) {
         const n = files.length;
         toast.success(
@@ -123,7 +158,7 @@ export function RegistryPhotoField({ item }: { item: RegistryItem }) {
 
   const removeAt = (index: number) =>
     startTransition(async () => {
-      const res = await removeRegistryPhotoAction(item.id, keys[index]);
+      const res = await owner.remove(owner.id, keys[index]);
       if (res.success) {
         toast.success("Foto dihapus.");
         router.refresh();
@@ -134,15 +169,15 @@ export function RegistryPhotoField({ item }: { item: RegistryItem }) {
 
   return (
     <PhotoRow
-      label="Foto Barang Impian"
-      hint={HINT}
+      label={owner.label}
+      hint={owner.hint}
       error={error}
       inputRef={inputRef}
       onFiles={onFiles}
       multiple
       avatar={
         <Thumbs
-          srcs={keys.map((_, i) => `/registry/${item.id}/photo?i=${i}`)}
+          srcs={keys.map((_, i) => owner.src(owner.id, i))}
           onRemove={removeAt}
           disabled={pending}
         />
@@ -161,7 +196,7 @@ export function RegistryPhotoField({ item }: { item: RegistryItem }) {
           </Button>
           {full && (
             <span className="text-muted-foreground text-label-sm self-center">
-              Kuota {MAX_PHOTOS} foto penuh
+              Kuota {owner.max} foto penuh
             </span>
           )}
         </>
@@ -175,10 +210,17 @@ export function RegistryPhotoPicker({
   files,
   onChange,
   disabled,
+  max = MAX_PHOTOS,
+  label = "Foto Barang Impian",
+  hint = HINT,
 }: {
   files: File[];
   onChange: (files: File[]) => void;
   disabled?: boolean;
+  /** Katalog Shop punya kuota dan label sendiri; default-nya tetap registry. */
+  max?: number;
+  label?: string;
+  hint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -190,9 +232,9 @@ export function RegistryPhotoPicker({
 
   const onFiles = (picked: File[]) =>
     startTransition(async () => {
-      const room = MAX_PHOTOS - files.length;
+      const room = max - files.length;
       if (picked.length > room) {
-        setError(`Maksimal ${MAX_PHOTOS} foto. Sisa kuota ${room} foto lagi.`);
+        setError(`Maksimal ${max} foto. Sisa kuota ${room} foto lagi.`);
         return;
       }
 
@@ -211,8 +253,8 @@ export function RegistryPhotoPicker({
 
   return (
     <PhotoRow
-      label="Foto Barang Impian"
-      hint={HINT}
+      label={label}
+      hint={hint}
       error={error}
       inputRef={inputRef}
       onFiles={onFiles}
@@ -229,7 +271,7 @@ export function RegistryPhotoPicker({
           type="button"
           variant="outline"
           size="sm"
-          disabled={disabled || pending || files.length >= MAX_PHOTOS}
+          disabled={disabled || pending || files.length >= max}
           onClick={() => inputRef.current?.click()}
         >
           <Icon name="add" className="text-[16px]" />

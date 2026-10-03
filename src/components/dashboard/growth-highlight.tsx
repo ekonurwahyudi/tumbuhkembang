@@ -85,8 +85,7 @@ export function GrowthHighlight({
           const m = format(latest[key] as string | null);
           const prev = previous?.[key] as string | null | undefined;
           const now = latest[key] as string | null;
-          const diff =
-            now != null && prev != null ? Number(now) - Number(prev) : null;
+          const diff = now != null && prev != null ? Number(now) - Number(prev) : null;
           const result = byType.get(type);
 
           return (

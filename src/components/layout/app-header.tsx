@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { LogoutMenuItem } from "@/components/logout-button";
+import { AdminHelpdeskLink, AdminNav } from "@/components/admin/admin-nav";
 import { TopNav } from "./top-nav";
 import type { UserRole } from "@/db/schema";
 
@@ -42,14 +44,22 @@ export function AppHeader({
    */
   photoKey?: string | null;
   /**
-   * Mode superadmin: judul dan tautan brand berganti, TopNav orang tua disembunyikan.
-   * Satu prop, bukan header kedua — sisanya (avatar, menu akun, logout) identik.
+   * Mode superadmin: judul dan tautan brand berganti, dan <AdminNav> + Helpdesk
+   * menggantikan <TopNav> orang tua. Satu prop, bukan header kedua — sisanya
+   * (avatar, menu akun, logout) identik.
    */
   admin?: boolean;
 }) {
   return (
     <header className="bg-card/90 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-40 border-b shadow-[0_1px_8px_rgb(0_0_0/0.03)] backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-4xl items-center gap-3 px-4">
+      {/* Lebih lebar di mode admin: tabel datanya tujuh kolom, dan max-w-4xl
+          memaksanya di-scroll mendatar bahkan di layar desktop. */}
+      <div
+        className={cn(
+          "mx-auto flex h-16 items-center gap-3 px-4",
+          admin ? "max-w-6xl" : "max-w-4xl",
+        )}
+      >
         <Link href={admin ? "/admin" : "/dashboard"} className="flex min-w-0 items-center gap-2.5">
           <Image
             src="/brand-logo.png"
@@ -70,7 +80,14 @@ export function AppHeader({
           {/* Lonceng terpisah dihapus: tab "Notifikasi" di nav sudah jadi pintu
               masuknya, dan dua tautan ke halaman yang sama hanya membingungkan.
               Jumlah belum terbaca ikut ke nav, di desktop maupun di HP. */}
-          {!admin && <TopNav unread={unread} />}
+          {admin ? (
+            <>
+              <AdminNav />
+              <AdminHelpdeskLink />
+            </>
+          ) : (
+            <TopNav unread={unread} />
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menu akun">

@@ -66,8 +66,10 @@ const STORES = [
  * benar-benar ikut di FormData — bukan tombol yang perlu state sendiri.
  * `focus-within:ring-2` dipakai karena radio yang disembunyikan tidak lagi
  * memperlihatkan fokusnya sendiri.
+ *
+ * Diekspor karena form katalog Shop memakainya apa adanya.
  */
-function ChipRadio({
+export function ChipRadio({
   name,
   value,
   label,
@@ -359,16 +361,9 @@ export function RegistryItemForm({
         {STORES.map((store) => (
           <div key={store.name} className="space-y-2">
             <Label htmlFor={store.name} className="gap-1.5">
-              {/* Lambang merek dalam kepingan berwarna tokonya — label tetap tertulis,
+              {/* Lambang resmi tokonya, tanpa keping bulat — label tetap tertulis,
                   jadi warna bukan satu-satunya penanda. */}
-              <span
-                className={cn(
-                  "grid size-5 shrink-0 place-items-center rounded-full",
-                  STORE_BRAND[store.brand].bg,
-                )}
-              >
-                <StoreMark brand={store.brand} className="size-3" />
-              </span>
+              <StoreMark brand={store.brand} className="size-5" />
               {store.label}
             </Label>
             <div className="flex gap-2">

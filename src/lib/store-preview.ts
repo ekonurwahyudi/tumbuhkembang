@@ -49,16 +49,44 @@ import { ALLOWED_PHOTO_TYPES, MAX_UPLOAD_BYTES } from "@/lib/storage-limits";
  *
  * Dicocokkan persis, bukan `endsWith`: "shopee.co.id.evil.com" lolos dari endsWith.
  */
-const PAGE_HOSTS = new Set([
+const SHOPEE_HOSTS = new Set([
   "s.shopee.co.id",
   "shopee.co.id",
   "www.shopee.co.id",
   "id.shp.ee",
   "shp.ee",
-  "tokopedia.com",
-  "www.tokopedia.com",
-  "m.tokopedia.com",
 ]);
+const TOKOPEDIA_HOSTS = new Set(["tokopedia.com", "www.tokopedia.com", "m.tokopedia.com"]);
+/**
+ * TikTok SENGAJA tidak ikut `PAGE_HOSTS` — host-nya hanya dikenali untuk menempatkan
+ * tautannya di kolom yang benar, tidak pernah dituju `fetch`. Lihat catatan kepala.
+ */
+const TIKTOK_HOSTS = new Set(["tiktok.com", "www.tiktok.com", "vt.tiktok.com", "shop.tiktok.com"]);
+
+/** Diturunkan, bukan daftar kedua: satu daftar host yang tidak bisa keluar sinkron. */
+const PAGE_HOSTS = new Set([...SHOPEE_HOSTS, ...TOKOPEDIA_HOSTS]);
+
+export type StoreBrand = "shopee" | "tokopedia" | "tiktok";
+
+/**
+ * Toko mana, dilihat dari host-nya. Dipakai form Shop yang cuma punya SATU kolom
+ * tautan: servernya yang memutuskan kolom tautan toko mana yang terisi.
+ *
+ * Dicocokkan persis lewat Set yang sama dengan penjaga SSRF di atas — bukan
+ * `includes`/`endsWith`: "shopee.co.id.evil.com" lolos dari keduanya.
+ */
+export function storeBrandOf(raw: string): StoreBrand | null {
+  let host: string;
+  try {
+    host = new URL(raw.trim()).hostname;
+  } catch {
+    return null;
+  }
+  if (SHOPEE_HOSTS.has(host)) return "shopee";
+  if (TOKOPEDIA_HOSTS.has(host)) return "tokopedia";
+  if (TIKTOK_HOSTS.has(host)) return "tiktok";
+  return null;
+}
 
 /** Host CDN gambar kedua toko — hanya dari sini bytes foto diunduh. */
 const IMAGE_HOSTS = new Set([

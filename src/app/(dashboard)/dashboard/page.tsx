@@ -5,7 +5,10 @@ import { listChildrenWithLatestForViewer } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
 import { listVaccinations } from "@/lib/data/vaccinations";
 import { listReminders } from "@/lib/data/vaccine-reminders";
-import { registryClaimCount } from "@/lib/data/registry";
+import { hasSubscription } from "@/lib/data/notifications";
+import { listRegistryItems, registrySummary } from "@/lib/data/registry";
+import { listShopProducts } from "@/lib/data/shop";
+import { listFavoriteIds } from "@/lib/data/shop-favorites";
 import { listSkippedCatalogKeys } from "@/lib/data/vaccination-skips";
 import { evaluateMeasurement } from "@/lib/growth/engine";
 import { chronologicalAge, formatAgeDaysDetailed, formatAgeDetailed } from "@/lib/growth/age";
@@ -15,6 +18,10 @@ import { syncVaccineNotifications } from "@/lib/notifications/vaccine-sync";
 import { ChildSwitcher } from "@/components/dashboard/child-switcher";
 import { GrowthHighlight } from "@/components/dashboard/growth-highlight";
 import { QuickAccess } from "@/components/dashboard/quick-access";
+import { PushPrompt } from "@/components/notifications/push-prompt";
+import { RegistryStrip } from "@/components/dashboard/registry-strip";
+import { ShopStrip } from "@/components/dashboard/shop-strip";
+import { StandardsNote } from "@/components/dashboard/standards-note";
 import { VaccineSlider } from "@/components/dashboard/vaccine-slider";
 import { EmptyState } from "@/components/empty-state";
 import { InstallPrompt } from "@/components/install-prompt";
@@ -55,13 +62,32 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const child = active.child;
 
   // Hanya anak aktif yang ditarik detailnya — bukan semua anak di carousel.
-  const [measurements, vaccinations, skippedKeys, reminders, claimCount] = await Promise.all([
+  const [
+    measurements,
+    vaccinations,
+    skippedKeys,
+    reminders,
+    registryRows,
+    shopProducts,
+    favoriteIds,
+    pushSubscribed,
+  ] = await Promise.all([
     listMeasurements(user.id, child.id, "desc"),
     listVaccinations(user.id, child.id),
     listSkippedCatalogKeys(user.id, child.id),
     listReminders(user.id, child.id),
-    registryClaimCount(user.id),
+    // Daftar utuh, bukan registryClaimCount: strip List Kado butuh barangnya, dan
+    // badge klaim di Akses Cepat tinggal dijumlahkan dari baris yang sama.
+    listRegistryItems(user.id),
+    // Katalog milik bersama, jadi tidak ber-scope anak aktif. Lima, sejumlah kolom
+    // grid-nya di desktop: yang keenam akan berdiri sendirian di baris kedua.
+    listShopProducts({ limit: 5 }),
+    listFavoriteIds(user.id),
+    // Nilai awal saja; PushPrompt memverifikasinya ke browser setelah terhidrasi.
+    hasSubscription(user.id),
   ]);
+
+  const claimCount = registryRows.reduce((n, r) => n + r.claims.length, 0);
 
   const latest = measurements[0];
   const currentWeightGrams =
@@ -76,6 +102,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   return (
     <div className="flex flex-col gap-4 pt-2">
       <InstallPrompt />
+
+      {/* Setelah InstallPrompt, dan salah satunya selalu diam: di iPhone dalam tab
+          push belum mungkin, jadi memasang dulu yang benar. */}
+      <PushPrompt subscribed={pushSubscribed} />
 
       <Greeting name={user.name} />
 
@@ -125,6 +155,14 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         givenCount={schedule.filter((e) => e.status === "given").length}
         reminders={reminders}
       />
+
+      {/* Enam terbaru saja — sisanya di /registry, dan strip beranda yang panjang
+          membuat orang menggulir melewati katalog di bawahnya. */}
+      <RegistryStrip rows={registryRows.slice(0, 5)} summary={registrySummary(registryRows)} />
+
+      <ShopStrip products={shopProducts} favoriteIds={favoriteIds} />
+
+      <StandardsNote />
     </div>
   );
 }

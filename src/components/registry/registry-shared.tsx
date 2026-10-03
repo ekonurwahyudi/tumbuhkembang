@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { BANKS, CATEGORY_LABEL, PRIORITY_LABEL, type BankCode } from "@/schemas/registry";
 import { cn } from "@/lib/utils";
 import {
@@ -383,9 +384,67 @@ export function ChildStack({
   );
 }
 
-/** Progress patungan. Angka selalu ditulis; bar hanya penguat. */
-export function ClaimProgress({ claimed, desired }: { claimed: number; desired: number }) {
+/**
+ * Progress pemenuhan kado. Angka selalu ditulis; bar hanya penguat — bar sendirian
+ * tidak pernah bisa menyebut "2 dari 3".
+ *
+ * `compact` untuk kartu: label dan persennya jadi satu baris pendek dan barnya 1,5px,
+ * karena di kartu selebar setengah layar HP versi penuhnya memakan ruang yang
+ * dibutuhkan nama barangnya.
+ *
+ * Hijau saat terpenuhi, biru merek saat belum: warnanya penguat juga, bukan penanda
+ * tunggal — teksnya sudah menyebut keadaannya.
+ */
+export function ClaimProgress({
+  claimed,
+  desired,
+  compact = false,
+}: {
+  claimed: number;
+  desired: number;
+  compact?: boolean;
+}) {
   const percent = Math.min(100, Math.round((claimed / desired) * 100));
+  const done = claimed >= desired;
+
+  const bar = (
+    <div
+      className={cn("bg-border overflow-hidden rounded-full", compact ? "h-1.5" : "h-2")}
+      role="progressbar"
+      aria-valuenow={claimed}
+      aria-valuemin={0}
+      aria-valuemax={desired}
+      aria-label="Kemajuan pemenuhan kado"
+    >
+      <div
+        className={cn(
+          "h-full rounded-full",
+          done ? "bg-[var(--color-status-normal)]" : "bg-primary",
+        )}
+        style={{ width: `${percent}%` }}
+      />
+    </div>
+  );
+
+  if (compact)
+    return (
+      <div className="space-y-1">
+        {bar}
+        <p
+          className={cn(
+            "text-label-sm tabular-nums",
+            done ? "text-[var(--color-status-normal-text)] font-bold" : "text-muted-foreground",
+          )}
+        >
+          {/* Angkanya, bukan "Sudah terpenuhi": badge di atas foto kartu sudah
+              menulis itu, dan dua kalimat yang sama di satu kartu terbaca
+              seperti salah satunya keliru. `1/1` vs `0/1` sudah membedakan
+              keadaannya tanpa warna. */}
+          {claimed}/{desired} terpenuhi
+        </p>
+      </div>
+    );
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
@@ -394,70 +453,187 @@ export function ClaimProgress({ claimed, desired }: { claimed: number; desired: 
         </span>
         <span className="text-muted-foreground text-label-sm tabular-nums">{percent}%</span>
       </div>
-      <div
-        className="bg-border h-2 overflow-hidden rounded-full"
-        role="progressbar"
-        aria-valuenow={claimed}
-        aria-valuemin={0}
-        aria-valuemax={desired}
-        aria-label="Kemajuan patungan kado"
-      >
-        <div className="bg-primary h-full rounded-full" style={{ width: `${percent}%` }} />
-      </div>
+      {bar}
     </div>
   );
 }
 
 /**
- * Marketplace dengan warna mereknya sendiri. Lambangnya SVG inline: font ikon
- * aplikasi ini adalah subset dan tidak memuat glyph merek apa pun.
+ * Marketplace dengan lambang resminya, berkas gambar di `public/stores/` — dulu
+ * SVG inline gambar tangan, karena font ikon aplikasi ini subset dan tidak memuat
+ * glyph merek apa pun. Lambang aslinya langsung dikenali; tiruan tangannya tidak.
  *
  * Nama tokonya selalu tertulis di samping lambang, jadi identitas toko tidak
  * pernah bergantung pada warna saja — aturan yang sama dengan badge prioritas.
  *
- * `bg` dan `hover` dipisah supaya lambangnya bisa dipakai di tempat yang bukan
- * tautan — label form tidak punya keadaan hover.
+ * `bg`/`hover` tinggal untuk tombol "Baca" di form, yang memang berwarna toko dan
+ * TIDAK memuat lambangnya. Di tempat lain lambangnya berdiri sendiri tanpa keping
+ * bulat — lambang berwarna penuh di atas keping berwarna merek saling menelan.
  */
 export const STORE_BRAND = {
   shopee: {
     label: "Shopee",
+    src: "/stores/shopee.png",
     bg: "bg-[#EE4D2D] text-white",
     hover: "hover:bg-[#d8431f]",
-    // Tas jinjing, bentuk dasar lambang Shopee.
-    path: "M12 2a4 4 0 0 0-4 4H5.4a1 1 0 0 0-1 .95l-.6 11.9A2 2 0 0 0 5.8 21h12.4a2 2 0 0 0 2-2.15l-.6-11.9a1 1 0 0 0-1-.95H16a4 4 0 0 0-4-4Zm0 2a2 2 0 0 1 2 2h-4a2 2 0 0 1 2-2Zm0 6c2 0 3.2.9 3.2 2.1 0 .6-.4 1-1 1-.5 0-.8-.3-1-.7-.2-.4-.6-.6-1.2-.6-.7 0-1.2.3-1.2.8 0 .5.4.7 1.6 1.1 1.6.5 2.6 1.1 2.6 2.4 0 1.5-1.3 2.4-3.1 2.4-2 0-3.3-1-3.3-2.2 0-.6.4-1 1-1 .5 0 .8.2 1 .7.2.5.7.7 1.4.7.8 0 1.3-.3 1.3-.8 0-.5-.5-.8-1.7-1.2-1.5-.5-2.5-1-2.5-2.3 0-1.4 1.3-2.4 2.9-2.4Z",
   },
   tokopedia: {
     label: "Tokopedia",
+    src: "/stores/tokopedia.png",
     bg: "bg-[#03AC0E] text-white",
     hover: "hover:bg-[#02900c]",
-    // Kanopi toko — silhuetnya sengaja beda tajam dari tas Shopee.
-    path: "M3 9l1.9-4.3A2 2 0 0 1 6.7 3.5h10.6a2 2 0 0 1 1.8 1.2L21 9v1.4a2.6 2.6 0 0 1-4.5 1.6 2.6 2.6 0 0 1-4.5 0 2.6 2.6 0 0 1-4.5 0A2.6 2.6 0 0 1 3 10.4V9Zm1.7 4.8V19a2 2 0 0 0 2 2H10v-5h4v5h3.3a2 2 0 0 0 2-2v-5.2a4.2 4.2 0 0 1-4.6-.6 4.2 4.2 0 0 1-4.5 0 4.2 4.2 0 0 1-4.5.6Z",
   },
   tiktok: {
     label: "TikTok",
+    src: "/stores/tiktok.png",
     // Hitam adalah warna mereknya; di mode gelap dibalik supaya tetap terbaca.
     bg: "bg-black text-white dark:bg-white dark:text-black",
     hover: "hover:bg-neutral-800 dark:hover:bg-neutral-200",
-    path: "M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 0 1-2.6 2.5 2.6 2.6 0 0 1-2.6-2.6c0-1.7 1.7-3 3.4-2.5V9.7c-3.5-.5-6.5 2.2-6.5 5.6 0 3.3 2.8 5.7 5.7 5.7 3.1 0 5.7-2.6 5.7-5.7V9a7.4 7.4 0 0 0 4.3 1.4V7.3s-1.9.1-3.2-1.5Z",
   },
 } as const;
 
 export type StoreBrand = keyof typeof STORE_BRAND;
 
-/** Lambang merek saja — dekoratif, label tokonya selalu tertulis di sebelahnya. */
+/**
+ * Lambang merek saja — dekoratif, label tokonya selalu tertulis di sebelahnya.
+ *
+ * `object-contain`: ketiga berkasnya sudah dipangkas dan dipasang di kanvas persegi
+ * 128px, tapi proporsi aslinya berbeda-beda, jadi `cover` akan memotong salah satunya.
+ */
 export function StoreMark({ brand, className }: { brand: StoreBrand; className?: string }) {
+  const store = STORE_BRAND[brand];
   return (
-    <svg
-      viewBox="0 0 24 24"
+    <Image
+      src={store.src}
+      alt=""
       aria-hidden="true"
-      className={cn("size-4 shrink-0 fill-current", className)}
-    >
-      <path d={STORE_BRAND[brand].path} />
-    </svg>
+      width={32}
+      height={32}
+      className={cn("size-4 shrink-0 object-contain", className)}
+    />
   );
 }
 
-/** Tautan toko sebagai chip berwarna merek. Target blank + noopener karena keluar dari aplikasi. */
+/**
+ * Kartu "Beli di Toko" di halaman detail. Dipakai detail kado DAN detail katalog —
+ * sebelumnya yang satu punya kartu dan yang lain hanya sederet chip telanjang, jadi
+ * dua halaman yang isinya sama terasa dua aplikasi berbeda.
+ *
+ * Tanpa tautan toko pun kartunya tetap ada, dengan kalimat yang menjelaskan: bentuk
+ * halaman tidak berubah hanya karena satu kolom belum diisi.
+ */
+export function BuyBox({
+  shopee,
+  tokopedia,
+  tiktok,
+}: {
+  shopee: string | null;
+  tokopedia: string | null;
+  tiktok: string | null;
+}) {
+  const hasStore = Boolean(shopee || tokopedia || tiktok);
+
+  return (
+    <section className="bg-card space-y-3 rounded-2xl border p-4 shadow-sm">
+      <h2 className="text-label-sm flex items-center gap-1.5 font-bold">
+        <Icon name="card_giftcard" className="text-primary text-[16px]" />
+        Beli di Toko
+      </h2>
+      {hasStore ? (
+        <>
+          <p className="text-muted-foreground text-label-sm">
+            Membuka tab baru di aplikasi tokonya. Pembelian dan pembayarannya di toko, bukan di
+            aplikasi ini.
+          </p>
+          <StoreLinks shopee={shopee} tokopedia={tokopedia} tiktok={tiktok} />
+        </>
+      ) : (
+        <p className="text-muted-foreground text-label-sm">Tautan tokonya belum tersedia.</p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Daftar toko sebagai lambang saja, satu baris — untuk kartu, di mana tiga chip
+ * berlabel membungkus jadi dua baris dan menenggelamkan nama barangnya.
+ *
+ * Label tokonya tidak hilang, hanya pindah: `aria-label` untuk pembaca layar dan
+ * `title` untuk tetikus. Jadi aturan yang sama dengan `StoreLinks` tetap berlaku —
+ * identitas toko tidak pernah bergantung pada warna saja.
+ *
+ * `<span>`, bukan `<a>`: kartunya sendiri sudah sebuah tautan, dan tautan bersarang
+ * adalah HTML tak sah. Di kartu ini lambangnya penanda "ada di toko mana", bukan
+ * tombol beli — tombol belinya ada di halaman detail.
+ */
+export function StoreRow({
+  shopee,
+  tokopedia,
+  tiktok,
+  className,
+}: {
+  shopee: string | null;
+  tokopedia: string | null;
+  tiktok: string | null;
+  className?: string;
+}) {
+  const brands = (
+    [
+      ["shopee", shopee],
+      ["tokopedia", tokopedia],
+      ["tiktok", tiktok],
+    ] as const
+  )
+    .filter(([, url]) => url)
+    .map(([key]) => key);
+  if (brands.length === 0) return null;
+
+  return (
+    <span className={cn("inline-flex items-center gap-1", className)}>
+      {/* Lambangnya telanjang, tanpa keping bulat berwarna: lambang resmi sudah
+          berwarna merek sendiri, dan menumpuknya di atas keping warna yang sama
+          membuat keduanya saling menelan. */}
+      {brands.map((key) => (
+        <span key={key} title={`Tersedia di ${STORE_BRAND[key].label}`} className="inline-flex">
+          <StoreMark brand={key} className="size-4" />
+          <span className="sr-only">Tersedia di {STORE_BRAND[key].label}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Penanda "Lihat detail" di kaki kartu, berbentuk pil bertepi supaya terbaca sebagai
+ * tombol.
+ *
+ * Tetap `<span aria-hidden>`, BUKAN `<button>`: kartunya sendiri sudah `<a>` seluruh
+ * badan, dan tombol di dalam tautan adalah konten interaktif bersarang — HTML tak sah,
+ * dan pembaca layar akan mengumumkan dua kendali untuk satu tujuan yang sama. Jadi ia
+ * terlihat tombol dan kartunya yang menanganinya.
+ */
+export function DetailCue({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "text-primary border-primary/30 text-label-sm inline-flex h-7 items-center gap-0.5 rounded-full border pr-1.5 pl-2.5 font-bold",
+        className,
+      )}
+    >
+      Lihat detail
+      <Icon name="chevron_right" className="text-[14px]" />
+    </span>
+  );
+}
+
+/**
+ * Tautan toko sebagai chip. Target blank + noopener karena keluar dari aplikasi.
+ *
+ * Chipnya berlatar kartu, bukan berwarna merek: lambang resminya sendiri sudah
+ * berwarna merek, dan lambang oranye di atas chip oranye Shopee praktis hilang.
+ * Identitas tokonya kini dibawa lambang + nama tertulis, bukan latar belakang.
+ */
 export function StoreLinks({
   shopee,
   tokopedia,
@@ -478,25 +654,18 @@ export function StoreLinks({
 
   return (
     <div className="flex flex-wrap gap-1.5">
-      {links.map(([key, url]) => {
-        const store = STORE_BRAND[key];
-        return (
-          <a
-            key={key}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "text-label-sm inline-flex h-8 items-center gap-1.5 rounded-full px-3 font-bold shadow-sm transition-colors active:scale-95",
-              store.bg,
-              store.hover,
-            )}
-          >
-            <StoreMark brand={key} />
-            {store.label}
-          </a>
-        );
-      })}
+      {links.map(([key, url]) => (
+        <a
+          key={key}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-card hover:bg-accent text-label-sm inline-flex h-8 items-center gap-1.5 rounded-full border px-3 font-bold shadow-sm transition-colors active:scale-95"
+        >
+          <StoreMark brand={key} />
+          {STORE_BRAND[key].label}
+        </a>
+      ))}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   shippingSchema,
   tidyText,
 } from "./registry";
+import { discountPercent, shopProductSchema } from "./shop";
 import { isNotFuture, isValidYMD } from "./date";
 
 /**
@@ -92,7 +93,12 @@ describe("childSchema", () => {
   });
 
   it("menerima berat lahir dalam rentang, opsional, dan null", () => {
-    const base = { name: "Budi", sex: "MALE" as const, dateOfBirth: yesterday(), birthType: "TERM" as const };
+    const base = {
+      name: "Budi",
+      sex: "MALE" as const,
+      dateOfBirth: yesterday(),
+      birthType: "TERM" as const,
+    };
     expect(childSchema.safeParse({ ...base, birthWeightGrams: 1800 }).success).toBe(true);
     expect(childSchema.safeParse({ ...base, birthWeightGrams: null }).success).toBe(true);
     expect(childSchema.safeParse(base).success).toBe(true);
@@ -159,7 +165,11 @@ describe("registerSchema", () => {
   });
 
   it("menolak password lemah", () => {
-    const r = registerSchema.safeParse({ ...base, password: "rahasia", confirmPassword: "rahasia" });
+    const r = registerSchema.safeParse({
+      ...base,
+      password: "rahasia",
+      confirmPassword: "rahasia",
+    });
     expect(r.success).toBe(false);
   });
 
@@ -228,9 +238,7 @@ describe("validasi tanggal dan zona waktu", () => {
         birthType: "TERM",
       }).success,
     ).toBe(true);
-    expect(
-      measurementSchema.safeParse({ measuredAt: today(), weightKg: 7 }).success,
-    ).toBe(true);
+    expect(measurementSchema.safeParse({ measuredAt: today(), weightKg: 7 }).success).toBe(true);
   });
 
   it("menolak hari esok pada kedua schema", () => {
@@ -242,9 +250,9 @@ describe("validasi tanggal dan zona waktu", () => {
         birthType: "TERM",
       }).success,
     ).toBe(false);
-    expect(
-      measurementSchema.safeParse({ measuredAt: tomorrow(), weightKg: 7 }).success,
-    ).toBe(false);
+    expect(measurementSchema.safeParse({ measuredAt: tomorrow(), weightKg: 7 }).success).toBe(
+      false,
+    );
   });
 
   it("tidak terpengaruh zona waktu", () => {
@@ -264,9 +272,9 @@ describe("validasi tanggal dan zona waktu", () => {
     expect(isValidYMD("2026-13-01")).toBe(false);
     expect(isValidYMD("2024-02-29")).toBe(true); // kabisat
     expect(isValidYMD("2026-02-29")).toBe(false);
-    expect(
-      measurementSchema.safeParse({ measuredAt: "2026-02-31", weightKg: 7 }).success,
-    ).toBe(false);
+    expect(measurementSchema.safeParse({ measuredAt: "2026-02-31", weightKg: 7 }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -336,7 +344,9 @@ describe("registryItemSchema", () => {
     expect(r.success).toBe(false);
     // Path harus sama dengan atribut name input, kalau tidak pesannya tidak muncul.
     expect(r.success === false && r.error.issues[0].path[0]).toBe("priceMax");
-    expect(registryItemSchema.safeParse({ ...base, priceMin: "500000", priceMax: "900000" }).success).toBe(true);
+    expect(
+      registryItemSchema.safeParse({ ...base, priceMin: "500000", priceMax: "900000" }).success,
+    ).toBe(true);
     // Satu sisi saja tetap boleh.
     expect(registryItemSchema.safeParse({ ...base, priceMax: "900000" }).success).toBe(true);
   });
@@ -371,18 +381,24 @@ describe("registryClaimSchema", () => {
   const base = { claimerName: "Tante Rina", qty: "1" };
 
   it("menolak nomor resi dengan karakter aneh", () => {
-    expect(registryClaimSchema.parse({ ...base, trackingNumber: " JNE 012-345.6 " }).trackingNumber).toBe(
-      "JNE 012-345.6",
+    expect(
+      registryClaimSchema.parse({ ...base, trackingNumber: " JNE 012-345.6 " }).trackingNumber,
+    ).toBe("JNE 012-345.6");
+    expect(registryClaimSchema.safeParse({ ...base, trackingNumber: "<script>" }).success).toBe(
+      false,
     );
-    expect(registryClaimSchema.safeParse({ ...base, trackingNumber: "<script>" }).success).toBe(false);
-    expect(registryClaimSchema.safeParse({ ...base, trackingNumber: "x".repeat(51) }).success).toBe(false);
+    expect(registryClaimSchema.safeParse({ ...base, trackingNumber: "x".repeat(51) }).success).toBe(
+      false,
+    );
     // Opsional: kosong berarti belum dikirim, bukan tidak valid.
     expect(registryClaimSchema.parse({ ...base, trackingNumber: "" }).trackingNumber).toBeNull();
   });
 
   it("membatasi nama pengklaim — ini kiriman dari orang tanpa sesi", () => {
     expect(registryClaimSchema.safeParse({ ...base, claimerName: "A" }).success).toBe(false);
-    expect(registryClaimSchema.safeParse({ ...base, claimerName: "x".repeat(81) }).success).toBe(false);
+    expect(registryClaimSchema.safeParse({ ...base, claimerName: "x".repeat(81) }).success).toBe(
+      false,
+    );
     expect(registryClaimSchema.safeParse(base).success).toBe(true);
   });
 
@@ -390,7 +406,9 @@ describe("registryClaimSchema", () => {
     // Kosong berarti "hapus resinya", bukan error: yang menjaga agar klaim tidak
     // berakhir tanpa bukti apa pun adalah UI-nya, bukan schema ini.
     expect(registryTrackingSchema.parse({ trackingNumber: "" }).trackingNumber).toBeNull();
-    expect(registryTrackingSchema.parse({ trackingNumber: " JNE 123 " }).trackingNumber).toBe("JNE 123");
+    expect(registryTrackingSchema.parse({ trackingNumber: " JNE 123 " }).trackingNumber).toBe(
+      "JNE 123",
+    );
     expect(registryTrackingSchema.safeParse({ trackingNumber: "<script>" }).success).toBe(false);
   });
 });
@@ -454,12 +472,24 @@ describe("shippingSchema", () => {
     expect(on.bankAccount).toBe("123 456-7890");
 
     // Kode bank di luar daftar ditolak: yang dipakai BankChip adalah kunci BANKS.
-    expect(errorPaths({ ...base, bankPublic: true, bankName: "BANK PALSU", bankHolder: "A", bankAccount: "1" })).toContain(
-      "bankName",
-    );
+    expect(
+      errorPaths({
+        ...base,
+        bankPublic: true,
+        bankName: "BANK PALSU",
+        bankHolder: "A",
+        bankAccount: "1",
+      }),
+    ).toContain("bankName");
     // Rekening bukan tempat menaruh teks bebas.
     expect(
-      errorPaths({ ...base, bankPublic: true, bankName: "BCA", bankHolder: "A", bankAccount: "<script>" }),
+      errorPaths({
+        ...base,
+        bankPublic: true,
+        bankName: "BCA",
+        bankHolder: "A",
+        bankAccount: "<script>",
+      }),
     ).toContain("bankAccount");
   });
 });
@@ -496,5 +526,35 @@ describe("tidyText", () => {
         desiredQty: "1",
       }).description,
     ).toBeNull();
+  });
+});
+
+describe("shopProductSchema", () => {
+  const base = { name: "Pompa ASI", category: "MOM_NURSING" };
+
+  it("menghitung persen diskon, dibulatkan ke bawah", () => {
+    expect(discountPercent(100_000, 125_000)).toBe(20);
+    // 33,33% dibulatkan ke bawah: 33, bukan 34.
+    expect(discountPercent(100_000, 150_000)).toBe(33);
+  });
+
+  it("tidak memberi persen diskon bila diskonnya tidak ada", () => {
+    expect(discountPercent(100_000, 100_000)).toBeNull();
+    expect(discountPercent(100_000, 90_000)).toBeNull();
+    expect(discountPercent(null, 125_000)).toBeNull();
+    expect(discountPercent(100_000, null)).toBeNull();
+  });
+
+  it("menolak harga asli di bawah harga jual, pada field yang benar", () => {
+    const r = shopProductSchema.safeParse({ ...base, price: "900000", priceOriginal: "500000" });
+    expect(r.success).toBe(false);
+    // Path harus sama dengan atribut name input, kalau tidak pesannya tidak muncul.
+    expect(r.success === false && r.error.issues[0].path[0]).toBe("priceOriginal");
+    expect(
+      shopProductSchema.safeParse({ ...base, price: "100000", priceOriginal: "125000" }).success,
+    ).toBe(true);
+    // Satu sisi saja tetap boleh: produk tanpa diskon.
+    expect(shopProductSchema.safeParse({ ...base, price: "100000" }).success).toBe(true);
+    expect(shopProductSchema.safeParse({ ...base, priceOriginal: "125000" }).success).toBe(true);
   });
 });
