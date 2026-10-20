@@ -19,21 +19,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { ChildFilter, type FilterChild } from "./child-rail";
-import {
-  CATEGORY_LABEL,
-  ChildStack,
-  ChildTag,
-  ClaimProgress,
-  ItemPhoto,
-  StoreLinks,
-  formatPriceRange,
-  joinNames,
-} from "./registry-shared";
-import { PRICE_TONE } from "@/components/shop/shop-price";
+import { CATEGORY_LABEL, RegistryGridCard } from "./registry-shared";
 import { SORT_LABEL, sortRows, type SortKey } from "./sort";
 import type { RegistryCategory, RegistryClaim, RegistryItem } from "@/db/schema";
+
+/** Maks. kartu per halaman — sepuluh terasa seperti satu layar penuh, bukan gulir tanpa akhir. */
+const PAGE_SIZE = 10;
 
 /** Bentuk yang dikirim halaman: item + klaimnya, sudah diringkas di server. */
 export type ListRow = {
@@ -50,11 +43,15 @@ const STATUS_LABEL: Record<Status, string> = {
   done: "Sudah Ada",
 };
 
+/** Nilai `<select>` untuk "Semua Kategori" — `category` aslinya `null`, tapi `<option>` butuh string. */
+const ALL_CATEGORIES = "ALL" as const;
+
 export function RegistryList({ rows, childList }: { rows: ListRow[]; childList: FilterChild[] }) {
   const [status, setStatus] = useState<Status>("all");
   const [category, setCategory] = useState<RegistryCategory | null>(null);
   const [childId, setChildId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("priority");
+  const [page, setPage] = useState(0);
 
   const done = (r: ListRow) => r.claimedQty >= r.item.desiredQty;
   // Barang tanpa anak ikut di tiap pilihan anak — kado untuk semua anak.
@@ -74,216 +71,146 @@ export function RegistryList({ rows, childList }: { rows: ListRow[]; childList: 
     byChild.some((r) => r.item.category === c),
   );
 
-  const childById = new Map(childList.map((c) => [c.id, c]));
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = visible.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
   return (
     <div className="space-y-3">
-      <ChildFilter
+      {/* <ChildFilter
         childList={childList}
         value={childId}
-        onChange={setChildId}
+        onChange={(id) => {
+          setChildId(id);
+          setPage(0);
+        }}
         total={rows.length}
         gifted={rows.filter(done).length}
-      />
+      /> */}
 
       {/*
-        Dua baris penyaring digeser mendatar: pada lebar HP enam kategori tidak
-        muat sebaris. Label teks selalu tampak, tidak ada penanda warna saja.
+        Tiga dropdown sebaris, bentuk yang sama dengan `SortSelect`: pil bulat
+        + ikon + `<select>` bawaan. Sebelumnya status dan kategori berupa deret
+        pil yang digeser mendatar — rapi untuk sedikit pilihan, tapi dua baris
+        pil di satu halaman terasa ramai dibanding satu dropdown "Prioritas"
+        di sebelahnya. `<select>` bawaan juga berarti di HP yang terbuka picker
+        asli sistem, bukan popover custom.
       */}
-      <div className="flex items-center gap-2">
-        <div
-          role="tablist"
-          aria-label="Saring menurut status"
-          className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto"
-        >
-          {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
-            <FilterPill
-              key={s}
-              active={status === s}
-              onClick={() => setStatus(s)}
-              label={`${STATUS_LABEL[s]} (${
-                s === "all"
-                  ? byChild.length
-                  : byChild.filter((r) => (s === "done" ? done(r) : !done(r))).length
-              })`}
-            />
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterSelect
+          icon="list_alt"
+          srLabel="Saring menurut status"
+          value={status}
+          onChange={(s) => {
+            setStatus(s);
+            setPage(0);
+          }}
+          options={(Object.keys(STATUS_LABEL) as Status[]).map((s) => ({
+            value: s,
+            label: `${STATUS_LABEL[s]} (${
+              s === "all"
+                ? byChild.length
+                : byChild.filter((r) => (s === "done" ? done(r) : !done(r))).length
+            })`,
+          }))}
+        />
 
-        <SortSelect value={sort} onChange={setSort} />
-      </div>
-
-      {usedCategories.length > 1 && (
-        <div
-          role="tablist"
-          aria-label="Saring menurut kategori"
-          className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
-        >
-          <FilterPill
-            active={category === null}
-            onClick={() => setCategory(null)}
-            label="Semua Kategori"
+        {usedCategories.length > 1 && (
+          <FilterSelect
+            icon="apps"
+            srLabel="Saring menurut kategori"
+            value={category ?? ALL_CATEGORIES}
+            onChange={(c) => {
+              setCategory(c === ALL_CATEGORIES ? null : c);
+              setPage(0);
+            }}
+            options={[
+              { value: ALL_CATEGORIES, label: "Semua Kategori" },
+              ...usedCategories.map((c) => ({ value: c, label: CATEGORY_LABEL[c] })),
+            ]}
           />
-          {usedCategories.map((c) => (
-            <FilterPill
-              key={c}
-              active={category === c}
-              onClick={() => setCategory(c)}
-              label={CATEGORY_LABEL[c]}
-            />
-          ))}
-        </div>
-      )}
+        )}
+
+        <SortSelect
+          value={sort}
+          onChange={(v) => {
+            setSort(v);
+            setPage(0);
+          }}
+        />
+      </div>
 
       {visible.length === 0 ? (
         <p className="text-muted-foreground text-body-sm py-2">
           Tidak ada barang pada kelompok ini.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {visible.map((row) => (
-            <ItemCard
-              key={row.item.id}
-              row={row}
-              child={row.item.childId ? (childById.get(row.item.childId) ?? null) : null}
-              allChildren={childList}
-            />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ItemCard({
-  row,
-  child,
-  allChildren,
-}: {
-  row: ListRow;
-  child: FilterChild | null;
-  /** Dipakai bila barangnya tidak menyebut anak: kadonya untuk mereka semua. */
-  allChildren: FilterChild[];
-}) {
-  const { item, claims, claimedQty } = row;
-  const price = formatPriceRange(item.priceMinIdr, item.priceMaxIdr);
-  const fulfilled = claimedQty >= item.desiredQty;
-  const photoSrc = (i: number) => `/registry/${item.id}/photo?i=${i}`;
-
-  return (
-    <li className="bg-card space-y-3 rounded-2xl border p-3 shadow-sm">
-      {/*
-        Foto dan judul jadi satu tautan ke detail; tombol Ubah/Hapus ada di luar
-        supaya tidak ada tombol di dalam tautan.
-      */}
-      <Link href={`/registry/${item.id}`} className="block space-y-3 rounded-xl">
-        <ItemPhoto
-          count={item.photoKeys.length}
-          src={photoSrc}
-          name={item.name}
-          priority={item.priority}
-          category={item.category}
-          isPublic={item.isPublic}
-          fulfilled={fulfilled}
-        />
-
-        <div className="space-y-1.5 px-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-headline-sm min-w-0">{item.name}</h3>
-            <Icon name="chevron_right" className="text-muted-foreground mt-0.5 text-[18px]" />
-          </div>
-          {/* Seukuran judulnya di atas, bukan `text-metric` yang 20px — harga yang lebih
-              besar daripada nama barangnya terbaca sebagai judul kartu. Warnanya yang
-              membedakan, lewat `PRICE_TONE` yang sama dengan kartu Shop Katalog. */}
-          {price && <p className={cn("text-headline-sm", PRICE_TONE)}>{price}</p>}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Tanpa anak tertentu: satu chip untuk semuanya, bukan satu chip per anak. */}
-            {child ? (
-              <ChildTag child={child} />
-            ) : allChildren.length > 0 ? (
-              <span className="bg-muted text-label-sm inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 font-bold">
-                <ChildStack childList={allChildren} max={2} size="sm" />
-                Untuk {joinNames(allChildren)}
-              </span>
-            ) : null}
-            <span className="text-muted-foreground text-label-sm">
-              Dibutuhkan {item.desiredQty} unit
-            </span>
-          </div>
-        </div>
-      </Link>
-
-      <div className="space-y-3 px-1">
-        {item.note && (
-          <p className="bg-muted text-body-sm rounded-xl p-3 italic">&ldquo;{item.note}&rdquo;</p>
-        )}
-
-        <StoreLinks shopee={item.urlShopee} tokopedia={item.urlTokopedia} tiktok={item.urlTiktok} />
-
-        {item.desiredQty > 1 && claimedQty > 0 && (
-          <ClaimProgress claimed={claimedQty} desired={item.desiredQty} />
-        )}
-
-        {/*
-          Baris klaim netral, bukan biru. Sebelumnya barang yang sudah terpenuhi
-          diberi `bg-accent text-primary` — biru merek yang terbaca sebagai "ini
-          yang penting", padahal justru sebaliknya: yang sudah ada tidak butuh
-          perhatian lagi. Statusnya tetap terbaca dari ikon dan teksnya sendiri.
-        */}
-        {claims.length > 0 && (
-          <ul className="space-y-1.5">
-            {claims.map((c) => (
-              <li
-                key={c.id}
-                className="bg-muted/60 text-body-sm flex items-start gap-2 rounded-xl p-2.5"
-              >
-                <Icon
-                  name="check_circle"
-                  filled
-                  className={cn(
-                    "mt-0.5 text-[16px]",
-                    c.trackingNumber || c.photoKey ? "text-primary" : "text-muted-foreground",
-                  )}
+        <>
+          {/* Grid 2/3/5 — sama dengan `/shop` dan strip beranda, jadi kartunya
+              selebar di mana-mana. Maks 10 per halaman lewat `pageRows`, bukan
+              gulir tanpa akhir. */}
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {pageRows.map((row) => (
+              <li key={row.item.id}>
+                <RegistryGridCard
+                  item={row.item}
+                  claimCount={row.claims.length}
+                  claimedQty={row.claimedQty}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="icon-sm"
+                        className="rounded-full"
+                        aria-label={`Ubah ${row.item.name}`}
+                      >
+                        <Link href={`/registry/${row.item.id}/edit`}>
+                          <Icon name="edit" className="text-[14px]" />
+                        </Link>
+                      </Button>
+                      <DeleteItemButton
+                        itemId={row.item.id}
+                        name={row.item.name}
+                        hasClaims={row.claims.length > 0}
+                      />
+                    </div>
+                  }
                 />
-                <span className="min-w-0 flex-1">
-                  <strong>{c.claimerName}</strong>
-                  {c.qty > 1 && ` (${c.qty} unit)`}
-                  {" — "}
-                  {/* Resi ATAU foto barangnya; rincian fotonya ada di halaman detail. */}
-                  {c.trackingNumber
-                    ? `resi ${c.trackingNumber}`
-                    : c.photoKey
-                      ? "sudah dikirim, ada fotonya"
-                      : "menunggu dikirim"}
-                </span>
-                <DeleteClaimButton claimId={c.id} claimerName={c.claimerName} />
               </li>
             ))}
           </ul>
-        )}
 
-        {/*
-          Tombol seperti di halaman detail: Detail dan Ubah sebagai `outline` pil,
-          Hapus sebagai ikon di ujung. Sebelumnya ketiganya `ghost` tanpa batas, jadi
-          tiga tautan teks mengambang di sudut kartu tanpa terbaca sebagai tombol.
-        */}
-        <div className="flex items-center gap-2 border-t pt-3">
-          <Button asChild variant="outline" size="sm" className="flex-1 rounded-full">
-            <Link href={`/registry/${item.id}`}>
-              <Icon name="visibility" className="text-[16px]" />
-              Detail
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="flex-1 rounded-full">
-            <Link href={`/registry/${item.id}/edit`}>
-              <Icon name="edit" className="text-[16px]" />
-              Ubah
-            </Link>
-          </Button>
-          <DeleteItemButton itemId={item.id} name={item.name} hasClaims={claims.length > 0} />
-        </div>
-      </div>
-    </li>
+          {pageCount > 1 && (
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={safePage === 0}
+                onClick={() => setPage(safePage - 1)}
+              >
+                <Icon name="arrow_back_ios_new" className="text-[14px]" />
+                Sebelumnya
+              </Button>
+              <span className="text-muted-foreground text-label-sm">
+                Halaman {safePage + 1} dari {pageCount}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={safePage >= pageCount - 1}
+                onClick={() => setPage(safePage + 1)}
+              >
+                Selanjutnya
+                <Icon name="arrow_forward" className="text-[14px]" />
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -420,6 +347,7 @@ export function DeleteClaimButton({
   );
 }
 
+/** Dipakai juga oleh `public-registry-list.tsx` (halaman publik) — bentuk filter pil asli. */
 export function FilterPill({
   active,
   onClick,
@@ -446,9 +374,45 @@ export function FilterPill({
 }
 
 /**
- * Pengurut. `<select>` bawaan, bukan komponen Select ber-popover: di HP ini
- * membuka picker asli sistem, yang lebih enak dan tanpa JS tambahan.
+ * Dropdown penyaring/pengurut: pil bulat + ikon + `<select>` bawaan. Dipakai untuk
+ * status, kategori, DAN pengurut — ketiganya pola yang sama, jadi satu komponen
+ * generik dengan tipe nilai berbeda-beda, bukan tiga salinan nyaris identik.
+ *
+ * `<select>` bawaan, bukan komponen Select ber-popover: di HP ini membuka picker
+ * asli sistem, yang lebih enak dan tanpa JS tambahan.
  */
+function FilterSelect<T extends string>({
+  icon,
+  srLabel,
+  value,
+  onChange,
+  options,
+}: {
+  icon: IconName;
+  srLabel: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  return (
+    <label className="bg-card text-label-sm flex h-9 shrink-0 items-center gap-1 rounded-full border px-3 font-bold">
+      <span className="sr-only">{srLabel}</span>
+      <Icon name={icon} className="text-muted-foreground text-[16px]" />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="bg-transparent pr-1 outline-none"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function SortSelect({
   value,
   onChange,
@@ -457,20 +421,12 @@ export function SortSelect({
   onChange: (v: SortKey) => void;
 }) {
   return (
-    <label className="bg-card text-label-sm flex h-9 shrink-0 items-center gap-1 rounded-full border px-3 font-bold">
-      <span className="sr-only">Urutkan</span>
-      <Icon name="swap_horiz" className="text-muted-foreground text-[16px]" />
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as SortKey)}
-        className="bg-transparent pr-1 outline-none"
-      >
-        {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
-          <option key={k} value={k}>
-            {SORT_LABEL[k]}
-          </option>
-        ))}
-      </select>
-    </label>
+    <FilterSelect
+      icon="swap_horiz"
+      srLabel="Urutkan"
+      value={value}
+      onChange={onChange}
+      options={(Object.keys(SORT_LABEL) as SortKey[]).map((k) => ({ value: k, label: SORT_LABEL[k] }))}
+    />
   );
 }

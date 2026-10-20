@@ -96,7 +96,7 @@ export function PublicRegistryList({
 
       {shippingPanel}
 
-      <ChildPills childList={childList} value={childId} onChange={setChildId} total={rows.length} />
+      {/* <ChildPills childList={childList} value={childId} onChange={setChildId} total={rows.length} /> */}
 
       {/* Status dan kategori: dua baris supaya keduanya bisa digeser sendiri di HP. */}
       <div className="flex items-center gap-2">

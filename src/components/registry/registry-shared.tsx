@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { BANKS, CATEGORY_LABEL, PRIORITY_LABEL, type BankCode } from "@/schemas/registry";
 import { cn } from "@/lib/utils";
 import {
@@ -9,6 +10,7 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { PRICE_TONE } from "@/components/shop/shop-price";
 import type { RegistryCategory, RegistryClaim, RegistryItem, RegistryPriority } from "@/db/schema";
 
 /**
@@ -624,6 +626,90 @@ export function DetailCue({ className }: { className?: string }) {
       Lihat detail
       <Icon name="chevron_right" className="text-[14px]" />
     </span>
+  );
+}
+
+/**
+ * Kartu grid untuk daftar kado — foto persegi penuh lebar, judul, harga, kemajuan
+ * klaim, lalu kaki berisi lambang toko. Dipakai `RegistryStrip` (beranda) DAN
+ * `RegistryList` (/registry): sebelumnya keduanya menulis markup kartu yang sama
+ * secara terpisah, dan dua salinan itu pernah berbeda diam-diam.
+ *
+ * `actions` menggantikan `DetailCue` di kaki kartu — dipakai /registry untuk ikon
+ * Ubah/Hapus pemilik. Kosong di beranda, jadi kakinya tetap "Lihat detail".
+ */
+export function RegistryGridCard({
+  item,
+  claimCount,
+  claimedQty,
+  actions,
+}: {
+  item: RegistryItem;
+  claimCount: number;
+  claimedQty: number;
+  actions?: React.ReactNode;
+}) {
+  const price = formatPriceRange(item.priceMinIdr, item.priceMaxIdr);
+  const fulfilled = claimedQty >= item.desiredQty;
+  const href = `/registry/${item.id}`;
+
+  return (
+    <div className="bg-card hover:border-primary/40 flex h-full flex-col overflow-hidden rounded-2xl border shadow-sm transition-transform">
+      <Link href={href} className="block active:scale-[0.98]">
+        <div className="bg-accent text-primary relative aspect-square w-full overflow-hidden">
+          {item.photoKeys.length > 0 ? (
+            // eslint-disable-next-line @next/next/no-img-element -- route foto berotorisasi, bukan aset statis untuk next/image
+            <img
+              src={`${href}/photo?i=0`}
+              alt={`Foto ${item.name}`}
+              className="size-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span className="grid size-full place-items-center">
+              <Icon name="card_giftcard" filled className="text-[32px]" />
+            </span>
+          )}
+
+          <span className="absolute inset-x-2 top-2 flex">
+            {fulfilled ? (
+              <span className="bg-background/90 text-foreground inline-flex h-6 items-center gap-1 rounded-full px-2 text-[10px] leading-none font-bold backdrop-blur-sm">
+                <Icon name="check_circle" filled className="text-primary text-[12px]" />
+                Sudah Dihadiahi
+              </span>
+            ) : (
+              <PriorityBadge priority={item.priority} />
+            )}
+          </span>
+        </div>
+      </Link>
+
+      <div className="flex flex-1 flex-col gap-1 p-3">
+        <Link href={href} className="block space-y-1">
+          <h3 className="text-body-sm line-clamp-2 font-bold">{item.name}</h3>
+          <p
+            className={cn(
+              "text-body-sm",
+              price ? PRICE_TONE : "text-muted-foreground tabular-nums",
+            )}
+          >
+            {price ?? "Harga menyusul"}
+          </p>
+        </Link>
+
+        <ClaimProgress claimed={claimedQty} desired={item.desiredQty} compact />
+
+        <div className="mt-auto flex items-center justify-between gap-1.5 pt-1">
+          <StoreRow shopee={item.urlShopee} tokopedia={item.urlTokopedia} tiktok={item.urlTiktok} />
+          {actions ?? <DetailCue className="ml-auto" />}
+        </div>
+
+        {claimCount > 0 && (
+          <p className="text-muted-foreground text-label-sm">{claimCount} orang sudah mengklaim</p>
+        )}
+      </div>
+    </div>
   );
 }
 
