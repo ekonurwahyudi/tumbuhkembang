@@ -31,6 +31,9 @@ export const MORE_ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/settings", label: "Pengaturan", icon: "settings" },
   { href: "/bantuan", label: "Bantuan", icon: "info" },
   { href: "/shop", label: "Shop Katalog", icon: "menu_book" },
+  // `history_edu`, bukan `play_circle`: font ikon di repo ini subset dan tidak
+  // memuat glyph play. Lihat catatan di ui/icon.tsx.
+  { href: "/video", label: "Video Edukasi", icon: "history_edu" },
 ];
 
 /** Benar juga untuk `/settings/apa-pun`, sama dengan tab nav lainnya. */
