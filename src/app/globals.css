@@ -17,6 +17,7 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-input-surface: var(--input-surface);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -106,8 +107,27 @@
   --accent: oklch(0.951 0.025 236.8);
   --accent-foreground: oklch(0.353 0.078 238.1);
   --destructive: oklch(0.577 0.215 27.3);
-  --border: oklch(0.929 0.013 255.5);
-  --input: oklch(0.869 0.02 252.9);
+  /*
+    Tanpa garis di seluruh aplikasi: `--border` dan `--input` dibuat transparan,
+    bukan menghapus ratusan kelas `border` satu per satu. Satu titik ubah, dan
+    bentuk elemennya tetap utuh — lebar 1px-nya masih menempati ruang, jadi tidak
+    ada tata letak yang bergeser saat garisnya hilang.
+
+    Pemisah antar-kartu kini dari bayangan dan jarak, seperti di beranda.
+
+    `--input` ikut transparan atas permintaan. Konsekuensinya kolom isian kehilangan
+    satu-satunya penandanya, jadi latar `--input-surface` di bawah menggantikannya —
+    lihat catatannya di sana.
+  */
+  --border: transparent;
+  --input: transparent;
+  /*
+    Latar kolom isian. Dibutuhkan karena `--input` kini transparan: komponen Input
+    memakai `bg-transparent`, jadi tanpa latar ini kolomnya benar-benar tidak terlihat
+    dan tidak ada lagi yang menyampaikan "di sini tempat mengetik" — penanda area
+    interaktif itu syarat dasar aksesibilitas, bukan hiasan.
+  */
+  --input-surface: oklch(0.968 0.007 247.9);
   /* Cincin fokus mengikuti primary baru (#2391FF) supaya keduanya sekeluarga.
      Sebagai elemen non-teks ambangnya 3:1, dan terhadap canvas nilainya 3,06:1. */
   --ring: oklch(0.655 0.188 253.3);
@@ -152,8 +172,11 @@
   --accent: oklch(0.31 0.058 249.4);
   --accent-foreground: oklch(0.912 0.045 249.4);
   --destructive: oklch(0.711 0.166 22.2);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 18%);
+  --border: transparent;
+  --input: transparent;
+  /* Di mode gelap latar isian dinaikkan dari surface, bukan diturunkan: permukaan
+     yang lebih terang itulah yang terbaca sebagai "bisa disentuh". */
+  --input-surface: oklch(0.289 0.046 261.4);
   --ring: oklch(0.745 0.139 253.3);
   --chart-1: oklch(0.669 0.159 22.3);
   --chart-2: oklch(0.7 0.13 240);
