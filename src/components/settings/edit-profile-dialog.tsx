@@ -142,7 +142,7 @@ function ProfileForm({
 
       <SubmitButton
         pendingLabel="Menyimpan..."
-        className="h-12 rounded-xl bg-[#0284C7] text-[15px] font-semibold hover:bg-[#006194]"
+        className="h-12 rounded-xl bg-[#0284C7] text-[15px] font-semibold hover:bg-[#1C74CC]"
       >
         Simpan Perubahan
       </SubmitButton>
@@ -249,7 +249,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
 
       <SubmitButton
         pendingLabel="Menyimpan..."
-        className="h-12 rounded-xl bg-[#0284C7] text-[15px] font-semibold text-white hover:bg-[#006194]"
+        className="h-12 rounded-xl bg-[#0284C7] text-[15px] font-semibold text-white hover:bg-[#1C74CC]"
       >
         {hasPassword ? "Ganti Kata Sandi" : "Buat Kata Sandi"}
       </SubmitButton>

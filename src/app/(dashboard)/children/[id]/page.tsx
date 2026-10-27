@@ -109,7 +109,7 @@ export default async function ChildProfilePage({
           childId={child.id}
           minDate={child.dateOfBirth}
           trigger={
-            <button className="bg-primary text-primary-foreground text-body-md flex items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-semibold tracking-tight shadow-sm transition-transform hover:bg-[#006194] active:scale-[0.98]">
+            <button className="bg-primary text-primary-foreground text-body-md flex items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-semibold tracking-tight shadow-sm transition-transform hover:bg-[#1C74CC] active:scale-[0.98]">
               <span className="grid size-7 place-items-center rounded-full bg-white/20">
                 <Icon name="straighten" className="text-[18px]" />
               </span>

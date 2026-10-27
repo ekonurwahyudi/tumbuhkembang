@@ -86,7 +86,7 @@ export function LoginForm({ next }: { next?: string }) {
 
       <SubmitButton
         pendingLabel="Memverifikasi..."
-        className="mt-1.5 h-12 w-full rounded-xl bg-[#0284C7] text-[17px] font-semibold hover:bg-[#006194]"
+        className="mt-1.5 h-12 w-full rounded-xl bg-[#0284C7] text-[17px] font-semibold hover:bg-[#1C74CC]"
       >
         Masuk ke Aplikasi
         <Icon name="arrow_forward" className="text-[20px]" />

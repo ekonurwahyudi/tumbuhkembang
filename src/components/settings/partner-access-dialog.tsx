@@ -160,7 +160,7 @@ export function PartnerAccessDialog({
 
             <SubmitButton
               pendingLabel="Membuat undangan..."
-              className="h-12 rounded-xl bg-[#0284C7] text-[15px] font-semibold hover:bg-[#006194]"
+              className="h-12 rounded-xl bg-[#0284C7] text-[15px] font-semibold hover:bg-[#1C74CC]"
             >
               Buat Link Undangan
             </SubmitButton>

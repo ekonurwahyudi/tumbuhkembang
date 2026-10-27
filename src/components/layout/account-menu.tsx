@@ -22,12 +22,35 @@ const initials = (name: string) =>
     .join("") || "?";
 
 /**
- * Avatar + menu akun (Pengaturan, Superadmin, Keluar).
- *
- * Tinggal di komponennya sendiri karena dipakai dua tempat: `AppHeader` di desktop,
- * dan sapaan beranda di HP — di mana headernya disembunyikan. Tanpa ini, menyalin
- * dropdownnya ke beranda berarti jalan keluar dan tautan Superadmin bisa berbeda
- * diam-diam antara dua tempat yang seharusnya sama.
+ * Avatar pengguna saja, tanpa menu. Diekspor supaya sapaan beranda — yang kini
+ * menautkan avatarnya langsung ke /settings, bukan membuka dropdown — memakai
+ * avatar yang SAMA dengan header, bukan salinannya.
+ */
+export function UserAvatar({
+  name,
+  photoKey,
+  className,
+}: {
+  name: string;
+  photoKey?: string | null;
+  className?: string;
+}) {
+  return (
+    <Avatar className={cn("ring-accent size-8 ring-2", className)}>
+      {photoKey && (
+        <AvatarImage src={`/user/photo?v=${encodeURIComponent(photoKey)}`} alt={`Foto ${name}`} />
+      )}
+      <AvatarFallback className="bg-accent text-accent-foreground text-body-sm font-bold">
+        {initials(name)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+/**
+ * Avatar + menu akun (Pengaturan, Superadmin, Keluar). Dipakai `AppHeader` di
+ * desktop. Di HP headernya disembunyikan dan avatarnya menautkan langsung ke
+ * /settings — lihat `Greeting` di beranda.
  */
 export function AccountMenu({
   name,
@@ -57,17 +80,7 @@ export function AccountMenu({
           className={cn("rounded-full", className)}
           aria-label="Menu akun"
         >
-          <Avatar className={cn("ring-accent size-8 ring-2", avatarClassName)}>
-            {photoKey && (
-              <AvatarImage
-                src={`/user/photo?v=${encodeURIComponent(photoKey)}`}
-                alt={`Foto ${name}`}
-              />
-            )}
-            <AvatarFallback className="bg-accent text-accent-foreground text-body-sm font-bold">
-              {initials(name)}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar name={name} photoKey={photoKey} className={avatarClassName} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

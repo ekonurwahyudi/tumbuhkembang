@@ -183,7 +183,7 @@ export function RegisterForm() {
 
       <SubmitButton
         pendingLabel="Membuat Akun..."
-        className="mt-2 h-12 w-full rounded-full bg-[#0284C7] text-[13px] font-semibold shadow-md shadow-[#0284C7]/20 hover:bg-[#006194]"
+        className="mt-2 h-12 w-full rounded-full bg-[#0284C7] text-[13px] font-semibold shadow-md shadow-[#0284C7]/20 hover:bg-[#1C74CC]"
       >
         Buat Akun Sekarang
         <Icon name="arrow_forward" className="text-[18px]" />

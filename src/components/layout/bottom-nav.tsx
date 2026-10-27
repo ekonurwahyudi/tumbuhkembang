@@ -97,9 +97,25 @@ export function BottomNav({
       tepi layar harus naik UTUH di atas home indicator iPhone, bukan menumbuhkan
       padding di dalam dirinya sendiri.
     */
+    /*
+      Kaca ala iOS. Tiga lapis yang membuatnya terbaca sebagai kaca, bukan sekadar
+      panel tembus pandang:
+
+      1. `backdrop-blur-2xl` + `backdrop-saturate-150` — blur saja menghasilkan kabur
+         keabuan; saturasi yang dinaikkan membuat warna di belakangnya ikut terbawa,
+         dan itulah yang dilakukan material iOS.
+      2. `bg-card/70` — cukup tembus untuk terlihat kaca, tapi tetap jadi alas yang
+         menjamin kontras labelnya. Di bawah ~60% teks mulai beradu dengan foto
+         produk yang lewat di belakangnya.
+      3. Tepi terang di dalam (`inset 0 1px 0 rgb(255 255 255/0.6)`) — kaca asli
+         menangkap cahaya di tepi atasnya. Tanpa itu pitanya terbaca rata.
+
+      `supports-[backdrop-filter]` menjaga peramban tanpa backdrop-filter tetap
+      mendapat latar pekat (`bg-card/95`), bukan pita nyaris transparan.
+    */
     <nav
       aria-label="Navigasi utama"
-      className="bg-card/95 fixed inset-x-3 z-40 rounded-[28px] border shadow-[0_8px_28px_rgb(15_23_42/0.10)] backdrop-blur-xl md:hidden"
+      className="bg-card/95 supports-[backdrop-filter]:bg-card/70 fixed inset-x-3 z-40 rounded-[28px] border border-white/40 shadow-[0_8px_32px_rgb(15_23_42/0.12),inset_0_1px_0_rgb(255_255_255/0.6)] backdrop-blur-2xl backdrop-saturate-150 md:hidden dark:border-white/10 dark:shadow-[0_8px_32px_rgb(0_0_0/0.4),inset_0_1px_0_rgb(255_255_255/0.08)]"
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
     >
       <ul className="mx-auto flex h-16 max-w-md items-stretch px-1">

@@ -124,7 +124,7 @@ export function QuickRecordSheet({ childrenList }: { childrenList: QuickChild[] 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetTrigger
           aria-label="Catat aktivitas"
-          className="bg-primary text-primary-foreground ring-card grid size-12 place-items-center rounded-full shadow-lg ring-4 transition-transform hover:bg-[#006194] active:scale-90"
+          className="bg-primary text-primary-foreground ring-card grid size-12 place-items-center rounded-full shadow-lg ring-4 transition-transform hover:bg-[#1C74CC] active:scale-90"
         >
           <Icon name="add" className="text-[26px]" />
         </SheetTrigger>

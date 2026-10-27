@@ -136,6 +136,37 @@ export default async function SettingsPage() {
         )}
       </section>
 
+      {/*
+        Superadmin. Pindah ke sini dari dropdown avatar yang sudah dihapus — di HP
+        itulah satu-satunya jalan masuknya, dan nav bawah tidak punya slot untuknya.
+
+        Menyembunyikan tautan ini BUKAN penjaganya: /admin dijaga requireSuperadmin()
+        di layout-nya, yang membaca peran dari DB tiap permintaan. Ini hanya agar
+        orang tua biasa tidak melihat pintu yang tidak bisa mereka buka.
+      */}
+      {user.role === "SUPERADMIN" && (
+        <section className="flex flex-col gap-2">
+          <span className="text-muted-foreground text-label-sm px-1 font-bold tracking-wider uppercase">
+            ADMINISTRASI
+          </span>
+          <Link
+            href="/admin"
+            className="bg-card hover:bg-muted flex items-center gap-3 rounded-2xl border p-4 shadow-sm transition-colors"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300">
+              <Icon name="shield" filled className="text-[20px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-body-md block font-bold">Superadmin</span>
+              <p className="text-muted-foreground text-body-sm">
+                Kelola pengguna, katalog, dan helpdesk
+              </p>
+            </span>
+            <Icon name="chevron_right" className="text-muted-foreground text-[20px]" />
+          </Link>
+        </section>
+      )}
+
       {/* Referensi & Perhitungan Medis */}
       <section className="flex flex-col gap-2">
         <span className="text-muted-foreground text-label-sm font-bold uppercase tracking-wider px-1">
@@ -220,11 +251,12 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {/* Logout */}
+      {/* Logout. Latar merah penuh, bukan outline: keluar adalah satu-satunya aksi
+          merusak di halaman ini, dan teks putih di atas rose-600 lolos AA (4,70:1). */}
       <div className="pt-2">
         <LogoutButton
           variant="outline"
-          className="w-full h-12 rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-body-md"
+          className="text-body-md h-12 w-full rounded-xl border-transparent bg-rose-600 font-bold text-white shadow-sm hover:bg-rose-700 hover:text-white dark:bg-rose-600 dark:hover:bg-rose-700"
         />
       </div>
 

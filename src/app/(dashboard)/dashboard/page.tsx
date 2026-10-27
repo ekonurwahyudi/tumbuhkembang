@@ -15,7 +15,7 @@ import { chronologicalAge, formatAgeDaysDetailed, formatAgeDetailed } from "@/li
 import { correctedAge } from "@/lib/growth/corrected-age";
 import { upcomingVaccines, vaccineSchedule } from "@/lib/immunization/schedule";
 import { syncVaccineNotifications } from "@/lib/notifications/vaccine-sync";
-import { AccountMenu } from "@/components/layout/account-menu";
+import { UserAvatar } from "@/components/layout/account-menu";
 import { ChildSwitcher } from "@/components/dashboard/child-switcher";
 import { GrowthHighlight } from "@/components/dashboard/growth-highlight";
 import { QuickAccess } from "@/components/dashboard/quick-access";
@@ -29,7 +29,6 @@ import { InstallPrompt } from "@/components/install-prompt";
 import { MeasurementDialog } from "@/components/measurements/measurement-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import type { UserRole } from "@/db/schema";
 
 export const metadata: Metadata = { title: "Beranda" };
 
@@ -43,13 +42,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   ]);
 
   const greeting = (
-    <Greeting
-      name={user.name}
-      email={user.email}
-      role={user.role}
-      photoKey={user.photoKey}
-      unread={unread}
-    />
+    <Greeting name={user.name} photoKey={user.photoKey} unread={unread} />
   );
 
   if (items.length === 0)
@@ -185,39 +178,38 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
 /**
  * Sapaan beranda. Di HP ini juga menggantikan header aplikasi yang disembunyikan
- * (lihat `AppHeader`): avatar + menu akun pindah ke kiri nama, dan lonceng di kanan
- * menggantikan hati yang dulu hanya hiasan — satu-satunya jalan keluar dan jalan ke
- * pemberitahuan di HP sebelumnya ada di header itu.
+ * (lihat `AppHeader`): avatar pindah ke kiri nama dan menautkan langsung ke
+ * /settings, dan lonceng di kanan menggantikan hati yang dulu hanya hiasan —
+ * keduanya jalan masuk yang sebelumnya hanya ada di header itu.
  *
  * Di desktop headernya kembali, jadi keduanya `md:hidden`: dua avatar dan dua lonceng
  * dalam satu layar terbaca sebagai dua kendali berbeda untuk tujuan yang sama.
  */
 function Greeting({
   name,
-  email,
-  role,
   photoKey,
   unread,
 }: {
   name: string;
-  email: string;
-  role?: UserRole;
   photoKey?: string | null;
   unread: number;
 }) {
   return (
     <header className="flex items-center gap-3">
-      {/* size-10, sama dengan loncengnya di ujung lain baris: dua lingkaran sebesar
-          sama membingkai sapaan di antaranya. 44px membuat avatarnya lebih tinggi
-          daripada dua baris teks di sebelahnya dan barisnya jadi berat sebelah. */}
-      <AccountMenu
-        name={name}
-        email={email}
-        role={role}
-        photoKey={photoKey}
-        className="-ml-1.5 size-10 shrink-0 md:hidden"
-        avatarClassName="size-10"
-      />
+      {/* Tautan langsung ke /settings, bukan pembuka dropdown: menunya hanya berisi
+          Pengaturan, Superadmin, dan Keluar — ketiganya kini ada DI DALAM halaman
+          Pengaturan itu sendiri, jadi dropdownnya cuma satu ketukan tambahan menuju
+          tempat yang sama.
+
+          size-10, sama dengan loncengnya di ujung lain baris: dua lingkaran sebesar
+          sama membingkai sapaan di antaranya. */}
+      <Link
+        href="/settings"
+        aria-label="Profil & pengaturan"
+        className="-ml-1.5 shrink-0 md:hidden"
+      >
+        <UserAvatar name={name} photoKey={photoKey} className="size-10" />
+      </Link>
 
       <div className="min-w-0 flex-1">
         {/* Di HP satu takik lebih kecil (headline-md, 17px): di sini judulnya berbagi

@@ -86,7 +86,7 @@ export function CopyAllButton({ text, label }: { text: string; label: string }) 
       }
       className={cn(
         "text-label-sm inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full font-bold transition-colors active:scale-[0.98]",
-        done ? "bg-accent text-primary" : "bg-primary text-primary-foreground hover:bg-[#006194]",
+        done ? "bg-accent text-primary" : "bg-primary text-primary-foreground hover:bg-[#1C74CC]",
       )}
     >
       <Icon name={done ? "check" : "content_copy"} className="text-[16px]" />
