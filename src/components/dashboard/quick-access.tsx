@@ -23,26 +23,41 @@ type Tile = {
  * blok yang harus dibaca kata per kata; warna berbeda membuat tiap ubin punya
  * bentuk ingatan sendiri, jadi orang tua yang sudah hafal bisa menujunya langsung.
  *
- * Pola `bg-x-100 text-x-700` + `dark:bg-x-900 dark:text-x-300` mengikuti
- * `PRIORITY_TONE` di registry-shared.tsx, bukan sistem baru. Tiap pasangan sudah
- * diuji >= 4,5:1 (AA) di kedua mode — nilai terendah amber/oranye 4,51:1. Ikonnya
- * `x-700`, BUKAN `x-600`: amber-600 di atas amber-100 hanya 2,86:1, di bawah
- * ambang 3:1 untuk elemen non-teks.
+ * Kepingnya kaca berwarna: tint `x-100/70` ditimpa gradien putih miring (lihat
+ * `GLASS` di bawah), bukan warna padat.
+ *
+ * Ikonnya `x-600`, satu langkah lebih lembut dari `x-700`. Kontras diuji pada warna
+ * hasil PENUMPUKAN (tint 70% + kilau putih 25% di atas kartu putih), bukan pada tint
+ * mentahnya: pada x-600 nilai terendah 3,01:1 (amber) — masih lolos ambang 3:1 untuk
+ * elemen non-teks, tapi nyaris. Jangan dilembutkan lagi: pada `x-500` lima dari
+ * delapan warna jatuh di bawah ambang (amber 2,03:1, teal 2,34:1).
  *
  * Warna di sini HANYA pembeda tempat, bukan penanda status: labelnya selalu
  * tertulis di bawah ikon, jadi tidak ada makna yang hilang bila warnanya tidak
  * terbedakan.
  */
 const TONE = {
-  sky: "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300",
-  emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-  violet: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300",
-  orange: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-  rose: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
-  amber: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  teal: "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
-  fuchsia: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-300",
+  sky: "bg-sky-100/70 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300",
+  emerald: "bg-emerald-100/70 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300",
+  violet: "bg-violet-100/70 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300",
+  orange: "bg-orange-100/70 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+  rose: "bg-rose-100/70 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300",
+  amber: "bg-amber-100/70 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300",
+  teal: "bg-teal-100/70 text-teal-600 dark:bg-teal-500/20 dark:text-teal-300",
+  fuchsia: "bg-fuchsia-100/70 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300",
 } as const;
+
+/**
+ * Lapisan kaca di atas tint berwarna: gradien putih miring + tepi terang di sisi
+ * atas, aturan yang sama dengan nav bawah dan strip asupan — satu bahasa kaca di
+ * seluruh aplikasi, bukan tiga racikan berbeda.
+ *
+ * `backdrop-blur-sm` ikut dipasang meski keping ini duduk di atas kartu putih polos
+ * (tidak ada yang bisa diburamkan): membuatnya tetap benar bila kartunya suatu saat
+ * berlatar foto atau warna.
+ */
+const GLASS =
+  "relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/60 before:via-white/15 before:to-transparent before:content-[''] shadow-[inset_0_1px_0_rgb(255_255_255/0.7)] backdrop-blur-sm dark:before:from-white/15 dark:before:via-white/5 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.12)]";
 
 export function QuickAccess({
   childId,
@@ -55,9 +70,8 @@ export function QuickAccess({
   const tiles: Tile[] = [
     { label: "Profil Anak", icon: "child_care", href: `/children/${childId}`, tone: TONE.sky },
     {
-      // "Vaksin", bukan "Jadwal Vaksin": pada ubin selebar ~73px label dua kata
-      // membungkus, dan grid menyamakan tinggi baris — satu label yang membungkus
-      // membuat SEMUA ubin di barisnya lebih tinggi dan menyisakan ruang kosong.
+      // Nama panjangnya kembali: sebagai carousel lebar ubin tidak lagi terkunci
+      // seperempat layar, jadi dua baris label tidak memaksa ubin lain ikut tinggi.
       label: "Vaksin",
       icon: "vaccines",
       href: `/children/${childId}#vaksinasi`,
@@ -75,16 +89,16 @@ export function QuickAccess({
       href: `/children/${childId}/growth`,
       tone: TONE.orange,
     },
-    { label: "Katalog", icon: "card_giftcard", href: "/shop", tone: TONE.rose },
+    { label: "Shop", icon: "card_giftcard", href: "/shop", tone: TONE.rose },
     {
-      label: "MyRegistry",
+      label: "List Kado",
       icon: "list_alt",
       href: "/registry",
-      badge: registryClaims > 0 ? String(registryClaims) : undefined,
+      // badge: registryClaims > 0 ? String(registryClaims) : undefined,
       tone: TONE.amber,
     },
-    { label: "Nakes Care", icon: "medical_services", badge: "Siaga", tone: TONE.teal },
-    { label: "Babysitter", icon: "family_restroom", badge: "Baru", tone: TONE.fuchsia },
+    { label: "Nakes Care", icon: "medical_services", badge: "Soon", tone: TONE.teal },
+    { label: "Babysitter", icon: "family_restroom", badge: "Soon", tone: TONE.fuchsia },
   ];
 
   return (
@@ -97,9 +111,9 @@ export function QuickAccess({
       </h2>
       <p className="text-muted-foreground text-body-sm mt-0.5">Layanan utama si kecil</p>
 
-      {/* `gap-1` di bawah 360px: dengan gap 10px, tiga celah memakan 30px dari
-          ~288px ruang isi dan menyisakan ubin ~59px — terlalu sempit untuk
-          "Profil Anak". Celah yang lebih rapat mengembalikan ~6px per ubin. */}
+      {/* Grid 4 kolom, dua baris — semua layanan terlihat sekaligus tanpa digeser.
+          `gap-1` di bawah 360px: dengan celah 10px, tiga celah memakan 30px dari
+          ~288px ruang isi dan menyisakan ubin ~59px, terlalu sempit untuk labelnya. */}
       <ul className="mt-3.5 grid grid-cols-4 gap-1 min-[360px]:gap-2.5">
         {tiles.map((tile) => (
           <li key={tile.label}>
@@ -124,8 +138,9 @@ export function QuickAccess({
    ubinnya.
 
    `pt-4` menyisakan jalur untuk badge "Siaga"/"Baru" di sudut — tanpa itu badge
-   menindih keping ikon. Tanpa `min-h`: tingginya ditentukan isinya, dan isinya
-   selalu setinggi sama karena tiap label dijaga satu baris. */
+   menindih keping ikon.
+
+   `w-full`: lebarnya ditentukan kolom grid, bukan ubinnya sendiri. */
 const TILE =
   "relative flex h-full w-full flex-col items-center justify-start gap-1.5 rounded-2xl px-0.5 pt-4 pb-2.5 text-center transition-all hover:bg-muted active:scale-[0.96]";
 
@@ -136,14 +151,21 @@ function TileBody({ label, icon, badge, href, tone }: Tile) {
           ikon aplikasi, dan bentuknya membedakan ubin layanan dari avatar anak yang
           memang lingkaran. Tanpa shadow — di atas tint lembut, bayangan membuat
           kepingnya tampak mengambang. */}
-      <span className={cn("grid size-11 place-items-center rounded-lg", tone)}>
-        <Icon name={icon} filled className="text-[22px]" />
+      {/* Keping 48px, glyph 32px: menyisakan ~8px napas di tiap sisi. Pada 38px ikon
+          padat seperti `analytics` (Grafik WHO) nyaris menyentuh tepi kepingnya. */}
+      <span className={cn("grid size-12 place-items-center rounded-xl", tone, GLASS)}>
+        {/* `relative` supaya ikonnya di ATAS lapisan kilau (`before`), bukan tertutup. */}
+        <Icon name={icon} filled className="relative text-[32px]" />
       </span>
-      {/* `truncate`, bukan membungkus: label yang membungkus memaksa seluruh baris
-          jadi lebih tinggi. Ukurannya 12px (naik dari 11px); BUKAN 13px, karena
-          "Grafik WHO" butuh 73px sementara ruangnya 70px. Di bawah 360px turun ke
-          10px — di sana ubinnya hanya ~59px. Semua angka ini diukur, bukan ditebak. */}
-      <span className="block w-full truncate text-[10px] leading-[14px] font-bold min-[360px]:text-[12px] min-[360px]:leading-[16px]">
+      {/* `font-normal` (400), bukan bold: di baris ubin yang semuanya tebal, tidak ada
+          yang menonjol dan seluruh barisnya terbaca "berteriak" — berat normal membuat
+          ikonnya yang memimpin, teks tinggal menamainya. 500 pun masih terbaca tebal
+          di sini, jadi turun satu langkah lagi ke 400.
+
+          Kembali ke grid berarti lebar ubin kembali terkunci seperempat layar: 13px
+          muat di 390px, tapi di 320px ubinnya hanya ~59px dan "Babysitter" terpotong.
+          Jadi 11px di bawah 360px, 13px di atasnya — diukur, bukan ditebak. */}
+      <span className="block w-full text-[11px] leading-[15px] font-normal min-[360px]:text-[13px] min-[360px]:leading-[17px]">
         {label}
       </span>
       {badge && (

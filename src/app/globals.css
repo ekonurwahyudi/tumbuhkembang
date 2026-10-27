@@ -172,32 +172,41 @@
   src: url("/fonts/material-symbols-subset.woff2") format("woff2");
 }
 
-.material-symbols-outlined {
-  font-family: "Material Symbols Outlined";
-  font-weight: normal;
-  font-style: normal;
-  font-size: 1.25rem;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  font-variation-settings:
-    "FILL" 0,
-    "wght" 400,
-    "GRAD" 0,
-    "opsz" 24;
-}
+/*
+  Dibungkus `@layer base` supaya utility Tailwind (`text-[22px]`, `text-[16px]`, …)
+  bisa menimpanya. Tanpa pembungkus ini aturannya TIDAK berlapis, dan CSS tak
+  berlapis selalu menang atas apa pun yang ada di dalam layer — akibatnya
+  `font-size: 1.25rem` di sini mengunci SEMUA ikon di 20px, berapa pun ukuran yang
+  diminta di markup. Ukuran ikon di seluruh aplikasi diam-diam tidak berlaku.
+*/
+@layer base {
+  .material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 1.25rem;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings:
+      "FILL" 0,
+      "wght" 400,
+      "GRAD" 0,
+      "opsz" 24;
+  }
 
-.material-symbols-outlined[data-filled] {
-  font-variation-settings:
-    "FILL" 1,
-    "wght" 400,
-    "GRAD" 0,
-    "opsz" 24;
+  .material-symbols-outlined[data-filled] {
+    font-variation-settings:
+      "FILL" 1,
+      "wght" 400,
+      "GRAD" 0,
+      "opsz" 24;
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {
