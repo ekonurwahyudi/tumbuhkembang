@@ -40,7 +40,7 @@ export function ProductCard({
     <div className="relative h-full">
       <Link
         href={`/shop/${p.id}`}
-        className="bg-card hover:border-primary/40 flex h-full flex-col overflow-hidden rounded-2xl border shadow-sm transition-transform active:scale-[0.98]"
+        className="bg-card flex h-full flex-col overflow-hidden rounded-2xl shadow-sm transition-transform active:scale-[0.98]"
       >
         <div className="bg-accent text-primary relative aspect-square w-full overflow-hidden">
           {p.photoKeys.length > 0 ? (

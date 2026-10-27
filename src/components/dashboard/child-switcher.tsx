@@ -57,8 +57,8 @@ export function ChildSwitcher({
                  jadi kartunya minimal 212px — 220px memberi sedikit kelonggaran.
                  Tetap muat lebih dari satu di layar HP, jadi masih terbaca sebagai
                  daftar yang bisa digeser. */
-              "bg-card flex w-[220px] shrink-0 snap-start items-center gap-2.5 rounded-2xl border p-2.5 text-left shadow-sm transition-all active:scale-[0.98]",
-              active ? "ring-primary/40 border-primary/30 ring-2" : "opacity-60",
+              "bg-card flex w-[220px] shrink-0 snap-start items-center gap-2.5 rounded-2xl p-2.5 text-left shadow-sm transition-all active:scale-[0.98]",
+              active ? "ring-primary/40 ring-2" : "opacity-60",
             )}
           >
             <ChildAvatar

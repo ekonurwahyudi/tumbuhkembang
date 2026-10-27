@@ -69,7 +69,7 @@ export function GrowthHighlight({
   const byType = new Map(outcomes.filter(isGrowthResult).map((o) => [o.measurementType, o]));
 
   return (
-    <section className="bg-card space-y-3.5 rounded-2xl border p-4 shadow-sm">
+    <section className="bg-card space-y-3.5 rounded-2xl p-4 shadow-sm">
       <div>
         <h2 className="text-headline-sm flex items-center gap-1.5">
           <Icon name="monitor_heart" className="text-primary text-[18px]" />
@@ -89,7 +89,7 @@ export function GrowthHighlight({
           const result = byType.get(type);
 
           return (
-            <div key={key} className="bg-muted border-border rounded-xl border p-2.5">
+            <div key={key} className="bg-muted rounded-xl p-2.5">
               <dt className="text-muted-foreground text-label-sm flex items-center justify-between gap-1">
                 <span className="truncate">{label}</span>
                 <Icon name={icon} className="text-primary shrink-0 text-[15px]" />
@@ -138,7 +138,7 @@ export function GrowthHighlight({
         />
         <Link
           href={`/children/${childId}/`}
-          className="bg-card text-body-md flex h-11 items-center justify-center gap-1.5 rounded-xl border font-bold active:scale-[0.97]"
+          className="bg-muted text-body-md flex h-11 items-center justify-center gap-1.5 rounded-xl font-bold active:scale-[0.97]"
         >
           Grafik WHO
           <Icon name="arrow_forward" className="text-[15px]" />

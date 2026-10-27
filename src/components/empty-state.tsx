@@ -17,7 +17,10 @@ export function EmptyState({
   tone?: string;
 }) {
   return (
-    <Card>
+    // `border-transparent`, bukan mengubah `Card` itu sendiri: komponen Card dipakai
+    // di seluruh aplikasi, dan melepas batasnya di sana ikut mengubah halaman yang
+    // tidak diminta. Di beranda pemisah antar-kartu cukup dari bayangan.
+    <Card className="border-transparent">
       <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
         {/* Keping ikonnya berwarna dan lebih besar: halaman kosong adalah layar
             pertama yang dilihat orang tua baru, dan satu ikon pucat di tengah kartu

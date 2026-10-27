@@ -88,7 +88,7 @@ export function QuickAccess({
   ];
 
   return (
-    <section className="bg-card rounded-2xl border p-4 shadow-sm" aria-labelledby="akses-cepat">
+    <section className="bg-card rounded-2xl p-4 shadow-sm" aria-labelledby="akses-cepat">
       <h2 id="akses-cepat" className="text-headline-sm flex items-center gap-2">
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300">
           <Icon name="apps" filled className="text-[16px]" />

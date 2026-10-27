@@ -42,7 +42,7 @@ export function IntakeStrip({ input }: { input: EstimateInput }) {
   const perSessionMax = max != null ? Math.round(max / sessions) : null;
 
   return (
-    <div className="bg-muted border-border space-y-3 rounded-xl border p-3">
+    <div className="bg-muted space-y-3 rounded-xl p-3">
       <div className="flex items-center gap-2">
         <span className="bg-card text-primary grid size-6 shrink-0 place-items-center rounded-full">
           <Icon name="water_bottle" className="text-[14px]" />
@@ -135,7 +135,7 @@ function Figure({
   className?: string;
 }) {
   return (
-    <div className={`bg-card border-border rounded-lg border p-2 ${className ?? ""}`}>
+    <div className={`bg-card rounded-lg p-2 ${className ?? ""}`}>
       <dt className="text-muted-foreground text-label-sm flex items-center gap-1">
         <Icon name={icon} className={`text-[13px] ${tone}`} />
         <span className="truncate">{label}</span>

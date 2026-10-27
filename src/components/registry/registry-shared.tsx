@@ -654,7 +654,7 @@ export function RegistryGridCard({
   const href = `/registry/${item.id}`;
 
   return (
-    <div className="bg-card hover:border-primary/40 flex h-full flex-col overflow-hidden rounded-2xl border shadow-sm transition-transform">
+    <div className="bg-card flex h-full flex-col overflow-hidden rounded-2xl shadow-sm transition-transform">
       <Link href={href} className="block active:scale-[0.98]">
         <div className="bg-accent text-primary relative aspect-square w-full overflow-hidden">
           {item.photoKeys.length > 0 ? (

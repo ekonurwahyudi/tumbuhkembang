@@ -53,7 +53,7 @@ export function VaccineSlider({
       </div>
 
       {entries.length === 0 ? (
-        <p className="bg-card text-muted-foreground text-body-sm rounded-2xl border p-4 shadow-sm">
+        <p className="bg-card text-muted-foreground text-body-sm rounded-2xl p-4 shadow-sm">
           Seluruh vaksin katalog sudah tercatat atau ditandai tidak berlaku.
         </p>
       ) : (
@@ -78,7 +78,7 @@ export function VaccineSlider({
             return (
               <li
                 key={entry.vaccine.key}
-                className="bg-card w-[286px] shrink-0 snap-start space-y-2.5 rounded-2xl border p-4 shadow-sm"
+                className="bg-card w-[286px] shrink-0 snap-start space-y-2.5 rounded-2xl p-4 shadow-sm"
               >
                 <span className="bg-accent text-primary text-label-sm inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold">
                   Target usia {entry.vaccine.ageLabel}
@@ -142,7 +142,7 @@ export function VaccineSlider({
 
       <Link
         href={`/children/${childId}#vaksinasi`}
-        className="bg-card text-body-sm flex h-11 items-center justify-center gap-1.5 rounded-xl border font-bold shadow-sm active:scale-[0.97]"
+        className="bg-card text-body-sm flex h-11 items-center justify-center gap-1.5 rounded-xl font-bold shadow-sm active:scale-[0.97]"
       >
         Jadwal Lengkap
         <span className="tabular-nums">
