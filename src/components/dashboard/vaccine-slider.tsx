@@ -38,8 +38,11 @@ export function VaccineSlider({
           di tepi isi halaman, dan 4px tambahan di sini membuat satu judul meleset
           sendirian dari garis tegak yang dibentuk sisanya. */}
       <div className="flex items-center justify-between gap-2">
-        <h2 id="jadwal-vaksin" className="text-headline-sm flex items-center gap-1.5">
-          <Icon name="vaccines" className="text-primary text-[18px]" />
+        {/* Emerald, sewarna ubin Jadwal Vaksin di Akses Cepat. */}
+        <h2 id="jadwal-vaksin" className="text-headline-sm flex items-center gap-2">
+          <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 grid size-7 shrink-0 place-items-center rounded-lg">
+            <Icon name="vaccines" filled className="text-[16px]" />
+          </span>
           Jadwal Vaksin Si Kecil
         </h2>
         {nearest && (

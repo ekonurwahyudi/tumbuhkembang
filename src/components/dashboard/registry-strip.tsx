@@ -33,6 +33,7 @@ export function RegistryStrip({
         icon="card_giftcard"
         title="Belum ada List Kado"
         description="Ayo tambahkan list kadomu buat si kecil dan bagikan ke bestimu"
+        tone="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
         action={
           <Button asChild className="rounded-full">
             <Link href="/registry/new">
@@ -51,6 +52,8 @@ export function RegistryStrip({
         icon="card_giftcard"
         title="List Kado"
         href="/registry"
+        /* Amber, sewarna ubin MyRegistry di Akses Cepat. */
+        tone="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
         action={
           <span className="bg-accent text-primary text-label-sm rounded-full px-2.5 py-1 font-bold">
             {summary.gifted}/{summary.listed} terpenuhi

@@ -51,7 +51,13 @@ export function ChildSwitcher({
             aria-selected={active}
             onClick={() => select(item.id)}
             className={cn(
-              "bg-card flex w-[182px] shrink-0 snap-start items-center gap-2.5 rounded-2xl border p-2.5 text-left shadow-sm transition-all active:scale-[0.98]",
+              /* 220px, naik dari 182px: dengan badge "Prematur" (61px) kini sebaris
+                 dengan usianya, lebar lama hanya menyisakan ~43px untuk teks dan
+                 "4 Minggu 1 Hari" terpotong. Diukur: usia terpanjang butuh 73px,
+                 jadi kartunya minimal 212px — 220px memberi sedikit kelonggaran.
+                 Tetap muat lebih dari satu di layar HP, jadi masih terbaca sebagai
+                 daftar yang bisa digeser. */
+              "bg-card flex w-[220px] shrink-0 snap-start items-center gap-2.5 rounded-2xl border p-2.5 text-left shadow-sm transition-all active:scale-[0.98]",
               active ? "ring-primary/40 border-primary/30 ring-2" : "opacity-60",
             )}
           >
@@ -62,14 +68,21 @@ export function ChildSwitcher({
             />
             <span className="min-w-0 flex-1">
               <span className="text-body-md block truncate font-bold">{item.name}</span>
-              <span className="text-muted-foreground text-label-sm block truncate">
-                {item.caption}
-              </span>
-              {item.preterm && (
-                <span className="text-label-sm mt-0.5 inline-block rounded-full bg-[var(--color-butter-pastel)] px-1.5 font-bold text-[var(--color-on-butter)]">
-                  Prematur
+              {/* Badge sebaris dengan usianya, bukan di baris ketiga sendiri: kartu
+                  tiga baris membuat anak prematur tampak lebih tinggi daripada
+                  tetangganya, dan badge yang berdiri sendiri terbaca seperti tombol.
+                  `shrink-0` pada badge + `truncate` pada usia: yang mengalah saat
+                  sempit adalah teks usianya, bukan labelnya. */}
+              <span className="mt-0.5 flex items-center gap-1.5">
+                <span className="text-muted-foreground text-label-sm truncate">
+                  {item.caption}
                 </span>
-              )}
+                {item.preterm && (
+                  <span className="text-label-sm shrink-0 rounded-full bg-[var(--color-butter-pastel)] px-1.5 font-bold text-[var(--color-on-butter)]">
+                    Prematur
+                  </span>
+                )}
+              </span>
             </span>
           </button>
         );

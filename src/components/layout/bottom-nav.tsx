@@ -84,10 +84,23 @@ export function BottomNav({
   };
 
   return (
+    /*
+      Melayang, bukan menempel ke tepi bawah: pita selebar layar membagi layar jadi
+      dua blok dan terbaca sebagai bagian dari sistem, bukan bagian dari aplikasi.
+      Dengan jarak di tiga sisinya, latar halaman terlihat mengalir di belakangnya.
+
+      `inset-x-3` + `rounded-[28px]`: sudutnya dibulatkan penuh mengikuti tinggi
+      pitanya sendiri. Bayangannya diperkuat (dari /0.05 ke /0.10) — elemen yang
+      melayang butuh bayangan yang menjelaskan ia melayang.
+
+      `bottom` membawa safe-area, bukan `paddingBottom`: pita yang sudah lepas dari
+      tepi layar harus naik UTUH di atas home indicator iPhone, bukan menumbuhkan
+      padding di dalam dirinya sendiri.
+    */
     <nav
       aria-label="Navigasi utama"
-      className="bg-card/95 fixed inset-x-0 bottom-0 z-40 border-t shadow-[0_-4px_20px_rgb(15_23_42/0.05)] backdrop-blur-xl md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="bg-card/95 fixed inset-x-3 z-40 rounded-[28px] border shadow-[0_8px_28px_rgb(15_23_42/0.10)] backdrop-blur-xl md:hidden"
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
     >
       <ul className="mx-auto flex h-16 max-w-md items-stretch px-1">
         {left.map(tab)}

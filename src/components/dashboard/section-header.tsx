@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Icon, type IconName } from "@/components/ui/icon";
 
 /**
@@ -18,6 +19,7 @@ export function SectionHeader({
   action,
   href,
   hrefLabel = "Lihat semua",
+  tone = "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300",
 }: {
   id: string;
   icon: IconName;
@@ -26,12 +28,20 @@ export function SectionHeader({
   action?: React.ReactNode;
   href?: string;
   hrefLabel?: string;
+  /** Warna keping ikon; sewarna dengan ubin layanan yang sama di Akses Cepat. */
+  tone?: string;
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h2 id={id} className="text-headline-sm flex items-center gap-1.5">
-          <Icon name={icon} className="text-primary text-[18px]" />
+        {/* Ikonnya dalam keping berwarna, bukan ikon telanjang: di halaman yang
+            judul sectionnya beruntun, keping memberi tiap section jangkar visual
+            yang terbaca sebelum teksnya. Warnanya senada dengan ubin layanan yang
+            sama di Akses Cepat, jadi "kado" berarti satu warna di seluruh beranda. */}
+        <h2 id={id} className="text-headline-sm flex items-center gap-2">
+          <span className={cn("grid size-7 shrink-0 place-items-center rounded-lg", tone)}>
+            <Icon name={icon} filled className="text-[16px]" />
+          </span>
           {title}
         </h2>
         {subtitle && <p className="text-muted-foreground text-body-sm mt-0.5">{subtitle}</p>}

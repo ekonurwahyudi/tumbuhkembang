@@ -36,6 +36,8 @@ export function ShopStrip({
         title="Shop Katalog"
         subtitle="Kebutuhan ibu, bayi, dan anak"
         href="/shop"
+        /* Rose, sewarna ubin Shop Katalog di Akses Cepat. */
+        tone="bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300"
       />
 
       {/* 2 kolom di HP, 3 di tablet, 5 di desktop — sama persis dengan grid `/shop`,
