@@ -45,7 +45,10 @@ export function CategorySelect({ value }: { value: ShopCategoryValue | null }) {
         defaultValue={value ?? ""}
         aria-label="Saring menurut kategori"
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="absolute inset-0 size-full cursor-pointer opacity-0 outline-none"
+        /* `text-body-sm`: select ber-`opacity-0` tidak mewarisi ukuran font induknya,
+           jadi tanpa ini daftar opsinya terbuka pada 16px bawaan peramban — lebih
+           besar daripada seluruh kendali di sebelahnya. */
+        className="text-body-sm absolute inset-0 size-full cursor-pointer opacity-0 outline-none"
       >
         <option value="">Semua Kategori</option>
         {SHOP_GROUPS.map((g) => (

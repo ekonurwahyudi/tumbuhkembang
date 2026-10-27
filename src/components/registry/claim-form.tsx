@@ -70,12 +70,19 @@ export function ClaimButton({
           `--color-on-butter` adalah teks gelap pasangannya di globals.css, jadi
           kontrasnya tetap terbaca di terang maupun gelap.
         */}
+        {/* `h-10` tetap + `min-w-0` + `px-3`: `size="lg"` setinggi 48px membuat tombol
+            ini jauh lebih tebal daripada "Lihat Detail" (36px) tepat di bawahnya, dan
+            dua tombol bertingkat dengan tinggi berbeda terbaca tidak sengaja. `Button`
+            juga punya `whitespace-nowrap` bawaan, jadi tanpa `min-w-0` label panjangnya
+            memaksa tombol lebih lebar daripada kartu ~173px dan meluber keluar. */}
         <Button
-          size="lg"
-          className="text-body-sm w-full bg-[var(--color-butter-bright)] font-bold text-[var(--color-on-butter)] shadow-sm hover:bg-[var(--color-butter-pastel)]"
+          className="text-body-sm h-10 w-full min-w-0 bg-[var(--color-butter-bright)] px-3 font-bold text-[var(--color-on-butter)] shadow-sm hover:bg-[var(--color-butter-pastel)]"
         >
-          <Icon name="card_giftcard" filled className="text-[18px]" />
-          Klaim / Jadikan Hadiah
+          <Icon name="card_giftcard" filled className="shrink-0 text-[16px]" />
+          {/* Teks pendek di HP, lengkap sejak `sm`: dua <span>, bukan satu yang
+              dipotong — "Klaim / Jadikan Had…" tidak menyampaikan apa pun. */}
+          <span className="sm:hidden">Klaim</span>
+          <span className="hidden sm:inline">Klaim / Jadikan Hadiah</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">

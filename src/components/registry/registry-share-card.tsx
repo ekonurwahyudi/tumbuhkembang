@@ -90,7 +90,7 @@ export function RegistryShareCard({
           <Counter label="Menunggu" value={summary.waiting} />
         </dl>
         <div
-          className="bg-border h-2 overflow-hidden rounded-full"
+          className="bg-rule h-2 overflow-hidden rounded-full"
           role="progressbar"
           aria-valuenow={summary.gifted}
           aria-valuemin={0}

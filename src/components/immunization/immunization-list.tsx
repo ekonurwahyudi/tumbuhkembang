@@ -51,7 +51,7 @@ const STATUS_DOT: Record<Status, string> = {
   given: "bg-[var(--color-status-normal)]",
   skipped: "bg-muted-foreground",
   due: "bg-[var(--color-butter-bright)]",
-  upcoming: "bg-border",
+  upcoming: "bg-rule",
 };
 
 const STATUS_VARIANT: Record<Status, "default" | "secondary" | "outline" | "ghost"> = {
@@ -103,7 +103,7 @@ export function ImmunizationList({
             <span className="text-muted-foreground text-label-sm tabular-nums">{percent}%</span>
           </div>
           <div
-            className="bg-border h-2.5 overflow-hidden rounded-full"
+            className="bg-rule h-2.5 overflow-hidden rounded-full"
             role="progressbar"
             aria-valuenow={givenCount}
             aria-valuemin={0}

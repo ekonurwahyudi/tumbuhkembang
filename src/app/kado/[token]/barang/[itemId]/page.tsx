@@ -15,12 +15,13 @@ import {
   ChildStack,
   ClaimProgress,
   ItemGallery,
-  ItemPhoto,
   PriorityBadge,
   StoreLinks,
   formatPriceRange,
   joinNames,
+  toPublicRow,
 } from "@/components/registry/registry-shared";
+import { PublicCard } from "@/components/registry/public-registry-list";
 import { sortRows } from "@/components/registry/sort";
 import { Icon } from "@/components/ui/icon";
 
@@ -275,35 +276,27 @@ export default async function PublicItemPage({
               </Link>
             </div>
 
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {others.slice(0, 8).map((r) => {
-                const done = remainingQty(r) === 0;
-                const otherPrice = formatPriceRange(r.item.priceMinIdr, r.item.priceMaxIdr);
-                return (
-                  <li key={r.item.id}>
-                    <Link
-                      href={`/kado/${token}/barang/${r.item.id}`}
-                      className="bg-card hover:border-primary/40 block space-y-2 rounded-2xl border p-3 shadow-sm transition-shadow hover:shadow-md"
-                    >
-                      <ItemPhoto
-                        count={r.item.photoKeys.length}
-                        src={(i) => `/kado/${token}/foto/${r.item.id}?i=${i}`}
-                        name={r.item.name}
-                        priority={r.item.priority}
-                        category={r.item.category}
-                        fulfilled={done}
-                      />
-                      <h3 className="text-body-md line-clamp-2 font-bold">{r.item.name}</h3>
-                      {otherPrice && (
-                        <p className="text-body-sm text-primary tabular-nums">{otherPrice}</p>
-                      )}
-                      <p className="text-muted-foreground text-label-sm">
-                        {done ? "Sudah dihadiahi" : `${remainingQty(r)} unit belum terpenuhi`}
-                      </p>
-                    </Link>
-                  </li>
-                );
-              })}
+            {/*
+              `PublicCard` yang SAMA dengan daftar utama di `/kado/[token]` — lengkap
+              dengan tombol Klaim, chip anak, lambang toko, dan "Lihat Detail".
+              Sebelumnya di sini ada kartu versi sendiri yang lebih miskin: foto, nama,
+              harga, satu baris status. Akibatnya barang yang sama terlihat berbeda
+              tergantung orang sampai lewat mana, dan yang membuka halaman ini dari
+              WhatsApp tidak bisa mengklaim kado lain tanpa berpindah halaman dulu.
+
+              2 kolom sejak HP, sama dengan grid daftar utamanya.
+            */}
+            <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {others.slice(0, 8).map((r) => (
+                <PublicCard
+                  key={r.item.id}
+                  row={toPublicRow(r)}
+                  child={r.item.childId ? (faces.find((f) => f.id === r.item.childId) ?? null) : null}
+                  allChildren={faces}
+                  token={token}
+                  origin={origin}
+                />
+              ))}
             </ul>
           </section>
         )}

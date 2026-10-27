@@ -18,6 +18,7 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-input-surface: var(--input-surface);
+  --color-rule: var(--rule);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -128,6 +129,17 @@
     interaktif itu syarat dasar aksesibilitas, bukan hiasan.
   */
   --input-surface: oklch(0.968 0.007 247.9);
+  /*
+    Abu-abu untuk garis dan lintasan yang memang harus TERLIHAT: alur progress bar,
+    pemisah antar-baris di dalam satu kartu, `Separator`.
+
+    Dulu semuanya memakai `bg-border` — warna yang sama dengan garis tepi kartu. Saat
+    `--border` dibuat transparan, semuanya ikut lenyap: progress bar 0% tidak
+    menampilkan apa pun dan terbaca seperti barnya hilang, bukan seperti bar kosong.
+    Dipisahkan jadi token sendiri supaya "tanpa garis tepi" tidak lagi berarti "tanpa
+    garis sama sekali"; keduanya memang dua hal berbeda.
+  */
+  --rule: oklch(0.906 0.017 252.9);
   /* Cincin fokus mengikuti primary baru (#2391FF) supaya keduanya sekeluarga.
      Sebagai elemen non-teks ambangnya 3:1, dan terhadap canvas nilainya 3,06:1. */
   --ring: oklch(0.655 0.188 253.3);
@@ -177,6 +189,8 @@
   /* Di mode gelap latar isian dinaikkan dari surface, bukan diturunkan: permukaan
      yang lebih terang itulah yang terbaca sebagai "bisa disentuh". */
   --input-surface: oklch(0.289 0.046 261.4);
+  /* Di gelap, garis/lintasan dinaikkan dari surface supaya tetap terbaca. */
+  --rule: oklch(1 0 0 / 20%);
   --ring: oklch(0.745 0.139 253.3);
   --chart-1: oklch(0.669 0.159 22.3);
   --chart-2: oklch(0.7 0.13 240);
@@ -230,6 +244,18 @@
       "GRAD" 0,
       "opsz" 24;
   }
+}
+
+/*
+  Tombol silang bawaan `input[type=search]` di WebKit/Blink. Disembunyikan karena
+  kotak cari di aplikasi ini menggambar tombol hapusnya sendiri — tanpa ini ada DUA
+  silang bersebelahan, dan yang bawaan mengosongkan nilai DOM tanpa memberi tahu
+  React, jadi state `term` tetap terisi dan daftarnya tidak ikut kembali utuh.
+*/
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .no-scrollbar::-webkit-scrollbar {

@@ -189,7 +189,7 @@ export function PartnerAccessDialog({
         {childCount > 0 && (
           <>
             <div className="relative my-5 flex items-center justify-center">
-              <div className="bg-border h-px w-full" />
+              <div className="bg-rule h-px w-full" />
               <span className="absolute px-3 text-[11px] font-medium tracking-[0.02em] text-muted-foreground">
                 undangan terkirim
               </span>

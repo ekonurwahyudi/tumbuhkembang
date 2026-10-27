@@ -63,9 +63,9 @@ export function TrackingForm({
         onSaved={() => setThanks(true)}
       />
       <div className="flex items-center gap-2">
-        <span className="bg-border h-px flex-1" />
+        <span className="bg-rule h-px flex-1" />
         <span className="text-muted-foreground text-label-sm font-bold">ATAU</span>
-        <span className="bg-border h-px flex-1" />
+        <span className="bg-rule h-px flex-1" />
       </div>
       <TrackingNumberForm
         claimToken={claimToken}

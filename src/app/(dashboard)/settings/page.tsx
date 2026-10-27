@@ -183,7 +183,7 @@ export default async function SettingsPage() {
             <Icon name="chevron_right" className="text-muted-foreground text-[20px]" />
           </div>
 
-          <div className="bg-border h-px" />
+          <div className="bg-rule h-px" />
 
           <div className="flex items-center justify-between">
             <div>
@@ -217,7 +217,7 @@ export default async function SettingsPage() {
             </p>
           </div>
 
-          <div className="bg-border h-px" />
+          <div className="bg-rule h-px" />
 
           <div>
             <span className="text-body-md font-bold block">Pasang Aplikasi</span>
@@ -233,7 +233,7 @@ export default async function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-border h-px" />
+          <div className="bg-rule h-px" />
 
           <div>
             <span className="text-body-md font-bold block">Tentang</span>

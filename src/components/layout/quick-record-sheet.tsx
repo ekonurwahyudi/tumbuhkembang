@@ -134,7 +134,7 @@ export function QuickRecordSheet({ childrenList }: { childrenList: QuickChild[] 
           showCloseButton={false}
           className="mx-auto max-w-md gap-0 rounded-t-3xl p-5"
         >
-          <div className="bg-border mx-auto mb-3 h-1.5 w-12 rounded-full" />
+          <div className="bg-rule mx-auto mb-3 h-1.5 w-12 rounded-full" />
 
           <SheetHeader className="gap-0.5 p-0">
             <span className="text-primary text-label-sm flex items-center gap-1.5 font-bold uppercase tracking-wider">

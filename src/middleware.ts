@@ -48,7 +48,11 @@ export const config = {
   // SENDIRI — tanpa cookie sesi. Permintaan itu kena middleware, dialihkan ke /login,
   // dan gambarnya gagal dioptimalkan. `brand-logo.png` sudah ada di sini karena alasan
   // yang sama persis.
+  //
+  // `banks` ikut karena alasan yang SAMA, dan tanpanya logo bank di halaman kado
+  // publik dialihkan ke /login — halaman itu dibuka orang yang memang tidak punya
+  // akun, jadi logonya tidak pernah muncul dan panel rekening tampak kotak kosong.
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|fonts|stores|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
+    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|fonts|stores|banks|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
   ],
 };

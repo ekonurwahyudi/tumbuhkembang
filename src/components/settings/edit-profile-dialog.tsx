@@ -212,7 +212,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
         />
 
         <div className="flex items-center gap-2">
-          <div className="bg-border h-1 flex-1 overflow-hidden rounded-full">
+          <div className="bg-rule h-1 flex-1 overflow-hidden rounded-full">
             <div
               className={`h-full rounded-full transition-all ${strength.color || "bg-transparent"}`}
               style={{ width: `${strength.score * 25}%` }}

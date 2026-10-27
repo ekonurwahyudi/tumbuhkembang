@@ -410,8 +410,18 @@ export function ClaimProgress({
   const done = claimed >= desired;
 
   const bar = (
+    /*
+      Lintasannya abu-abu eksplisit, BUKAN `bg-rule`: sejak `--border` dibuat
+      transparan di seluruh aplikasi, lintasan bar ikut tak terlihat — jadi kado yang
+      belum diklaim (0%) tidak menampilkan apa pun dan barnya terbaca seperti hilang,
+      bukan seperti bar yang masih kosong.
+
+      `bg-rule`, bukan `bg-muted`: diukur di atas kartu putih, `muted` hanya 1,10:1 —
+      praktis tak kasatmata. Token `--rule` (1,23:1) cukup terbaca sebagai alur tanpa
+      bersaing dengan bagian terisinya, dan dipakai bersama semua garis/lintasan lain.
+    */
     <div
-      className={cn("bg-border overflow-hidden rounded-full", compact ? "h-1.5" : "h-2")}
+      className={cn("bg-rule overflow-hidden rounded-full", compact ? "h-1.5" : "h-2")}
       role="progressbar"
       aria-valuenow={claimed}
       aria-valuemin={0}

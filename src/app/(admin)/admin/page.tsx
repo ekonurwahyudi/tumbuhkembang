@@ -48,7 +48,7 @@ export default async function AdminPage() {
           <div className="bg-card space-y-3.5 rounded-2xl border p-4 shadow-sm">
             {group.sections.map((s, i) => (
               <div key={s.slug} className="space-y-3.5">
-                {i > 0 && <div className="bg-border h-px" />}
+                {i > 0 && <div className="bg-rule h-px" />}
                 <ModuleLink section={s} />
               </div>
             ))}

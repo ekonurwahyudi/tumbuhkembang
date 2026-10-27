@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { REGISTRY_CATEGORIES } from "@/schemas/registry";
@@ -17,11 +17,14 @@ import {
   ChildTag,
   ClaimProgress,
   ItemPhoto,
-  StoreLinks,
+  StoreRow,
   formatPriceRange,
   joinNames,
   type PublicRow,
+  type RegistryChild,
 } from "./registry-shared";
+import { nextActive } from "@/components/shop/shop-search-logic";
+import { PRICE_TONE } from "@/components/shop/shop-price";
 import { sortRows, type SortKey } from "./sort";
 import type { RegistryCategory } from "@/db/schema";
 
@@ -57,6 +60,10 @@ export function PublicRegistryList({
   const [category, setCategory] = useState<RegistryCategory | null>(null);
   const [status, setStatus] = useState<"all" | "open" | "done">("all");
   const [sort, setSort] = useState<SortKey>("priority");
+  const [term, setTerm] = useState("");
+  const [open, setOpen] = useState(false);
+  const [activeIdx, setActive] = useState(-1);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const done = (r: PublicRow) => r.claimedQty >= r.item.desiredQty;
   // Barang tanpa anak ikut di tiap pilihan anak — itu kado untuk mereka semua,
@@ -67,10 +74,55 @@ export function PublicRegistryList({
   const byStatus = byChild.filter((r) =>
     status === "all" ? true : status === "done" ? done(r) : !done(r),
   );
+  /*
+    Pencarian disaring di browser, bukan lewat URL seperti `/shop`: seluruh barang
+    wishlist sudah ada di memori (daftarnya puluhan, bukan ribuan), jadi tidak ada
+    yang perlu diambil ulang dari server. Nama DAN catatan ikut dicari — orang tua
+    sering menulis merek atau ukuran di catatan, bukan di nama barangnya.
+  */
+  const q = term.trim().toLowerCase();
+  const bySearch = q
+    ? byStatus.filter(
+        (r) =>
+          r.item.name.toLowerCase().includes(q) || (r.item.note ?? "").toLowerCase().includes(q),
+      )
+    : byStatus;
   const visible = sortRows(
-    byStatus.filter((r) => (category ? r.item.category === category : true)),
+    bySearch.filter((r) => (category ? r.item.category === category : true)),
     sort,
   );
+
+  /*
+    Saran untuk dropdown: dicocokkan dari NAMA saja (bukan catatan seperti `bySearch`),
+    karena yang ditampilkan di tiap barisnya adalah namanya — saran yang cocok lewat
+    catatan tersembunyi akan terbaca seperti hasil yang keliru. Delapan sudah melebihi
+    tinggi layar HP, sama dengan batas di `/shop`.
+  */
+  const matches = q ? byChild.filter((r) => r.item.name.toLowerCase().includes(q)).slice(0, 8) : [];
+  const showSuggest = open && matches.length > 0;
+
+  /** Memilih saran mengisi kotak carinya — daftarnya ada di halaman ini juga. */
+  const pick = (name: string) => {
+    setTerm(name);
+    setOpen(false);
+    setActive(-1);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") return setOpen(false);
+    if (!showSuggest) return;
+
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => nextActive(i, e.key === "ArrowDown" ? 1 : -1, matches.length));
+      return;
+    }
+
+    if (e.key === "Enter" && activeIdx >= 0 && activeIdx < matches.length) {
+      e.preventDefault();
+      pick(matches[activeIdx].item.name);
+    }
+  };
 
   const usedCategories = REGISTRY_CATEGORIES.filter((c) =>
     byChild.some((r) => r.item.category === c),
@@ -92,66 +144,208 @@ export function PublicRegistryList({
         listed={listed}
         gifted={gifted}
         waiting={waiting}
+        shippingPanel={shippingPanel}
       />
-
-      {shippingPanel}
 
       {/* <ChildPills childList={childList} value={childId} onChange={setChildId} total={rows.length} /> */}
 
-      {/* Status dan kategori: dua baris supaya keduanya bisa digeser sendiri di HP. */}
+      {/*
+        Satu baris kendali seperti `/shop`: kotak cari yang melebar + kategori sebagai
+        dropdown. Sebelumnya kategori berupa deret pil yang digeser mendatar — enam
+        kategori tidak muat sebaris di HP, jadi sebagiannya tersembunyi di luar layar
+        tanpa penanda apa pun.
+
+        Beda dari `/shop`, ini TIDAK lewat `<form method=get>`: halaman publik disaring
+        di browser (lihat `bySearch`), jadi hasil ketikan langsung terlihat tanpa muat
+        ulang — dan tanpa menaruh isi wishlist orang di URL yang bisa ikut tersalin
+        saat tautannya diteruskan.
+      */}
       <div className="flex items-center gap-2">
-        <div
-          role="tablist"
-          aria-label="Saring menurut status"
-          className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto"
-        >
-          <FilterPill
-            active={status === "all"}
-            onClick={() => setStatus("all")}
-            label={`Semua Barang (${byChild.length})`}
-          />
-          <FilterPill
-            active={status === "open"}
-            onClick={() => setStatus("open")}
-            label={`Belum Dihadiahi (${waiting})`}
-          />
-          <FilterPill
-            active={status === "done"}
-            onClick={() => setStatus("done")}
-            label={`Sudah Ada (${gifted})`}
-          />
+        {/*
+          Combobox dengan saran bergambar, pola yang sama dengan `ShopSearch` di
+          `/shop`: mengetik membuka dropdown berisi foto + nama + harga, panah
+          atas/bawah menyorot, Enter membuka barangnya. `nextActive` dipakai ulang
+          dari `shop-search-logic.ts` — bukan ditulis ulang, supaya perilaku panahnya
+          tidak bisa berbeda diam-diam antara dua halaman.
+
+          Bedanya: memilih saran di sini TIDAK pindah halaman melainkan mengisi kotak
+          carinya, karena daftar kadonya memang ada di halaman ini juga.
+        */}
+        <div className="relative min-w-0 flex-1">
+          <label className="bg-card focus-within:ring-ring flex h-10 items-center gap-2 rounded-xl px-3 shadow-sm focus-within:ring-2">
+            {/* Tanpa ikon: font ikon di repo ini subset dan TIDAK memuat glyph
+                `search`, sementara `list_alt` sebagai gantinya justru terbaca sebagai
+                "daftar", bukan "cari". Placeholder-nya sudah menyebut maksudnya, dan
+                ruang yang dihemat jadi lebar ketik. */}
+            <span className="sr-only">Cari kado</span>
+            <input
+              type="search"
+              value={term}
+              onChange={(e) => {
+                setTerm(e.target.value);
+                setOpen(true);
+                setActive(-1);
+              }}
+              onFocus={() => setOpen(true)}
+              /* Ketukan pada saran mencabut fokus SEBELUM `onClick`-nya jalan, jadi
+                 menutup seketika di `onBlur` akan membatalkan ketukannya. */
+              onBlur={() => {
+                blurTimer.current = setTimeout(() => setOpen(false), 120);
+              }}
+              onKeyDown={onKeyDown}
+              placeholder="Cari kado..."
+              role="combobox"
+              aria-expanded={showSuggest}
+              aria-controls="kado-suggestions"
+              aria-activedescendant={
+                activeIdx >= 0 && showSuggest ? `kado-suggestion-${activeIdx}` : undefined
+              }
+              autoComplete="off"
+              className="text-body-sm min-w-0 flex-1 bg-transparent outline-none"
+            />
+            {term && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTerm("");
+                  setOpen(false);
+                }}
+                aria-label="Hapus pencarian"
+                className="text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <Icon name="close" className="text-[16px]" />
+              </button>
+            )}
+          </label>
+
+          {showSuggest && (
+            /* `div`, bukan `ul`: anak sah satu-satunya `<ul>` adalah `<li>`. */
+            <div
+              id="kado-suggestions"
+              role="listbox"
+              aria-label="Saran kado"
+              className="bg-card absolute inset-x-0 top-full z-20 mt-1.5 max-h-80 overflow-y-auto rounded-xl py-1 shadow-lg"
+            >
+              {matches.map((r, i) => {
+                const sPrice = formatPriceRange(r.item.priceMinIdr, r.item.priceMaxIdr);
+                return (
+                  <div
+                    key={r.item.id}
+                    id={`kado-suggestion-${i}`}
+                    role="option"
+                    aria-selected={i === activeIdx}
+                    /* `onMouseDown` mendahului `onBlur`-nya input; `onClick` tidak. */
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (blurTimer.current) clearTimeout(blurTimer.current);
+                      pick(r.item.name);
+                    }}
+                    onMouseEnter={() => setActive(i)}
+                    className={cn(
+                      "flex w-full cursor-pointer items-center gap-3 px-2.5 py-2 text-left transition-colors",
+                      i === activeIdx && "bg-accent",
+                    )}
+                  >
+                    <span className="bg-accent text-primary grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg">
+                      {r.item.photoKeys.length > 0 ? (
+                        /* eslint-disable-next-line @next/next/no-img-element -- route foto bertoken, bukan aset statis untuk next/image */
+                        <img
+                          src={`/kado/${token}/foto/${r.item.id}?i=0`}
+                          alt=""
+                          className="size-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <Icon name="card_giftcard" filled className="text-[18px]" />
+                      )}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body-sm line-clamp-2 font-bold">{r.item.name}</p>
+                      {sPrice && (
+                        <p className={cn("text-label-sm mt-0.5", PRICE_TONE)}>{sPrice}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Kategori sebagai SATU ikon, persis pola `CategorySelect` di `/shop`:
+            `<select>` bawaan dibuat transparan dan dibentangkan menutupi ikonnya, jadi
+            ketukan di ikon membuka picker asli sistem. Labelnya dihapus supaya kotak
+            cari di sebelahnya mendapat seluruh sisa lebar — itulah tujuannya.
+
+            Ikonnya menyala + titik penanda saat ada kategori terpilih. Itu wajib,
+            bukan hiasan: tanpa label, itu satu-satunya petunjuk bahwa daftar sedang
+            disaring. */}
+        {usedCategories.length > 1 && (
+          <span
+            className={cn(
+              "bg-card focus-within:ring-ring relative grid size-10 shrink-0 place-items-center rounded-xl shadow-sm focus-within:ring-2",
+              category ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <Icon name="apps" filled={category !== null} className="text-[18px]" />
+
+            {category && (
+              <span className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" aria-hidden />
+            )}
+
+            <select
+              value={category ?? ""}
+              aria-label="Saring menurut kategori"
+              onChange={(e) => setCategory((e.target.value || null) as RegistryCategory | null)}
+              className="text-body-sm absolute inset-0 size-full cursor-pointer opacity-0 outline-none"
+            >
+              <option value="">Semua Kategori</option>
+              {usedCategories.map((c) => (
+                <option key={c} value={c}>
+                  {CATEGORY_LABEL[c]}
+                </option>
+              ))}
+            </select>
+          </span>
+        )}
+
         <SortSelect value={sort} onChange={setSort} />
       </div>
 
-      {usedCategories.length > 1 && (
-        <div
-          role="tablist"
-          aria-label="Saring menurut kategori"
-          className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
-        >
-          <FilterPill
-            active={category === null}
-            onClick={() => setCategory(null)}
-            label="Semua Kategori"
-          />
-          {usedCategories.map((c) => (
-            <FilterPill
-              key={c}
-              active={category === c}
-              onClick={() => setCategory(c)}
-              label={CATEGORY_LABEL[c]}
-            />
-          ))}
-        </div>
-      )}
+      {/* Status tetap pil: hanya tiga, muat sebaris, dan angkanya yang dibaca orang. */}
+      <div
+        role="tablist"
+        aria-label="Saring menurut status"
+        className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
+      >
+        <FilterPill
+          active={status === "all"}
+          onClick={() => setStatus("all")}
+          label={`Semua Barang (${byChild.length})`}
+        />
+        <FilterPill
+          active={status === "open"}
+          onClick={() => setStatus("open")}
+          label={`Belum Dihadiahi (${waiting})`}
+        />
+        <FilterPill
+          active={status === "done"}
+          onClick={() => setStatus("done")}
+          label={`Sudah Ada (${gifted})`}
+        />
+      </div>
 
       {visible.length === 0 ? (
         <p className="text-muted-foreground text-body-sm bg-card rounded-2xl border p-6 text-center shadow-sm">
           Tidak ada barang pada kelompok ini.
         </p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        // 2 kolom sejak HP, sama dengan grid List Kado dan Shop Katalog di beranda —
+        // sebelumnya 1 kolom di bawah `sm`, jadi kartu selebar layar penuh dan orang
+        // harus menggulir jauh untuk melihat barang kelima.
+        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
           {visible.map((row) => (
             <PublicCard
               key={row.item.id}
@@ -184,6 +378,7 @@ function PublicHero({
   listed,
   gifted,
   waiting,
+  shippingPanel,
 }: {
   childList: FilterChild[];
   value: string | null;
@@ -193,6 +388,8 @@ function PublicHero({
   listed: number;
   gifted: number;
   waiting: number;
+  /** Pemicu modal Alamat & Rekening — duduk sebaris dengan tombol WhatsApp. */
+  shippingPanel?: React.ReactNode;
 }) {
   const active = value ? (childList.find((c) => c.id === value) ?? null) : null;
   const link = `${origin}/kado/${token}`;
@@ -267,11 +464,14 @@ function PublicHero({
             <p className="bg-background/70 text-primary/90 flex min-w-0 flex-1 items-center rounded-full px-4 py-2 text-[12px] backdrop-blur-sm">
               <span className="truncate">{link}</span>
             </p>
-            <div className="flex gap-2">
+            {/* `flex-wrap` + `whitespace-nowrap`: tiga tombol tidak muat sebaris di
+                lebar HP. Yang dibungkus TOMBOLNYA (turun ke baris kedua utuh), bukan
+                teks di dalamnya — tanpa ini "Lihat Alamat" terpotong di tepi layar. */}
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={copy}
-                className="text-primary bg-background inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[12px] font-semibold shadow-sm active:scale-95"
+                className="text-primary bg-background inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold whitespace-nowrap shadow-sm active:scale-95"
               >
                 <Icon name="content_copy" className="text-[16px]" />
                 Salin Link
@@ -280,11 +480,15 @@ function PublicHero({
                 href={`https://wa.me/?text=${encodeURIComponent(waText)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#25D366] px-4 text-[12px] font-semibold text-white shadow-sm active:scale-95"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-[12px] font-semibold whitespace-nowrap text-white shadow-sm active:scale-95"
               >
                 <Icon name="link" className="text-[16px]" />
                 WhatsApp
               </a>
+              {/* Alamat & rekening: di sini, bukan dua kartu yang selalu terbuka di
+                  atas daftar barang. Keduanya dulu memakan satu layar penuh di HP
+                  sebelum barang pertama terlihat. */}
+              {shippingPanel}
             </div>
           </div>
         </div>
@@ -301,7 +505,7 @@ function PublicHero({
             <Counter label="Menunggu" value={waiting} />
           </dl>
           <div
-            className="bg-border h-2 overflow-hidden rounded-full"
+            className="bg-rule h-2 overflow-hidden rounded-full"
             role="progressbar"
             aria-valuenow={gifted}
             aria-valuemin={0}
@@ -325,7 +529,13 @@ function Counter({ label, value }: { label: string; value: number }) {
   );
 }
 
-function PublicCard({
+/**
+ * Kartu barang di halaman publik. Diekspor karena halaman detail memakainya juga
+ * untuk "Kado Lain" — sebelumnya di sana ada kartu versi sendiri yang lebih miskin
+ * (tanpa tombol Klaim, tanpa chip anak, tanpa lambang toko), jadi barang yang sama
+ * tampil berbeda tergantung orang sampai lewat mana.
+ */
+export function PublicCard({
   row,
   child,
   allChildren,
@@ -333,9 +543,15 @@ function PublicCard({
   origin,
 }: {
   row: PublicRow;
-  child: FilterChild | null;
+  /*
+    `RegistryChild`, bukan `FilterChild`: kartu ini hanya memakai nama dan fotonya —
+    `count` milik `FilterChild` dipakai pil penyaring, bukan di sini. Menuntutnya
+    memaksa setiap pemanggil menghitung jumlah barang per anak yang tidak pernah
+    dibaca; halaman detail tidak punya angka itu dan memang tidak membutuhkannya.
+  */
+  child: RegistryChild | null;
   /** Dipakai bila barangnya tidak menyebut anak: kadonya untuk mereka semua. */
-  allChildren: FilterChild[];
+  allChildren: RegistryChild[];
   token: string;
   origin: string;
 }) {
@@ -362,12 +578,15 @@ function PublicCard({
         />
 
         <div className="space-y-1.5 px-1">
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="text-headline-sm min-w-0">{item.name}</h2>
-            <Icon name="chevron_right" className="text-muted-foreground mt-0.5 text-[18px]" />
-          </div>
-          {price && <p className="text-metric text-primary tabular-nums">{price}</p>}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* `text-body-sm` + `line-clamp-2`, bukan `text-headline-sm`: di kartu
+              selebar setengah layar HP, judul 16px memakan tiga baris dan mendorong
+              harga keluar pandangan. Sama dengan kartu List Kado di beranda. */}
+          <h2 className="text-body-sm line-clamp-2 font-bold">{item.name}</h2>
+          {/* Nada harga yang sama dengan beranda (`PRICE_TONE`, hijau) dan seukuran
+              judulnya — sebelumnya `text-metric text-primary`, 20px biru, sehingga
+              harga terbaca lebih penting daripada nama barangnya. */}
+          {price && <p className={cn("text-body-sm", PRICE_TONE)}>{price}</p>}
+          <div className="flex flex-wrap items-center gap-1.5">
             {/* Tanpa anak tertentu: satu chip untuk semuanya, bukan satu chip per anak. */}
             {child ? (
               <ChildTag child={child} />
@@ -389,11 +608,20 @@ function PublicCard({
           <p className="bg-muted text-body-sm rounded-xl p-3 italic">&ldquo;{item.note}&rdquo;</p>
         )}
 
-        <StoreLinks shopee={item.urlShopee} tokopedia={item.urlTokopedia} tiktok={item.urlTiktok} />
+        {/* `StoreRow` (lambang saja), bukan `StoreLinks` (lambang + nama toko): di
+            kartu selebar setengah layar HP tiga chip berlabel membungkus jadi dua
+            baris dan menenggelamkan nama barangnya. Nama tokonya tidak hilang —
+            pindah ke `title` + `sr-only`, dan tombol toko sungguhan ada di detail. */}
+        <StoreRow shopee={item.urlShopee} tokopedia={item.urlTokopedia} tiktok={item.urlTiktok} />
 
-        {item.allowGroup && claimedQty > 0 && (
-          <ClaimProgress claimed={claimedQty} desired={item.desiredQty} />
-        )}
+        {/* Selalu ada, termasuk saat belum ada yang mengklaim (0/1). Sebelumnya bar
+            ini hanya muncul bila `allowGroup` DAN sudah ada klaim, jadi justru kado
+            yang masih butuh pembeli — yang paling perlu terbaca "belum terpenuhi" —
+            tidak punya penanda apa pun. Bar yang hilang-muncul juga membuat tinggi
+            kartu bergeser-geser antar-barang dalam satu grid.
+
+            `compact`: varian yang sama dengan kartu List Kado di beranda. */}
+        <ClaimProgress claimed={claimedQty} desired={item.desiredQty} compact />
 
         {/* Netral, bukan biru merek: yang sudah dibelikan justru tidak perlu menarik mata. */}
         {claims.length > 0 && (
