@@ -29,8 +29,14 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
       <OfflineBanner />
       {/* overflow-x-clip menahan slider yang sengaja "bleed" lewat -mx-4; relative
           memberi containing block agar label .sr-only (position:absolute) di dalam
-          slider ikut terpotong, bukan melebarkan dokumen. */}
-      <main className="relative mx-auto w-full max-w-4xl flex-1 overflow-x-clip px-4 pt-4 pb-24 md:pb-8">
+          slider ikut terpotong, bukan melebarkan dokumen.
+
+          `pt` membawa safe-area DAN jarak nafasnya: di HP <AppHeader> disembunyikan,
+          jadi <main> jadi elemen teratas — tanpa inset isinya masuk ke bawah poni
+          (layout.tsx memasang viewportFit:"cover"), dan tanpa 1.5rem di atasnya judul
+          halaman menempel ke tepi layar. Di desktop headernya kembali dan sudah
+          memberi jarak sendiri, jadi cukup pt-4 di sana. */}
+      <main className="relative mx-auto w-full max-w-4xl flex-1 overflow-x-clip px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-24 md:pt-4 md:pb-8">
         {children}
       </main>
       <BottomNav

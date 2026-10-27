@@ -34,7 +34,10 @@ export function VaccineSlider({
 
   return (
     <section className="space-y-2.5" aria-labelledby="jadwal-vaksin">
-      <div className="flex items-center justify-between gap-2 px-1">
+      {/* Tanpa px-1: judul section lain (List Kado, Shop Katalog, sapaan) mulai tepat
+          di tepi isi halaman, dan 4px tambahan di sini membuat satu judul meleset
+          sendirian dari garis tegak yang dibentuk sisanya. */}
+      <div className="flex items-center justify-between gap-2">
         <h2 id="jadwal-vaksin" className="text-headline-sm flex items-center gap-1.5">
           <Icon name="vaccines" className="text-primary text-[18px]" />
           Jadwal Vaksin Si Kecil
@@ -51,7 +54,12 @@ export function VaccineSlider({
           Seluruh vaksin katalog sudah tercatat atau ditandai tidak berlaku.
         </p>
       ) : (
-        <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
+        // `scroll-pl-4` mengimbangi `-mx-4 px-4`: tanpa itu titik snap jatuh di tepi
+        // scrollport, yang karena `-mx-4` ada di x=0 — browser menggeser sendiri
+        // sejauh 16px dan kartu pertama terselip di bawah gutter, meleset dari kartu
+        // section lain yang mulai di x=16. Dengan scroll-padding, snap-start berhenti
+        // tepat segaris dengan judulnya.
+        <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-1">
           {entries.map((entry) => {
             const reminder = reminderByKey.get(entry.vaccine.key);
             /*

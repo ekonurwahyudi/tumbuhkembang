@@ -36,7 +36,10 @@ export function ChildSwitcher({
       // snap-x membuat geseran berhenti rapi di tiap kartu; scrollbar disembunyikan
       // lewat utility di globals.css supaya tidak memotong kartu di desktop.
       // py-1.5 memberi ruang agar ring kartu terpilih tidak terpotong tepi scroll.
-      className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 py-1.5"
+      // scroll-pl-4 mengimbangi -mx-4 px-4: tanpa itu snap-start berhenti di tepi
+      // scrollport (x=0 karena -mx-4), jadi kartu yang disnap terselip di bawah
+      // gutter alih-alih segaris dengan isi halaman lainnya.
+      className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-2.5 overflow-x-auto px-4 py-1.5"
     >
       {items.map((item) => {
         const active = item.id === activeId;
