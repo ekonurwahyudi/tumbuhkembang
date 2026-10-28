@@ -13,7 +13,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const KEY = "kunci-uji";
 
-function videoItem(id: string, duration: string, title = `Video ${id}`) {
+/*
+  Judul bawaan sengaja berbahasa Indonesia: penarikan menyaring judul asing (lihat
+  `looksIndonesian`), jadi "Video x" akan terbuang dan tiap tes mengira penyaring
+  durasinya yang rusak.
+*/
+function videoItem(id: string, duration: string, views = 0, title = `Tips bayi ${id}`) {
   return {
     id,
     snippet: {
@@ -23,6 +28,7 @@ function videoItem(id: string, duration: string, title = `Video ${id}`) {
       thumbnails: { medium: { url: `https://i.ytimg.com/${id}.jpg` } },
     },
     contentDetails: { duration },
+    statistics: { viewCount: String(views) },
   };
 }
 
@@ -96,6 +102,63 @@ describe("fetchYoutubeVideos", () => {
     expect(f.mock.calls.length).toBe(4);
   });
 
+  it("mengurutkan dari tonton terbanyak, bukan urutan yang dikirim YouTube", async () => {
+    // `videos.list` membalas menurut urutan id yang dikirim, BUKAN menurut tonton —
+    // jadi tanpa pengurutan ulang di kode kita, "paling populer" tidak pernah terjadi.
+    vi.stubGlobal(
+      "fetch",
+      mockFetch([
+        videoItem("sedang", "PT1M", 5_000),
+        videoItem("sepi", "PT1M", 12),
+        videoItem("ramai", "PT1M", 900_000),
+      ]),
+    );
+
+    const { fetchYoutubeVideos } = await loadModule();
+    const res = await fetchYoutubeVideos("mpasi");
+
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.videos.map((v) => v.sourceId)).toEqual(["ramai", "sedang", "sepi"]);
+    expect(res.videos[0].viewCount).toBe(900_000);
+  });
+
+  it("meminta YouTube mengurutkan menurut jumlah tonton", async () => {
+    const f = mockFetch([videoItem("a", "PT1M", 10)]);
+    vi.stubGlobal("fetch", f);
+
+    const { fetchYoutubeVideos } = await loadModule();
+    await fetchYoutubeVideos("mpasi");
+
+    const searchUrl = String(f.mock.calls.find((c) => String(c[0]).includes("/search"))?.[0]);
+    expect(searchUrl).toContain("order=viewCount");
+  });
+
+  it("video tanpa angka tonton tetap ikut, ditaruh di belakang", async () => {
+    // Sebagian kanal menyembunyikan jumlah tontonnya. Membuangnya berarti kehilangan
+    // video yang mungkin bagus; menaruhnya di depan berarti berpura-pura ia populer.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const items = [
+          { ...videoItem("ramai", "PT1M", 500), statistics: { viewCount: "500" } },
+          { ...videoItem("tanpaAngka", "PT1M"), statistics: undefined },
+        ];
+        const body = String(input).includes("/search")
+          ? { items: items.map((i) => ({ id: { videoId: i.id } })) }
+          : { items };
+        return { ok: true, status: 200, json: async () => body } as unknown as Response;
+      }),
+    );
+
+    const { fetchYoutubeVideos } = await loadModule();
+    const res = await fetchYoutubeVideos("mpasi");
+
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.videos.map((v) => v.sourceId)).toEqual(["ramai", "tanpaAngka"]);
+  });
+
   it("mengembalikan alasan, bukan melempar, saat API key kosong", async () => {
     delete process.env.YOUTUBE_API_KEY;
     const { fetchYoutubeVideos } = await loadModule();
@@ -141,5 +204,44 @@ describe("fetchYoutubeVideos", () => {
     vi.useRealTimers();
 
     expect(second.ok).toBe(true);
+  });
+});
+
+/**
+ * Penyaring bahasa. Diuji dengan judul NYATA dari hasil penarikan — heuristik begini
+ * mudah jadi terlalu ketat, dan video Indonesia yang terbuang diam-diam tidak akan
+ * pernah terlihat sebagai bug: umpannya cuma terasa lebih sepi.
+ */
+describe("looksIndonesian", () => {
+  it("meloloskan judul berbahasa Indonesia", async () => {
+    const { looksIndonesian } = await loadModule();
+    for (const t of [
+      "MPASI Jepang beda banget sama Indonesia?",
+      "Mpasi Perdana (Kemenkes), untuk 1-2×makan #mpasipertama",
+      "Tutorial Pijat Supaya ASI Lancar",
+      "Pijat Laktasi untuk Memperlancar ASI",
+      "Cara Memerah ASI Pakai Tangan",
+      "cara ibu memandikan bayi baru lahir",
+      "RAHASIA BAYI 3 BULAN SUDAH BISA TENGKURAP MANDIRI",
+      "Solusi Anak Bosan Nasi Cuman 2 Bahan",
+      "Cara ganti popok yang benar #bayi",
+      "Tahapan Perkembangan Bayi 0-12 Bulan",
+    ]) {
+      expect(looksIndonesian(t), t).toBe(true);
+    }
+  });
+
+  it("menolak judul asing yang ikut terseret karena tontonnya tinggi", async () => {
+    // Semua ini muncul sungguhan di hasil "tummy time bayi" dengan order=viewCount:
+    // puluhan juta tonton, tapi tak berguna bagi orang tua Indonesia.
+    const { looksIndonesian } = await loadModule();
+    for (const t of [
+      "Tummy Time in Babies #shorts #youtubeshorts",
+      "Baby Zuko's Stunt Compilation!",
+      "क्यों जरूरी है Baby का Tummy Time",
+      "Babies Extended Sleep Patterns In The Victorian Era",
+    ]) {
+      expect(looksIndonesian(t), t).toBe(false);
+    }
   });
 });

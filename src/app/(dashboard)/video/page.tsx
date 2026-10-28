@@ -1,12 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { interleave } from "@/lib/video/feed";
+import { interleave, shuffle } from "@/lib/video/feed";
+import { VIDEO_TOPICS } from "@/schemas/video";
 import { fetchYoutubeVideos, TOPIC_QUERIES } from "@/lib/video/youtube";
 import { ShortsFeed } from "@/components/video/shorts-feed";
 import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Video" };
+
+/*
+  Dirender ulang tiap permintaan. Wajib: urutan umpannya diacak di dalam komponen
+  (lihat `shuffle` di bawah), dan hasil render yang di-cache akan membekukan satu
+  urutan — pengacakannya jadi tidak pernah terasa sekalipun kodenya benar.
+
+  Ini TIDAK menambah panggilan API: penarikan YouTube punya cache enam jamnya
+  sendiri di `fetchYoutubeVideos`, jadi yang diulang tiap permintaan hanya penyusunan
+  ulang daftar yang sudah ada di memori.
+*/
+export const dynamic = "force-dynamic";
 
 /**
  * Umpan video pendek: buka, langsung menonton, geser atas-bawah. Tanpa pil kategori
@@ -25,21 +37,29 @@ export default async function VideoPage() {
   await requireUser();
 
   /*
-    Empat kata kunci ditarik bersamaan, bukan berurutan: `Promise.all` membuat
-    totalnya selama satu permintaan terlambat, bukan jumlah keempatnya. Semuanya
-    terpisah di cache, jadi penarikan berikutnya tidak menyentuh jaringan sama sekali.
+    Seluruh topik ditarik bersamaan, bukan berurutan: `Promise.all` membuat totalnya
+    selama satu permintaan terlambat, bukan jumlah kesepuluhnya. Masing-masing punya
+    entri cache sendiri, jadi penarikan berikutnya tidak menyentuh jaringan.
 
-    OTHER sengaja dilewati — kata kuncinya ("perawatan bayi") terlalu dekat dengan
-    tiga lainnya dan hasilnya banyak bertumpuk.
+    12 per topik × 10 topik = sampai 120 kandidat; setelah duplikat antar-kata kunci
+    dibuang, umpannya mendarat di sekitar seratus video.
+
+    Kuota: tiap topik 101 unit per penarikan, cache enam jam → ~4.040 unit/hari dari
+    kuota harian 10.000. Lihat catatan di `VIDEO_TOPICS` sebelum menambah topik lagi.
   */
   const results = await Promise.all(
-    (["MPASI", "GROWTH", "HEALTH", "PARENTING"] as const).map((t) =>
-      fetchYoutubeVideos(TOPIC_QUERIES[t], 8),
-    ),
+    VIDEO_TOPICS.map((t) => fetchYoutubeVideos(TOPIC_QUERIES[t], 12)),
   );
 
-  const videos = interleave(results.map((r) => (r.ok ? r.videos : [])));
-  // Alasan dari penarikan pertama yang gagal — keempatnya gagal karena sebab yang
+  /*
+    Diacak tiap render supaya umpannya terasa berbeda tiap dibuka — hasil penarikan
+    di-cache enam jam, jadi tanpa ini video pertamanya selalu sama sepanjang pagi.
+
+    `interleave` tetap dipanggil lebih dulu: ia yang membuang duplikat antar-kata
+    kunci. Mengacak saja tidak menghilangkan video yang muncul dua kali.
+  */
+  const videos = shuffle(interleave(results.map((r) => (r.ok ? r.videos : []))));
+  // Alasan dari penarikan pertama yang gagal — semuanya gagal karena sebab yang
   // sama (API key kosong, kuota habis), jadi satu sudah mewakili.
   const firstFailure = results.find((r) => !r.ok);
   const reason = firstFailure && !firstFailure.ok ? firstFailure.reason : null;

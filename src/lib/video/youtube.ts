@@ -36,6 +36,8 @@ export type FetchedVideo = {
   author: string | null;
   thumbnailUrl: string | null;
   publishedAt: Date | null;
+  /** Jumlah tonton; dipakai mengurutkan dan ditampilkan di umpan. */
+  viewCount: number;
 };
 
 export type FetchResult =
@@ -67,10 +69,24 @@ const FAIL_CACHE_MS = 60 * 1000;
  */
 export const TOPIC_QUERIES: Record<VideoTopicValue, string> = {
   MPASI: "resep mpasi bayi",
+  ASI: "asi eksklusif menyusui",
+  // "pijat laktasi" saja terlalu sempit dan banyak menarik iklan klinik; ditambah
+  // "perah" supaya hasilnya condong ke video praktik, bukan promosi jasa.
+  LACTATION_MASSAGE: "pijat laktasi perah asi",
+  // Istilah Inggrisnya dipakai apa adanya — itu yang dituliskan kreator Indonesia
+  // di judulnya, dan "waktu tengkurap" nyaris tidak dipakai siapa pun.
+  TUMMY_TIME: "tummy time bayi",
   GROWTH: "tumbuh kembang bayi",
   HEALTH: "imunisasi bayi",
-  PARENTING: "tips mengasuh bayi",
-  OTHER: "perawatan bayi",
+  SLEEP: "pola tidur bayi",
+  // "tips mengasuh bayi" / "perawatan bayi" terlalu longgar: dengan order=viewCount,
+  // hiburan bertonton jutaan ikut terseret ("10 tipe anak sekolah", "anjing menjaga
+  // bayi"). Kata kunci dipersempit ke kalimat yang hampir hanya dipakai kreator
+  // edukasi — penyaring judul tidak bisa membedakan ini, karena keduanya sama-sama
+  // berbahasa Indonesia dan memang memuat kata "bayi".
+  PARENTING: "panduan pengasuhan bayi menurut dokter anak",
+  TIPS: "tips merawat bayi baru lahir untuk ibu",
+  OTHER: "edukasi perawatan bayi dokter",
 };
 
 /** ISO-8601 durasi ("PT1M30S") → detik. */
@@ -90,7 +106,33 @@ type DetailItem = {
     thumbnails?: Record<string, { url?: string } | undefined>;
   };
   contentDetails?: { duration?: string };
+  statistics?: { viewCount?: string };
 };
+
+/**
+ * Menduga video berbahasa Indonesia dari judulnya.
+ *
+ * Perlu karena `relevanceLanguage=id` hanya memberi BOBOT, bukan menyaring — dan
+ * bobot itu kalah telak begitu urutannya diganti ke `viewCount`: kata kunci serapan
+ * seperti "tummy time" menarik video global bertonton puluhan juta, sehingga umpan
+ * untuk orang tua Indonesia berisi video berbahasa Inggris dan Hindi.
+ *
+ * `defaultAudioLanguage` dari API tidak dipakai sebagai syarat: banyak kanal
+ * Indonesia mengosongkannya, jadi menuntutnya justru membuang video yang benar.
+ * Dugaan dari judul lebih longgar dan, untuk keperluan ini, lebih tepat.
+ */
+export function looksIndonesian(title: string): boolean {
+  // Aksara non-Latin (Hindi, Arab, Thai, CJK, dst.) — pasti bukan.
+  if (/[\u0600-\u06FF\u0900-\u097F\u0E00-\u0E7F\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]/.test(title))
+    return false;
+
+  const t = ` ${title.toLowerCase()} `;
+  // Kata fungsi yang nyaris selalu muncul di judul berbahasa Indonesia, dan jarang
+  // di judul Inggris. Satu kecocokan sudah cukup — judul pendek sering hanya punya satu.
+  return /[ ](bayi|anak|ibu|bunda|asi|mpasi|cara|tips|resep|yang|untuk|dengan|agar|biar|jangan|kenapa|supaya|si kecil|newborn bayi)[ ,.!?#]/.test(
+    t,
+  );
+}
 
 /**
  * Mencari video pendek berbahasa Indonesia untuk satu kata kunci.
@@ -128,6 +170,15 @@ export async function fetchYoutubeVideos(
     const search = new URL("https://www.googleapis.com/youtube/v3/search");
     search.searchParams.set("key", key);
     search.searchParams.set("part", "id");
+    // Yang paling banyak ditonton lebih dulu, bukan yang paling relevan (bawaan API).
+    // Untuk topik kesehatan anak, jumlah tonton adalah penyaring kasar yang berguna:
+    // video dengan ratusan ribu tonton umumnya sudah lewat banyak mata, sementara
+    // hasil "paling relevan" bisa saja unggahan baru tanpa penonton sama sekali.
+    //
+    // CATATAN: ini BUKAN jaminan mutu medis. Populer tidak sama dengan benar, dan
+    // mitos pengasuhan justru sering yang paling tersebar. Itulah kenapa halaman
+    // videonya membawa penafian "bukan nasihat medis".
+    search.searchParams.set("order", "viewCount");
     search.searchParams.set("q", query);
     search.searchParams.set("type", "video");
     // `short` = di bawah 4 menit menurut YouTube; durasi persisnya disaring lagi di bawah.
@@ -151,7 +202,7 @@ export async function fetchYoutubeVideos(
 
     const details = new URL("https://www.googleapis.com/youtube/v3/videos");
     details.searchParams.set("key", key);
-    details.searchParams.set("part", "snippet,contentDetails");
+    details.searchParams.set("part", "snippet,contentDetails,statistics");
     details.searchParams.set("id", ids.join(","));
 
     const dRes = await fetch(details, { cache: "no-store" });
@@ -168,6 +219,7 @@ export async function fetchYoutubeVideos(
 
       const secs = isoDurationToSeconds(it.contentDetails?.duration ?? "");
       if (secs === 0 || secs > SHORT_MAX_SECONDS) continue;
+      if (!looksIndonesian(title)) continue;
 
       const th = it.snippet?.thumbnails;
       out.push({
@@ -176,11 +228,21 @@ export async function fetchYoutubeVideos(
         author: it.snippet?.channelTitle ?? null,
         thumbnailUrl: th?.medium?.url ?? th?.default?.url ?? null,
         publishedAt: it.snippet?.publishedAt ? new Date(it.snippet.publishedAt) : null,
+        // Kanal yang menyembunyikan jumlah tontonnya tetap ikut, dianggap 0 — jadi
+        // ia turun ke belakang, bukan hilang dari umpan.
+        viewCount: Number(it.statistics?.viewCount ?? 0) || 0,
       });
-      if (out.length >= max) break;
     }
 
-    return remember({ ok: true, videos: out });
+    /*
+      Diurutkan ulang di sini walau `order=viewCount` sudah dipasang di pencarian:
+      urutan itu hilang setelah penyaringan durasi membuang sebagiannya, dan
+      `videos.list` mengembalikan hasil menurut urutan id yang dikirim — bukan
+      menurut jumlah tonton.
+    */
+    out.sort((a, b) => b.viewCount - a.viewCount);
+
+    return remember({ ok: true, videos: out.slice(0, max) });
   } catch (e) {
     // Jaringan mati atau JSON tak terduga — halaman admin tetap harus bisa dirender.
     return remember({ ok: false, reason: `Gagal menghubungi YouTube: ${(e as Error).message}` });

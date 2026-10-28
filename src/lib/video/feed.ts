@@ -28,3 +28,27 @@ export function interleave(groups: FetchedVideo[][]): FetchedVideo[] {
 
   return out;
 }
+
+/**
+ * Mengacak urutan (Fisher–Yates), salinan baru — argumennya tidak diubah.
+ *
+ * Dipakai supaya umpan terasa berbeda tiap kali dibuka. Itu perlu karena hasil
+ * penarikan di-cache enam jam: tanpa pengacakan, orang yang membuka halaman ini dua
+ * kali dalam satu pagi melihat video pertama yang persis sama dan umpannya terasa
+ * mati.
+ *
+ * Pengacakannya di sini, BUKAN di dalam cache: yang disimpan tetap satu hasil utuh,
+ * dan tiap render menyusun ulang urutannya sendiri — jadi tidak ada panggilan API
+ * tambahan hanya demi variasi.
+ *
+ * `Math.random` memang bukan acak kriptografis, dan di sini memang tidak perlu:
+ * tidak ada yang dirahasiakan dari urutan video edukasi.
+ */
+export function shuffle<T>(items: readonly T[]): T[] {
+  const a = [...items];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}

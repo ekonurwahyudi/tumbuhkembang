@@ -1,5 +1,25 @@
 export const VIDEO_SOURCES = ["YOUTUBE", "TIKTOK", "INSTAGRAM"] as const;
-export const VIDEO_TOPICS = ["MPASI", "GROWTH", "HEALTH", "PARENTING", "OTHER"] as const;
+/**
+ * Topik umpan video. Dipakai sebagai kata kunci penarikan (lihat `TOPIC_QUERIES`),
+ * BUKAN sebagai penyaring di layar — umpannya sengaja tanpa kategori.
+ *
+ * Jumlahnya menentukan kuota API: tiap topik = satu `search.list` (100 unit) +
+ * satu `videos.list` (1 unit) per penarikan, dan hasilnya di-cache enam jam, jadi
+ * empat penarikan per hari. Sepuluh topik ≈ 4.040 unit/hari dari kuota 10.000 —
+ * masih di bawah setengahnya. Menambah topik berarti menghitung ulang angka ini.
+ */
+export const VIDEO_TOPICS = [
+  "MPASI",
+  "ASI",
+  "LACTATION_MASSAGE",
+  "TUMMY_TIME",
+  "GROWTH",
+  "HEALTH",
+  "SLEEP",
+  "PARENTING",
+  "TIPS",
+  "OTHER",
+] as const;
 
 export type VideoSourceValue = (typeof VIDEO_SOURCES)[number];
 export type VideoTopicValue = (typeof VIDEO_TOPICS)[number];
@@ -12,9 +32,14 @@ export const VIDEO_SOURCE_LABEL: Record<VideoSourceValue, string> = {
 
 export const VIDEO_TOPIC_LABEL: Record<VideoTopicValue, string> = {
   MPASI: "MPASI & Nutrisi",
+  ASI: "ASI & Menyusui",
+  LACTATION_MASSAGE: "Pijat Laktasi",
+  TUMMY_TIME: "Tummy Time",
   GROWTH: "Tumbuh Kembang",
   HEALTH: "Kesehatan & Imunisasi",
+  SLEEP: "Tidur Bayi",
   PARENTING: "Pengasuhan",
+  TIPS: "Tips & Trik",
   OTHER: "Lainnya",
 };
 

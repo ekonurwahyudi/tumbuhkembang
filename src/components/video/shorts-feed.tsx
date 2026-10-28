@@ -24,8 +24,6 @@ import type { FetchedVideo } from "@/lib/video/youtube";
  */
 export function ShortsFeed({ videos }: { videos: FetchedVideo[] }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  /** Slide yang pernah aktif: iframe-nya dibiarkan hidup supaya geser balik tidak memuat ulang. */
-  const [started, setStarted] = useState<Set<number>>(new Set());
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,9 +37,6 @@ export function ShortsFeed({ videos }: { videos: FetchedVideo[] }) {
           const i = Number((e.target as HTMLElement).dataset.idx);
           if (Number.isNaN(i)) continue;
           setActiveIdx(i);
-          // Ditandai di sini, bukan lewat effect terpisah yang mengawasi `activeIdx`:
-          // setState di dalam effect memicu render berantai (dan ditolak lint).
-          setStarted((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
         }
       },
       // 0.6: slide dianggap aktif saat sebagian besarnya terlihat, bukan saat ujungnya
@@ -52,6 +47,20 @@ export function ShortsFeed({ videos }: { videos: FetchedVideo[] }) {
     for (const el of root.querySelectorAll("[data-idx]")) io.observe(el);
     return () => io.disconnect();
   }, [videos.length]);
+
+  /**
+   * Hanya slide aktif + satu tetangga di tiap sisi yang memasang `<iframe>`; sisanya
+   * kembali jadi thumbnail dan iframe-nya DILEPAS dari DOM.
+   *
+   * Dulu memakai himpunan "pernah aktif" yang hanya bertambah: setelah melewati
+   * sepuluh slide ada sebelas iframe hidup sekaligus, dan di daftar seratus video itu
+   * berarti seratus pemutar YouTube menumpuk di satu halaman — cukup untuk membuat
+   * HP kelas menengah tersendat dan menghabiskan kuota data.
+   *
+   * Tetangganya ikut dimuat supaya video berikutnya sudah siap saat digeser; tanpa itu
+   * tiap geseran dijeda pemuatan pemutar dari nol.
+   */
+  const live = (i: number) => Math.abs(i - activeIdx) <= 1;
 
   return (
     <div
@@ -66,26 +75,29 @@ export function ShortsFeed({ videos }: { videos: FetchedVideo[] }) {
           aria-label={`Video ${i + 1} dari ${videos.length}: ${v.title}`}
         >
           {/*
-            Portrait penuh. Videonya tetap 16:9 dari YouTube, jadi untuk memenuhi layar
-            tegak ia DIPERBESAR lalu dipotong kiri-kanan — `min-w-full min-h-full`
-            dengan `aspect-video` pada iframe yang dipusatkan: mana pun sisi yang
-            kurang akan melar melewati bingkainya, dan `overflow-hidden` di induknya
-            yang memotong.
+            Bingkai pemutar: setinggi layar, selebar layar, dipusatkan.
 
-            Dipotong, bukan disusutkan jadi kotak di tengah layar hitam: pita hitam
-            tebal di atas-bawah persis yang membuat umpan ini tidak terasa seperti
-            Shorts. Yang hilang hanya tepi kiri-kanan, dan subjek video pendek
-            hampir selalu di tengah bingkai.
+            TIDAK diperbesar-lalu-dipotong seperti sebelumnya. Umpan ini mencampur dua
+            bentuk video: Shorts yang memang tegak 9:16, dan video biasa yang 16:9.
+            Memaksa keduanya mengisi layar tegak berarti yang 16:9 kehilangan sebagian
+            besar kiri-kanannya — pada video ceramah atau demo masak, yang terpotong
+            justru orang dan bahannya.
+
+            Jadi iframe-nya dibiarkan seukuran bingkai dan YouTube sendiri yang
+            menyesuaikan isinya: video tegak mengisi penuh, video 16:9 menyisakan pita
+            hitam di atas-bawah — sama persis dengan perilaku Shorts asli saat
+            menampilkan video lanskap. Pita itu jauh lebih baik daripada subjek yang
+            terpotong keluar bingkai.
           */}
           <div className="absolute inset-0 overflow-hidden bg-black">
-            {started.has(i) ? (
+            {live(i) ? (
               <iframe
                 src={`${embedUrl("YOUTUBE", v.sourceId)}?autoplay=${i === activeIdx ? 1 : 0}&playsinline=1&rel=0&modestbranding=1&controls=0`}
                 title={v.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 referrerPolicy="strict-origin-when-cross-origin"
-                className="absolute top-1/2 left-1/2 aspect-video h-full min-h-full w-full min-w-full -translate-x-1/2 -translate-y-1/2 border-0"
+                className="absolute inset-0 size-full border-0"
               />
             ) : v.thumbnailUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element -- thumbnail dari CDN YouTube, bukan aset lokal untuk next/image */
