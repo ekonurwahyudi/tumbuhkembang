@@ -7,6 +7,7 @@ import {
   formatAgeDaysDetailed,
   formatAgeDetailed,
   formatYMD,
+  nextMilestone,
   parseYMD,
   todayYMD,
 } from "./age";
@@ -105,6 +106,53 @@ describe("formatAgeDetailed", () => {
   it("formatAgeDaysDetailed menghitung dari jumlah hari (anchor 2000)", () => {
     expect(formatAgeDaysDetailed(257)).toBe("8 Bulan 13 Hari");
     expect(formatAgeDaysDetailed(10)).toBe("10 Hari");
+  });
+});
+
+describe("nextMilestone", () => {
+  it("menghitung ulang bulan untuk bayi di bawah setahun", () => {
+    const m = nextMilestone("2026-01-08", "2026-09-22");
+    expect(m.label).toBe("Ulang bulan ke-9");
+    // 8 Sep → 8 Okt = 30 hari; 22 Sep berarti 16 hari lagi.
+    expect(m.daysLeft).toBe(16);
+    expect(m.percent).toBe(47);
+  });
+
+  it("beralih ke ulang tahun setelah usia 1 tahun", () => {
+    expect(nextMilestone("2024-03-22", "2026-09-22").label).toBe("Ulang tahun ke-3");
+  });
+
+  it("hari tonggaknya sendiri tampil sebagai tercapai, bukan hampir", () => {
+    expect(nextMilestone("2026-01-22", "2026-09-22")).toMatchObject({
+      label: "Ulang bulan ke-8",
+      daysLeft: 0,
+      percent: 100,
+    });
+    expect(nextMilestone("2024-09-22", "2026-09-22")).toMatchObject({
+      label: "Ulang tahun ke-2",
+      daysLeft: 0,
+    });
+    // Ulang bulan di tahun kedua bukan ulang tahun: tanggalnya pas, tapi tonggak
+    // yang ditunggu tetap ulang tahun berikutnya.
+    expect(nextMilestone("2024-03-22", "2026-09-22")).toMatchObject({
+      label: "Ulang tahun ke-3",
+      daysLeft: 181,
+    });
+  });
+
+  it("bulan pendek tidak membuat hitungannya meleset", () => {
+    // 31 Jan + 1 bulan = 28 Feb (clamp), jadi rentangnya 28 hari.
+    expect(nextMilestone("2026-01-31", "2026-02-20")).toMatchObject({
+      label: "Ulang bulan ke-1",
+      daysLeft: 8,
+    });
+  });
+
+  it("bayi baru lahir belum punya tonggak yang terlewati", () => {
+    expect(nextMilestone("2026-09-22", "2026-09-22")).toMatchObject({
+      label: "Ulang bulan ke-1",
+      percent: 0,
+    });
   });
 });
 

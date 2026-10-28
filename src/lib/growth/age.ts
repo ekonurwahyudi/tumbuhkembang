@@ -130,6 +130,54 @@ export function formatAgeDetailed(age: ChronologicalAge): string {
   return `${age.months} Bulan ${age.remainingDays} Hari`;
 }
 
+export type Milestone = {
+  /** "Ulang bulan ke-9" atau "Ulang tahun ke-2". */
+  label: string;
+  /** 0 berarti tonggaknya hari ini. */
+  daysLeft: number;
+  /** Kemajuan menuju tonggak berikutnya, 0-100. */
+  percent: number;
+};
+
+/**
+ * Tonggak usia berikutnya — dipakai kartu usia di beranda.
+ *
+ * Di bawah setahun dihitung per bulan, mengikuti irama penimbangan posyandu;
+ * setelah itu per tahun, karena "ulang bulan ke-38" bukan cara siapa pun
+ * menyebut usia anaknya. Anchor-nya tanggal ulang bulan/tahun kalender yang
+ * sama dengan `chronologicalAge`, jadi Februari tidak meleset.
+ */
+export function nextMilestone(
+  dateOfBirth: string | Date,
+  asOf: string | Date = new Date(),
+): Milestone {
+  const birth = parseYMD(dateOfBirth);
+  const age = chronologicalAge(dateOfBirth, asOf);
+  const yearly = age.years >= 1;
+
+  // Tepat di hari tonggaknya, `chronologicalAge` sudah maju ke angka baru — jadi
+  // yang ditampilkan adalah tonggak yang baru dicapai, bukan yang 30 hari lagi.
+  const reached = age.remainingDays === 0 && (!yearly || age.months === 0);
+  if (reached && age.days > 0)
+    return {
+      label: yearly ? `Ulang tahun ke-${age.years}` : `Ulang bulan ke-${age.totalMonths}`,
+      daysLeft: 0,
+      percent: 100,
+    };
+
+  const passed = yearly ? age.years * 12 : age.totalMonths;
+  const from = formatYMD(addMonthsClamped(birth, passed));
+  const to = formatYMD(addMonthsClamped(birth, passed + (yearly ? 12 : 1)));
+  const span = diffInDays(from, to);
+  const daysLeft = diffInDays(asOf, to);
+
+  return {
+    label: yearly ? `Ulang tahun ke-${age.years + 1}` : `Ulang bulan ke-${age.totalMonths + 1}`,
+    daysLeft,
+    percent: Math.min(100, Math.max(0, Math.round(((span - daysLeft) / span) * 100))),
+  };
+}
+
 /** `correctedAge().days` → label "6 Bulan 20 Hari" tanpa objek ChronologicalAge. */
 export function formatAgeDaysDetailed(days: number): string {
   // Usia terkoreksi tidak pernah negatif saat ditampilkan (bayi belum term = 0).

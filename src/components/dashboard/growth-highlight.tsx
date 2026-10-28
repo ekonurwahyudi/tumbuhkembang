@@ -15,12 +15,27 @@ import type { GrowthMeasurement } from "@/db/schema";
  * pertumbuhan: penilaian klinis adalah tugas tenaga kesehatan, bukan aplikasi ini.
  */
 
+/**
+ * Nuansa per metrik, sebahasa dengan ubin di AgeCard: tint lembut + teks gelap
+ * sewarna. Tiga ubin abu seragam terbaca sebagai satu blok yang harus dibaca kata
+ * per kata; warna memberi tiap metrik bentuk ingatan sendiri.
+ *
+ * Warna di sini HANYA pembeda tempat, bukan penilaian: labelnya selalu tertulis,
+ * dan z-score/persentil tetap angka — aturan yang sama dengan QuickAccess.
+ */
+const TONE = {
+  emerald: "bg-emerald-50 text-emerald-950 dark:bg-emerald-500/15 dark:text-emerald-50",
+  sky: "bg-sky-50 text-sky-950 dark:bg-sky-500/15 dark:text-sky-50",
+  violet: "bg-violet-50 text-violet-950 dark:bg-violet-500/15 dark:text-violet-50",
+} as const;
+
 const METRICS = [
   {
     key: "weightKg",
     label: "Berat",
     icon: "scale",
     type: "weight-for-age",
+    tone: TONE.emerald,
     format: splitWeight,
     /** Selisih berat lebih terbaca dalam gram. */
     delta: (d: number) => `${d > 0 ? "+" : "−"}${Math.round(Math.abs(d) * 1000)} g`,
@@ -30,6 +45,7 @@ const METRICS = [
     label: "Tinggi",
     icon: "height",
     type: "length-for-age",
+    tone: TONE.sky,
     format: splitLength,
     delta: (d: number) => `${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1).replace(".", ",")} cm`,
   },
@@ -38,6 +54,7 @@ const METRICS = [
     label: "L. Kepala",
     icon: "psychology",
     type: "head-circumference-for-age",
+    tone: TONE.violet,
     format: splitHead,
     delta: (d: number) => `${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1).replace(".", ",")} cm`,
   },
@@ -46,6 +63,7 @@ const METRICS = [
   label: string;
   icon: IconName;
   type: MeasurementType;
+  tone: string;
   format: (v: string | null) => { value: string; unit: string | null };
   delta: (d: number) => string;
 }[];
@@ -70,18 +88,20 @@ export function GrowthHighlight({
 
   return (
     <section className="bg-card space-y-3.5 rounded-2xl p-4 shadow-sm">
-      <div>
-        <h2 className="text-headline-sm flex items-center gap-1.5">
-          <Icon name="monitor_heart" className="text-primary text-[18px]" />
-          Tumbuh Kembang Si Kecil
-        </h2>
-        <p className="text-muted-foreground text-body-sm mt-0.5">
-          Pengukuran terakhir • {formatDate(latest.measuredAt)}
-        </p>
+      <div className="flex items-center gap-2">
+        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+          <Icon name="monitor_heart" filled className="text-[16px]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-headline-sm truncate">Tumbuh Kembang Si Kecil</h2>
+          <p className="text-muted-foreground text-body-sm mt-0.5">
+            Pengukuran terakhir • {formatDate(latest.measuredAt)}
+          </p>
+        </div>
       </div>
 
       <dl className="grid grid-cols-3 gap-2.5">
-        {METRICS.map(({ key, label, icon, type, format, delta }) => {
+        {METRICS.map(({ key, label, icon, type, tone, format, delta }) => {
           const m = format(latest[key] as string | null);
           const prev = previous?.[key] as string | null | undefined;
           const now = latest[key] as string | null;
@@ -89,16 +109,21 @@ export function GrowthHighlight({
           const result = byType.get(type);
 
           return (
-            <div key={key} className="bg-muted rounded-xl p-2.5">
-              <dt className="text-muted-foreground text-label-sm flex items-center justify-between gap-1">
+            <div key={key} className={`relative overflow-hidden rounded-xl p-2.5 ${tone}`}>
+              {/* Lingkaran dekoratif, bahasa yang sama dengan ubin usia. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -top-5 -right-5 size-14 rounded-full bg-white/40 dark:bg-white/5"
+              />
+              <dt className="text-label-sm relative flex items-center justify-between gap-1 font-bold opacity-80">
                 <span className="truncate">{label}</span>
-                <Icon name={icon} className="text-primary shrink-0 text-[15px]" />
+                <Icon name={icon} filled className="shrink-0 text-[15px]" />
               </dt>
-              <dd className="mt-1 flex items-baseline gap-0.5">
+              <dd className="relative mt-1 flex items-baseline gap-0.5">
                 <span className="text-metric tabular-nums">{m.value}</span>
-                {m.unit && <span className="text-muted-foreground text-label-sm">{m.unit}</span>}
+                {m.unit && <span className="text-label-sm opacity-80">{m.unit}</span>}
               </dd>
-              <dd className="text-label-sm mt-0.5 flex items-center gap-0.5">
+              <dd className="text-label-sm relative mt-0.5 flex items-center gap-0.5">
                 {diff !== null && diff !== 0 ? (
                   <>
                     <Icon
@@ -108,12 +133,12 @@ export function GrowthHighlight({
                     <span className="tabular-nums font-semibold">{delta(diff)}</span>
                   </>
                 ) : (
-                  <span className="text-muted-foreground">
+                  <span className="opacity-70">
                     {diff === 0 ? "tidak berubah" : "data pertama"}
                   </span>
                 )}
               </dd>
-              <dd className="text-muted-foreground text-label-sm mt-1.5 tabular-nums">
+              <dd className="text-label-sm relative mt-1.5 tabular-nums opacity-70">
                 {result
                   ? `Z ${result.zScore >= 0 ? "+" : "−"}${Math.abs(result.zScore).toFixed(2)} • P${formatPercentile(result.percentile)}`
                   : "—"}

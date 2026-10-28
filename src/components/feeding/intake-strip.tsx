@@ -42,12 +42,16 @@ export function IntakeStrip({ input }: { input: EstimateInput }) {
   const perSessionMax = max != null ? Math.round(max / sessions) : null;
 
   return (
-    <div className="bg-muted space-y-3 rounded-xl p-3">
+    // Tint sendiri, sebahasa dengan ubin usia dan metrik: strip ini bukan lagi
+    // blok abu yang terbaca sebagai catatan kaki.
+    <div className="space-y-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-500/15">
       <div className="flex items-center gap-2">
-        <span className="bg-card text-primary grid size-6 shrink-0 place-items-center rounded-full">
-          <Icon name="water_bottle" className="text-[14px]" />
+        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+          <Icon name="water_bottle" filled className="text-[15px]" />
         </span>
-        <p className="text-label-sm min-w-0 flex-1 truncate font-bold">Kisaran asupan susu</p>
+        <p className="text-body-sm min-w-0 flex-1 truncate font-bold text-amber-950 dark:text-amber-50">
+          Kisaran asupan susu
+        </p>
 
         {/*
           Dropdown, bukan kolom angka: di HP, Select membuka daftar yang bisa
@@ -58,15 +62,17 @@ export function IntakeStrip({ input }: { input: EstimateInput }) {
           <SelectTrigger
             size="sm"
             aria-label="Jadwal sesi menyusu"
-            className="bg-card text-label-sm h-7 shrink-0 rounded-full pl-2.5 font-bold [&_svg:not([class*='size-'])]:size-3.5"
+            // text-label-sm (11px) dan tanpa bold: ini pengatur, bukan angkanya —
+            // yang boleh menonjol di strip ini cuma nilai ml-nya.
+            className="bg-card text-label-sm h-7 shrink-0 rounded-full pl-2.5 font-normal [&_svg:not([class*='size-'])]:size-3.5"
           >
-            <Icon name="schedule" className="text-primary text-[14px]" />
+            <Icon name="schedule" className="text-[13px] text-amber-700 dark:text-amber-300" />
             {/* Pill-nya sempit: di tombol cukup jamnya, jumlah sesi ada di daftar. */}
             <SelectValue>Tiap {hours(sessions)} jam</SelectValue>
           </SelectTrigger>
           <SelectContent align="end">
             {SESSION_OPTIONS.map((n) => (
-              <SelectItem key={n} value={String(n)} className="text-body-sm h-9">
+              <SelectItem key={n} value={String(n)} className="text-label-sm h-9 font-normal">
                 Tiap {hours(n)} jam · {n} sesi
               </SelectItem>
             ))}
@@ -110,7 +116,7 @@ export function IntakeStrip({ input }: { input: EstimateInput }) {
         />
       </dl>
 
-      <p className="text-muted-foreground text-label-sm flex items-start gap-1.5">
+      <p className="text-label-sm flex items-start gap-1.5 text-amber-950/70 dark:text-amber-50/70">
         <Icon name="info" className="mt-px text-[13px]" />
         <span>
           Estimasi untuk susu formula, bukan target. Bayi yang menyusu langsung tidak punya target
@@ -135,14 +141,15 @@ function Figure({
   className?: string;
 }) {
   return (
-    <div className={`bg-card rounded-lg p-2 ${className ?? ""}`}>
-      <dt className="text-muted-foreground text-label-sm flex items-center gap-1">
+    <div className={`bg-card/80 rounded-lg p-2 text-center shadow-sm ${className ?? ""}`}>
+      <dt className="text-muted-foreground text-label-sm flex items-center justify-center gap-1">
         <Icon name={icon} className={`text-[13px] ${tone}`} />
         <span className="truncate">{label}</span>
       </dt>
-      {/* Lebih kecil dari text-metric di ubin pengukuran: strip ini keterangan, bukan judul. */}
-      <dd className="mt-0.5 flex items-baseline gap-0.5">
-        <span className={`text-body-sm font-bold tabular-nums ${tone}`}>{value}</span>
+      {/* Satu takik di atas label: dropdown jam sengaja dibuat kecil dan tidak
+          bold, jadi angka ml-lah yang menonjol di strip ini. */}
+      <dd className="mt-0.5 flex items-baseline justify-center gap-0.5">
+        <span className={`text-body-md font-bold tabular-nums ${tone}`}>{value}</span>
         <span className="text-muted-foreground text-label-sm">ml</span>
       </dd>
     </div>

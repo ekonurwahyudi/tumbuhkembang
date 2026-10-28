@@ -11,11 +11,11 @@ import { listShopProducts } from "@/lib/data/shop";
 import { listFavoriteIds } from "@/lib/data/shop-favorites";
 import { listSkippedCatalogKeys } from "@/lib/data/vaccination-skips";
 import { evaluateMeasurement } from "@/lib/growth/engine";
-import { chronologicalAge, formatAgeDaysDetailed, formatAgeDetailed } from "@/lib/growth/age";
-import { correctedAge } from "@/lib/growth/corrected-age";
+import { chronologicalAge, formatAgeDetailed } from "@/lib/growth/age";
 import { upcomingVaccines, vaccineSchedule } from "@/lib/immunization/schedule";
 import { syncVaccineNotifications } from "@/lib/notifications/vaccine-sync";
 import { UserAvatar } from "@/components/layout/account-menu";
+import { AgeCard } from "@/components/dashboard/age-card";
 import { ChildSwitcher } from "@/components/dashboard/child-switcher";
 import { GrowthHighlight } from "@/components/dashboard/growth-highlight";
 import { QuickAccess } from "@/components/dashboard/quick-access";
@@ -129,7 +129,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         }))}
       />
 
-      <AgeBand child={child} />
+      <AgeCard name={child.name} child={child} />
 
       {latest ? (
         <GrowthHighlight
@@ -238,49 +238,3 @@ function Greeting({
   );
 }
 
-/** Usia kronologis, plus usia terkoreksi bila anak lahir prematur. */
-function AgeBand({
-  child,
-}: {
-  child: {
-    dateOfBirth: string;
-    birthType: "TERM" | "PRETERM";
-    gestationalAgeWeeks: number | null;
-    gestationalAgeDays: number | null;
-  };
-}) {
-  const chrono = formatAgeDetailed(chronologicalAge(child.dateOfBirth));
-
-  const ga =
-    child.birthType === "PRETERM" &&
-    child.gestationalAgeWeeks !== null &&
-    child.gestationalAgeDays !== null
-      ? {
-          gestationalAgeWeeks: child.gestationalAgeWeeks,
-          gestationalAgeDays: child.gestationalAgeDays,
-        }
-      : null;
-  const args = ga ? { dateOfBirth: child.dateOfBirth, ...ga } : null;
-  const corrected =
-    args && correctedAge(args).applicable ? formatAgeDaysDetailed(correctedAge(args).days) : null;
-
-  return (
-    <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[var(--color-sky-tint)] to-[var(--color-sky-tint)]/40 px-3.5 py-3 text-[var(--color-accent-foreground)] shadow-sm">
-      <span className="bg-card/70 grid size-9 shrink-0 place-items-center rounded-full">
-        <Icon name="auto_awesome" filled className="text-[18px]" />
-      </span>
-      <dl className="text-body-sm min-w-0 flex-1 font-semibold">
-        <div className="flex flex-wrap gap-x-1.5">
-          <dt>Usia kronologis:</dt>
-          <dd>{chrono}</dd>
-        </div>
-        {corrected && (
-          <div className="mt-0.5 flex flex-wrap gap-x-1.5">
-            <dt>Usia koreksi:</dt>
-            <dd>{corrected}</dd>
-          </div>
-        )}
-      </dl>
-    </div>
-  );
-}
