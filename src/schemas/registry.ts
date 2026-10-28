@@ -13,6 +13,14 @@ export const REGISTRY_CATEGORIES = [
   "BEDROOM",
   "TOYS",
   "TRANSPORT",
+  "PREGNANCY",
+  "NURSING",
+  "MOM_CARE",
+  "DIAPERING",
+  "BATH",
+  "LEARNING",
+  "HEALTH",
+  "SAFETY",
   "OTHER",
 ] as const;
 
@@ -28,6 +36,14 @@ export const CATEGORY_LABEL: Record<(typeof REGISTRY_CATEGORIES)[number], string
   BEDROOM: "Kamar & Tidur",
   TOYS: "Mainan Sensorik & Edukasi",
   TRANSPORT: "Transportasi & Stroller",
+  PREGNANCY: "Kehamilan & Persiapan Lahir",
+  NURSING: "Menyusui & Pompa ASI",
+  MOM_CARE: "Perawatan & Vitamin Ibu",
+  DIAPERING: "Popok & Perlengkapan Ganti",
+  BATH: "Mandi & Perawatan Kulit",
+  LEARNING: "Buku & Alat Belajar",
+  HEALTH: "Alat Kesehatan & Pengukuran",
+  SAFETY: "Keamanan Bayi & Anak",
   OTHER: "Lainnya",
 };
 

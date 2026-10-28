@@ -32,9 +32,9 @@ import { ALLOWED_PHOTO_TYPES, MAX_UPLOAD_BYTES } from "@/lib/storage-limits";
  * Yang SENGAJA tidak diambil:
  * - Harga Shopee. Tidak ada di respons itu sama sekali (dicari `Rp` dan `"price`: nol
  *   kecocokan); angkanya dimuat lewat `/api/v4/pdp/*` yang menjawab 403.
- * - Deskripsi produk, di kedua toko. `og:description` bukan deskripsi: isinya bungkus
- *   SEO yang sama untuk semua barang ("Beli <nama> Terbaru Harga Murah di Shopee…",
- *   "Beli <nama> di <Toko>. Bebas ongkir…"). Nama di dalamnya yang dipakai.
+ * Deskripsi hanya dari JSON-LD Product; og:description adalah promosi SEO, bukan
+ * deskripsi penjual. Foto diambil dari Product.image dan og:image bila tersedia.
+ * Jumlah foto tergantung data publik yang disajikan toko.
  *
  * Ini menempel pada HTML pihak ketiga yang bisa berubah tanpa pemberitahuan — sudah
  * berubah sekali saat modul ini ditulis. Karena itu setiap kegagalan mengembalikan
@@ -111,7 +111,8 @@ const UA = "WhatsApp/2.23.20.0";
 
 export type StorePreview = {
   name: string;
-  image: { bytes: Uint8Array; type: string } | null;
+  description: string;
+  images: { bytes: Uint8Array; type: string }[];
   /** Rupiah bulat. Hanya Tokopedia; Shopee tidak menyajikannya sama sekali. */
   priceIdr: number | null;
 };
@@ -230,24 +231,73 @@ export function extractName(description: string | null, title: string | null): s
  * seratus juta — di luar itu hampir pasti bukan harga barang bayi, dan lebih baik
  * kosong daripada angka ngawur masuk basis data.
  */
-export function extractPriceIdr(html: string): number | null {
-  for (const m of html.matchAll(
-    /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]{1,200000}?)<\/script>/gi,
+function* productNodes(html: string): Generator<Record<string, unknown>> {
+  for (const match of html.matchAll(
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]{1,200000}?)<\/script>/gi,
   )) {
     let data: unknown;
     try {
-      data = JSON.parse(m[1]);
+      data = JSON.parse(match[1]);
     } catch {
       continue;
     }
-    if (!data || typeof data !== "object") continue;
-    const node = data as { "@type"?: unknown; offers?: { price?: unknown } };
-    if (node["@type"] !== "Product") continue;
+    const queue = [data];
+    while (queue.length) {
+      const value = queue.pop();
+      if (Array.isArray(value)) {
+        queue.push(...value.slice().reverse());
+      } else if (value && typeof value === "object") {
+        const node = value as Record<string, unknown>;
+        if ([node["@type"]].flat().includes("Product")) yield node;
+        if (node["@graph"]) queue.push(node["@graph"]);
+      }
+    }
+  }
+}
 
-    const price = Number(node.offers?.price);
+export function extractPriceIdr(html: string): number | null {
+  for (const node of productNodes(html)) {
+    const offers = node.offers as { price?: unknown } | undefined;
+    const price = Number(offers?.price);
     if (Number.isFinite(price) && price > 0 && price <= 100_000_000) return Math.round(price);
   }
   return null;
+}
+
+export function extractStoreDetails(html: string) {
+  const product: Record<string, unknown> | undefined = productNodes(html).next().value;
+  // og:description berisi promosi SEO, bukan deskripsi penjual. Jangan isi data pengganti.
+  const rawDescription = typeof product?.description === "string" ? product.description : "";
+  const description = unescapeHtml(
+    rawDescription.replace(/<br\s*\/?\s*>|<\/p>/gi, "\n").replace(/<[^>]*>/g, ""),
+  )
+    .trim()
+    .slice(0, 1000);
+  const candidates: string[] = [];
+  for (const image of [product?.image].flat()) {
+    if (typeof image === "string") candidates.push(image);
+    else if (image && typeof image === "object") {
+      const node = image as Record<string, unknown>;
+      const raw = node.contentUrl ?? node.url;
+      if (typeof raw === "string") candidates.push(raw);
+    }
+  }
+  for (const tag of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const image = metaContent(tag[0], "og:image");
+    if (image) candidates.push(image);
+  }
+  const images = [...new Set(candidates.map((raw) => httpsUrl(unescapeHtml(raw), IMAGE_HOSTS)?.href))]
+    .filter((url): url is string => Boolean(url))
+    .slice(0, 5);
+
+  return {
+    name:
+      typeof product?.name === "string" && product.name.trim()
+        ? cleanStoreTitle(product.name)
+        : extractName(metaContent(html, "og:description"), metaContent(html, "og:title")),
+    description,
+    images,
+  };
 }
 
 async function getImage(raw: string): Promise<{ bytes: Uint8Array; type: string } | null> {
@@ -286,7 +336,7 @@ async function getImage(raw: string): Promise<{ bytes: Uint8Array; type: string 
  * `null` berarti tidak dapat; pemanggilnya yang menerjemahkan itu jadi pesan untuk
  * orang tua.
  */
-export async function fetchStorePreview(rawUrl: string): Promise<StorePreview | null> {
+export async function fetchStorePreview(rawUrl: string, maxPhotos = 1): Promise<StorePreview | null> {
   const url = httpsUrl(rawUrl, PAGE_HOSTS);
   if (!url) return null;
 
@@ -306,15 +356,15 @@ export async function fetchStorePreview(rawUrl: string): Promise<StorePreview | 
     return null;
   }
 
-  const name = extractName(metaContent(html, "og:description"), metaContent(html, "og:title"));
-  // Judul halaman depan dipakai kedua toko sebagai fallback untuk tautan yang tidak
-  // menunjuk barang; itu bukan nama barang, jadi dianggap gagal.
+  const { name, description, images } = extractStoreDetails(html);
+  // Judul halaman depan bukan nama barang.
   if (!name || /^(?:Shopee Indonesia|Tokopedia)/i.test(name)) return null;
 
-  const rawImage = metaContent(html, "og:image");
+  const downloaded = await Promise.all(images.slice(0, maxPhotos).map(getImage));
   return {
     name,
-    image: rawImage ? await getImage(unescapeHtml(rawImage)) : null,
+    description,
+    images: downloaded.filter((image) => image !== null),
     priceIdr: extractPriceIdr(html),
   };
 }

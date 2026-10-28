@@ -256,11 +256,12 @@ export async function readStoreLinkAction(url: string): Promise<
     // utuh, dan bentuk ini bisa langsung dijadikan File di klien lewat
     // fetch(dataUrl).blob() — jalur unggah yang sama dengan foto pilihan tangan, jadi
     // fotonya berakhir di R2 kita, bukan di-hotlink dari CDN toko.
+    const image = preview.images[0];
     return ok({
       name: preview.name,
-      photo: preview.image
+      photo: image
         ? {
-            dataUrl: `data:${preview.image.type};base64,${Buffer.from(preview.image.bytes).toString("base64")}`,
+            dataUrl: `data:${image.type};base64,${Buffer.from(image.bytes).toString("base64")}`,
           }
         : null,
       priceIdr: preview.priceIdr,

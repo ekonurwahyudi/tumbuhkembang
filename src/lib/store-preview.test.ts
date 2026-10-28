@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { cleanStoreTitle, extractName, extractPriceIdr, storeBrandOf } from "./store-preview";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  cleanStoreTitle,
+  extractName,
+  extractPriceIdr,
+  extractStoreDetails,
+  fetchStorePreview,
+  storeBrandOf,
+} from "./store-preview";
 
 /**
  * Yang diuji di sini cuma pengurai teksnya — satu-satunya logika di modul ini yang
@@ -119,6 +126,85 @@ describe("extractPriceIdr", () => {
  * Yang membuat tes ini ada artinya adalah tiga kasus penolakan di bawah, bukan tiga
  * kasus pengenalan di atasnya.
  */
+describe("extractStoreDetails", () => {
+  const image = (id: number) => `https://down-id.img.susercontent.com/file/${id}`;
+  const ld = (data: unknown) => `<script type="application/ld+json">${JSON.stringify(data)}</script>`;
+
+  it("mengambil judul, deskripsi, dan galeri Product dalam @graph", () => {
+    const html = ld({ "@graph": [{
+      "@type": ["Product"], name: "Stroller &amp; Tas",
+      description: "Ringan<br>Warna biru &amp; putih",
+      image: [image(1), { contentUrl: image(2) }, { url: image(3) }],
+      offers: { price: 750000 },
+    }] });
+    expect(extractStoreDetails(html)).toEqual({
+      name: "Stroller & Tas", description: "Ringan\nWarna biru & putih",
+      images: [image(1), image(2), image(3)],
+    });
+    expect(extractPriceIdr(html)).toBe(750000);
+  });
+
+  it("memakai metadata bila JSON-LD rusak, menghapus duplikat dan menolak host asing", () => {
+    const html = `<script type="application/ld+json">rusak</script>
+      <meta property="og:title" content="Jual Stroller | Shopee Indonesia">
+      <meta property="og:description" content="Ringan &amp; praktis">
+      <meta property="og:image" content="${image(1)}">
+      <meta content="${image(1)}" property="og:image">
+      <meta property="og:image" content="http://down-id.img.susercontent.com/file/2">
+      <meta property="og:image" content="https://down-id.img.susercontent.com.evil.com/x">
+      <meta property="og:image" content="http://127.0.0.1/x">
+      <meta property="og:image" content="${image(2)}">`;
+    expect(extractStoreDetails(html)).toEqual({
+      name: "Stroller", description: "", images: [image(1), image(2)],
+    });
+  });
+
+  it("tidak menganggap promosi SEO Shopee sebagai deskripsi produk", () => {
+    // Metadata dari tautan pengguna, shop 295104809 / item 25805460704.
+    const name = "BUKU TULIS 38 LEMBAR GARIS A5 SKOLA BY SiDU NOTEBOOK SKOLA BY SINAR DUNIA BUKU TULIS ANAK SEKOLAH PACK [10PCS]";
+    const photo = "https://down-id.img.susercontent.com/file/id-11134207-822wq-mmd28pthpkasf8";
+    const html = `<meta property="og:title" content="Jual ${name} | Shopee Indonesia">
+      <meta property="og:description" content="Beli ${name} Terbaru Harga Murah di Shopee. Ada Gratis Ongkir, Promo COD, &amp; Cashback. Cek Review Produk Terlengkap">
+      <meta property="og:image" content="${photo}">
+      ${ld({ "@type": "WebSite", name: "Shopee" })}`;
+    expect(extractStoreDetails(html)).toEqual({ name, description: "", images: [photo] });
+  });
+
+  it("membatasi nama, deskripsi dan jumlah foto; mengabaikan data bukan Product", () => {
+    const html = ld([
+      { "@type": "Organization", image: image(99) },
+      { "@type": "Product", name: "A".repeat(200), description: "B".repeat(1500),
+        image: Array.from({ length: 8 }, (_, i) => image(i)) },
+    ]);
+    const details = extractStoreDetails(html);
+    expect(details.name).toHaveLength(120);
+    expect(details.description).toHaveLength(1000);
+    expect(details.images).toEqual([0, 1, 2, 3, 4].map(image));
+    expect(extractStoreDetails("")).toEqual({ name: "", description: "", images: [] });
+  });
+});
+
+describe("fetchStorePreview", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("mengembalikan beberapa foto valid tanpa gagal saat satu foto tidak tersedia", async () => {
+    const html = `<meta property="og:title" content="Stroller">
+      ${[1, 2, 3].map((n) => `<meta property="og:image" content="https://down-id.img.susercontent.com/file/${n}">`).join("")}`;
+    const fetchMock = vi.fn(async (url: URL) => {
+      if (url.hostname === "shopee.co.id") return new Response(html);
+      if (url.pathname.endsWith("/2")) return new Response("", { status: 404 });
+      return new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "image/jpeg" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const preview = await fetchStorePreview("https://shopee.co.id/product/1/2", 5);
+    expect(preview?.images).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    fetchMock.mockClear();
+    expect((await fetchStorePreview("https://shopee.co.id/product/1/2"))?.images).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("storeBrandOf", () => {
   it("mengenali host resmi ketiga toko", () => {
     expect(storeBrandOf("https://s.shopee.co.id/60S055iVg8")).toBe("shopee");

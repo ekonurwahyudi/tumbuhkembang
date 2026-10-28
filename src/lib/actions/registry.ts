@@ -31,7 +31,7 @@ import {
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { registryTrackingSchema, shippingSchema } from "@/schemas/registry";
 import { searchLokasi, type Lokasi } from "@/lib/lokasi";
-import { fetchStorePreview } from "@/lib/store-preview";
+import { fetchStorePreview, storeBrandOf, type StoreBrand } from "@/lib/store-preview";
 import { deletePhoto, photoStorageReady, putClaimPhoto, putRegistryPhoto } from "@/lib/storage";
 import { notify } from "@/lib/push";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, MAX_UPLOAD_BYTES } from "@/lib/storage-limits";
@@ -238,7 +238,13 @@ export async function saveShippingAction(formData: FormData): Promise<ActionResu
 export async function fetchStorePreviewAction(
   url: string,
 ): Promise<
-  ActionResult<{ name: string; photo: { dataUrl: string } | null; priceIdr: number | null }>
+  ActionResult<{
+    name: string;
+    description: string;
+    photos: { dataUrl: string }[];
+    priceIdr: number | null;
+    brand: StoreBrand;
+  }>
 > {
   try {
     await requireUser();
@@ -247,6 +253,12 @@ export async function fetchStorePreviewAction(
     // menembak jaringan, jadi tidak ada alasan ia menghabiskan kuota orangnya.
     if (typeof url !== "string" || url.length > 500)
       return fail("VALIDATION_ERROR", "Tautan tidak valid.");
+
+    const brand = storeBrandOf(url);
+    if (!brand || !url.trim().startsWith("https://"))
+      return fail("VALIDATION_ERROR", "Gunakan tautan HTTPS Shopee, Tokopedia, atau TikTok.");
+    if (brand === "tiktok")
+      return ok({ name: "", description: "", photos: [], priceIdr: null, brand });
 
     // 20, bukan 5 bawaannya: mengisi wishlist beberapa barang sekali duduk itu
     // pemakaian normal, bukan serangan.
@@ -257,7 +269,7 @@ export async function fetchStorePreviewAction(
         `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(limit.retryAfterSec / 60)} menit.`,
       );
 
-    const preview = await fetchStorePreview(url);
+    const preview = await fetchStorePreview(url, MAX_ITEM_PHOTOS);
     if (!preview)
       return fail(
         "VALIDATION_ERROR",
@@ -269,12 +281,12 @@ export async function fetchStorePreviewAction(
     // fetch(dataUrl).blob() — jalur yang sama dengan foto pilihan sendiri.
     return ok({
       name: preview.name,
-      photo: preview.image
-        ? {
-            dataUrl: `data:${preview.image.type};base64,${Buffer.from(preview.image.bytes).toString("base64")}`,
-          }
-        : null,
+      description: preview.description,
+      photos: preview.images.map((image) => ({
+        dataUrl: `data:${image.type};base64,${Buffer.from(image.bytes).toString("base64")}`,
+      })),
       priceIdr: preview.priceIdr,
+      brand,
     });
   } catch (err) {
     return handleUnexpected("fetchStorePreviewAction", err);

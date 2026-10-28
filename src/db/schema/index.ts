@@ -41,13 +41,16 @@ export const registryCategoryEnum = pgEnum("registry_category", [
   "TOYS",
   "TRANSPORT",
   "OTHER",
+  "PREGNANCY",
+  "NURSING",
+  "MOM_CARE",
+  "DIAPERING",
+  "BATH",
+  "LEARNING",
+  "HEALTH",
+  "SAFETY",
 ]);
-/**
- * Kategori katalog Shop — lebih luas dari registry_category: mencakup kebutuhan ibu
- * (hamil, menyusui, pasca-lahir), bukan hanya barang bayi. Enum tersendiri, bukan
- * perluasan registry_category: nilai baru di sana akan muncul sebagai pilihan di
- * form wishlist yang tidak membutuhkannya.
- */
+/** Katalog Shop punya enum tersendiri agar kategori kedua modul tetap independen. */
 export const shopCategoryEnum = pgEnum("shop_category", [
   "MOM_PREGNANCY",
   "MOM_NURSING",

@@ -4,7 +4,10 @@ import { measurementSchema } from "./measurement";
 import { registerSchema } from "./auth";
 import { vaccinationSchema } from "./vaccination";
 import { reminderSchema } from "./reminder";
+import { registryCategoryEnum } from "@/db/schema";
 import {
+  CATEGORY_LABEL,
+  REGISTRY_CATEGORIES,
   registryClaimSchema,
   registryItemSchema,
   registryTrackingSchema,
@@ -312,6 +315,15 @@ describe("registryItemSchema", () => {
     category: "TRANSPORT",
     desiredQty: "1",
   };
+
+  it("kategori dropdown sesuai enum database, berlabel, dan valid untuk disimpan", () => {
+    expect([...REGISTRY_CATEGORIES].sort()).toEqual([...registryCategoryEnum.enumValues].sort());
+    for (const category of REGISTRY_CATEGORIES) {
+      expect(CATEGORY_LABEL[category]).toBeTruthy();
+      expect(registryItemSchema.parse({ ...base, category }).category).toBe(category);
+    }
+    expect(registryItemSchema.safeParse({ ...base, category: "UNKNOWN" }).success).toBe(false);
+  });
 
   it("menerima tautan dari toko yang sesuai, menolak host lain", () => {
     const ok = registryItemSchema.parse({

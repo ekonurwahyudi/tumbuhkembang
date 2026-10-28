@@ -113,6 +113,13 @@
       "when": 1790971089912,
       "tag": "0015_mean_joshua_kane",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793171539578,
+      "tag": "0016_expand_registry_categories",
+      "breakpoints": true
     }
   ]
 }
