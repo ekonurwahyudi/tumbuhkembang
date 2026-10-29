@@ -1,9 +1,4 @@
-import {
-  chronologicalAge,
-  formatAgeDaysDetailed,
-  formatAgeDetailed,
-  nextMilestone,
-} from "@/lib/growth/age";
+import { chronologicalAge, formatAgeDaysDetailed, formatAgeDetailed } from "@/lib/growth/age";
 import { correctedAge } from "@/lib/growth/corrected-age";
 import { Icon, type IconName } from "@/components/ui/icon";
 
@@ -80,7 +75,6 @@ export function AgeCard({
   };
 }) {
   const chrono = chronologicalAge(child.dateOfBirth);
-  const milestone = nextMilestone(child.dateOfBirth);
 
   const ga =
     child.birthType === "PRETERM" &&

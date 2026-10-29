@@ -151,11 +151,13 @@ function TileBody({ label, icon, badge, href, tone }: Tile) {
           ikon aplikasi, dan bentuknya membedakan ubin layanan dari avatar anak yang
           memang lingkaran. Tanpa shadow — di atas tint lembut, bayangan membuat
           kepingnya tampak mengambang. */}
-      {/* Keping 48px, glyph 32px: menyisakan ~8px napas di tiap sisi. Pada 38px ikon
-          padat seperti `analytics` (Grafik WHO) nyaris menyentuh tepi kepingnya. */}
-      <span className={cn("grid size-12 place-items-center rounded-xl", tone, GLASS)}>
+      {/* Keping 60px, glyph 36px: ~12px napas di tiap sisi. 60px adalah batas atas
+          yang muat — di layar 320px ubinnya hanya ~65px setelah padding, jadi
+          kepingnya menyisakan ~2px di kiri-kanan. Jangan dibesarkan lagi tanpa
+          mengubah grid-nya dulu. */}
+      <span className={cn("grid size-[60px] place-items-center rounded-xl", tone, GLASS)}>
         {/* `relative` supaya ikonnya di ATAS lapisan kilau (`before`), bukan tertutup. */}
-        <Icon name={icon} filled className="relative text-[32px]" />
+        <Icon name={icon} filled className="relative text-[36px]" />
       </span>
       {/* `font-normal` (400), bukan bold: di baris ubin yang semuanya tebal, tidak ada
           yang menonjol dan seluruh barisnya terbaca "berteriak" — berat normal membuat
