@@ -190,15 +190,29 @@ export async function deleteRegistryItem(userId: string, itemId: string) {
   return row;
 }
 
-/** "Hadiah Masuk": semua klaim atas item milik user ini, terbaru di atas. */
+/**
+ * "Hadiah Masuk": semua klaim atas item milik user ini, terbaru di atas.
+ *
+ * `photoKeys` ikut ditarik hanya untuk tahu APAKAH barangnya punya foto — key-nya
+ * sendiri tidak pernah dikirim ke klien, karena route `/registry/[itemId]/photo`
+ * yang memilihnya berdasarkan indeks.
+ */
 export async function listRegistryClaims(userId: string) {
   const rows = await db
-    .select({ claim: registryClaims, itemName: registryItems.name })
+    .select({
+      claim: registryClaims,
+      itemName: registryItems.name,
+      itemPhotoKeys: registryItems.photoKeys,
+    })
     .from(registryClaims)
     .innerJoin(registryItems, eq(registryItems.id, registryClaims.itemId))
     .where(eq(registryItems.userId, userId))
     .orderBy(desc(registryClaims.createdAt));
-  return rows.map((r) => ({ ...r.claim, itemName: r.itemName }));
+  return rows.map((r) => ({
+    ...r.claim,
+    itemName: r.itemName,
+    itemHasPhoto: r.itemPhotoKeys.length > 0,
+  }));
 }
 
 /** Tiga penghitung di kepala halaman. Dihitung dari daftar yang sudah ditarik. */

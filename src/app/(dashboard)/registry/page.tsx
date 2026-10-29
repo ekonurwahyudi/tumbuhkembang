@@ -11,7 +11,9 @@ import {
   registrySummary,
 } from "@/lib/data/registry";
 import { chronologicalAge, formatAge } from "@/lib/growth/age";
+import { formatDateTime, formatRelative } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
+import { IncomingGifts } from "@/components/registry/incoming-gifts";
 import { RegistryList } from "@/components/registry/registry-list";
 import { RegistryShareCard } from "@/components/registry/registry-share-card";
 import { titled } from "@/components/registry/registry-shared";
@@ -33,6 +35,27 @@ export default async function RegistryPage() {
   ]);
 
   const summary = registrySummary(rows);
+
+  /*
+    Tanggal diformat DI SINI, bukan di komponennya: `toLocaleString` di klien
+    memakai zona waktu perangkat, dan hasilnya berbeda dengan render server —
+    aturan yang sama dengan `formatRelative` di lib/format.ts.
+  */
+  const now = new Date();
+  const gifts = claims.map((c) => ({
+    id: c.id,
+    itemId: c.itemId,
+    claimerName: c.claimerName,
+    itemName: c.itemName,
+    qty: c.qty,
+    message: c.message,
+    trackingNumber: c.trackingNumber,
+    itemHasPhoto: c.itemHasPhoto,
+    // Key-nya sendiri tidak ikut menyeberang — route fotonya yang mencarinya lagi.
+    hasProofPhoto: c.photoKey !== null,
+    when: formatDateTime(c.createdAt),
+    relative: formatRelative(c.createdAt, now),
+  }));
 
   /*
     Kolomnya nullable supaya akun lama tidak ditolak migrasi, jadi "lengkap" diuji
@@ -120,6 +143,9 @@ export default async function RegistryPage() {
         </p>
       )}
 
+      {/* ponytail: kabar in-app saja; tambah email bila orang tua melewatkan klaim. */}
+      <IncomingGifts gifts={gifts} />
+
       {rows.length === 0 ? (
         <EmptyState
           icon="card_giftcard"
@@ -156,44 +182,6 @@ export default async function RegistryPage() {
         </>
       )}
 
-      {/* ponytail: kabar in-app saja; tambah email bila orang tua melewatkan klaim. */}
-      {claims.length > 0 && (
-        <section className="space-y-2.5" aria-labelledby="hadiah-masuk">
-          <h2
-            id="hadiah-masuk"
-            className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase"
-          >
-            Hadiah Masuk
-          </h2>
-          <ul className="space-y-2">
-            {claims.map((c) => (
-              <li key={c.id} className="bg-card space-y-1 rounded-2xl border p-4 shadow-sm">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-body-md font-bold">{c.claimerName}</span>
-                  <span className="text-muted-foreground text-label-sm">
-                    {c.qty > 1 ? `${c.qty} unit` : "1 unit"}
-                  </span>
-                </div>
-                <p className="text-body-sm">{c.itemName}</p>
-                {c.message && (
-                  <p className="bg-muted text-body-sm rounded-xl p-2.5 italic">
-                    &ldquo;{c.message}&rdquo;
-                  </p>
-                )}
-                <p className="text-muted-foreground text-label-sm flex items-center gap-1">
-                  <Icon
-                    name={c.trackingNumber ? "check_circle" : "info"}
-                    className="text-[14px]"
-                  />
-                  {c.trackingNumber
-                    ? `Sedang dikirim — resi ${c.trackingNumber}`
-                    : "Menunggu dikirim, nomor resi belum diisi"}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }
