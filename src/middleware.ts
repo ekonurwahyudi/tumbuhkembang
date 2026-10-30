@@ -4,10 +4,10 @@ import { authConfig } from "@/lib/auth/config";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/invite", "/kado"];
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/invite", "/kado", "/terms", "/privacy"];
 
 /** Paths accessible without auth that should NOT redirect logged-in users to dashboard. */
-const PUBLIC_NO_BOUNCE = ["/invite", "/kado"];
+const PUBLIC_NO_BOUNCE = ["/invite", "/kado", "/terms", "/privacy"];
 
 export default auth((req) => {
   const { pathname, search } = req.nextUrl;

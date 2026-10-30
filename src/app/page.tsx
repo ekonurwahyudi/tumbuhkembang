@@ -77,7 +77,7 @@ export default async function RootPage() {
           </div>
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:text-sm">
             <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-white">BARU</span>
-            Pertumbuhan, imunisasi, dan banyak lagi
+            Skrining Perkembang IDAI
           </p>
           <h1 className="mx-auto mt-8 max-w-[680px] text-[2.25rem] leading-[1.16] font-extrabold tracking-[-0.035em] sm:text-5xl sm:leading-[1.14]">Pantau tumbuh kembang si kecil <span className="text-[#005298]">lebih tenang.</span></h1>
           <p className="mx-auto mt-5 max-w-[580px] text-base leading-7 text-slate-600">Catatan pertumbuhan, usia koreksi bayi prematur, dan jadwal imunisasi dalam satu tempat yang mudah dijangkau.</p>
@@ -133,12 +133,10 @@ export default async function RootPage() {
             <a href="#fitur" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Fitur</a>
             <a href="#unggulan" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Detail Fitur</a>
           </nav>
-          <nav aria-label="Jelajahi fitur footer" className="flex flex-col items-start gap-4 text-sm">
-            <h3 className="mb-1 text-base font-semibold text-white">Jelajahi</h3>
-            <a href="#unggulan" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Grafik Pertumbuhan</a>
-            <a href="#unggulan" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Jadwal Imunisasi</a>
-            <a href="#unggulan" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Tips & MPASI</a>
-            <a href="#unggulan" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Wishlist Kado</a>
+          <nav aria-label="Informasi footer" className="flex flex-col items-start gap-4 text-sm">
+            <h3 className="mb-1 text-base font-semibold text-white">Informasi</h3>
+            <Link href="/terms" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Syarat & Ketentuan</Link>
+            <Link href="/privacy" className="hover:text-white focus-visible:outline-2 focus-visible:outline-white">Kebijakan Privasi</Link>
           </nav>
           <div className="flex flex-col items-start gap-4 text-sm">
             <h3 className="mb-1 text-base font-semibold text-white">Kontak</h3>
