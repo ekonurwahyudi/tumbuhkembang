@@ -50,6 +50,19 @@ export const registryCategoryEnum = pgEnum("registry_category", [
   "HEALTH",
   "SAFETY",
 ]);
+/**
+ * Kategori artikel blog. Enum tersendiri, bukan berbagi dengan registry/shop:
+ * yang dikelompokkan di sini topik bacaan, bukan barang — "Imunisasi" adalah
+ * kategori artikel yang masuk akal tapi bukan kategori barang.
+ */
+export const blogCategoryEnum = pgEnum("blog_category", [
+  "NUTRISI",
+  "TUMBUH_KEMBANG",
+  "IMUNISASI",
+  "KESEHATAN",
+  "PERAWATAN",
+  "IBU",
+]);
 /** Katalog Shop punya enum tersendiri agar kategori kedua modul tetap independen. */
 export const shopCategoryEnum = pgEnum("shop_category", [
   "MOM_PREGNANCY",
@@ -392,6 +405,42 @@ export const shopProducts = pgTable(
 );
 
 /**
+ * Artikel blog edukasi. Ditulis superadmin, dibaca semua orang tua — jadi tidak
+ * ada `user_id`: isinya milik bersama seperti shop_products, bukan milik akun.
+ *
+ * `content_html` menyimpan HTML, dan itu keputusan dengan konsekuensi: HTML dari
+ * form admin TIDAK boleh langsung dirender. Ia dibersihkan di `lib/sanitize-html.ts`
+ * sebelum disimpan — kolom ini berisi hasil yang sudah bersih, dan penjaganya ada
+ * di schema Zod, bukan di komponen yang merendernya.
+ *
+ * `source_name`/`source_url` wajib diisi: artikel kesehatan tanpa sumber tidak
+ * bisa diperiksa pembacanya, dan aplikasi ini tidak menilai kondisi medis sendiri.
+ */
+export const blogPosts = pgTable(
+  "blog_posts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Bagian URL publik `/blog/<slug>` — stabil walau judulnya disunting. */
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    /** Ringkasan kartu dan meta description. Teks polos, bukan HTML. */
+    excerpt: text("excerpt").notNull(),
+    contentHtml: text("content_html").notNull(),
+    category: blogCategoryEnum("category").notNull().default("TUMBUH_KEMBANG"),
+    sourceName: text("source_name").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    isPublished: boolean("is_published").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("blog_posts_slug_unique").on(t.slug),
+    index("blog_posts_published_idx").on(t.isPublished, t.sortOrder),
+  ],
+);
+
+/**
  * Favorit produk katalog, per orang tua. Baris, bukan kolom di shop_products:
  * katalognya milik bersama, favoritnya milik satu orang.
  *
@@ -627,6 +676,8 @@ export type RegistryCategory = (typeof registryCategoryEnum.enumValues)[number];
 export type ShopProduct = typeof shopProducts.$inferSelect;
 export type ShopCategory = (typeof shopCategoryEnum.enumValues)[number];
 export type ShopFavorite = typeof shopFavorites.$inferSelect;
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type BlogCategory = (typeof blogCategoryEnum.enumValues)[number];
 export type Notification = typeof notifications.$inferSelect;
 export type NotificationKind = (typeof notificationKindEnum.enumValues)[number];
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

@@ -81,7 +81,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         label: "Blog",
         icon: "menu_book",
         description: "Tulis dan terbitkan artikel edukasi tumbuh kembang",
-        ready: false,
+        ready: true,
       },
     ],
   },

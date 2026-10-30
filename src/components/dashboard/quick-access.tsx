@@ -97,7 +97,9 @@ export function QuickAccess({
       // badge: registryClaims > 0 ? String(registryClaims) : undefined,
       tone: TONE.amber,
     },
-    { label: "Nakes Care", icon: "medical_services", badge: "Soon", tone: TONE.teal },
+    // Artikel menggantikan satu ubin "Soon": gridnya 4×2, dan menambah ubin
+    // kesembilan berarti baris ketiga berisi satu ubin sendirian.
+    { label: "Artikel", icon: "menu_book", href: "/blog", tone: TONE.teal },
     { label: "Babysitter", icon: "family_restroom", badge: "Soon", tone: TONE.fuchsia },
   ];
 

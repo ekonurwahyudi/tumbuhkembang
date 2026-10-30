@@ -120,6 +120,13 @@
       "when": 1793171539578,
       "tag": "0016_expand_registry_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793264890285,
+      "tag": "0017_add_blog_posts",
+      "breakpoints": true
     }
   ]
 }

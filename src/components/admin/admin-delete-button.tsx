@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { adminDeleteChildAction, adminDeleteParentAction } from "@/lib/actions/admin";
+import { deleteBlogPostAction } from "@/lib/actions/blog";
 import { deleteShopProductAction } from "@/lib/actions/shop";
 import {
   AlertDialog,
@@ -44,6 +45,12 @@ const KIND = {
     action: deleteShopProductAction,
     consequence:
       "Seluruh foto produk ini ikut terhapus. Produk yang sudah terbit akan hilang dari halaman Shop orang tua. Tindakan ini tidak dapat dibatalkan.",
+  },
+  blogPost: {
+    noun: "artikel",
+    action: deleteBlogPostAction,
+    consequence:
+      "Isi artikel ikut terhapus, dan tautan yang sudah dibagikan ke alamatnya tidak berlaku lagi. Tindakan ini tidak dapat dibatalkan.",
   },
 } as const;
 
