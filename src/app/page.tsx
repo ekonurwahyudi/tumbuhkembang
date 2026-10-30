@@ -76,13 +76,13 @@ export default async function RootPage() {
             </svg>
           </div>
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:text-sm">
-            <span className="rounded-full bg-[#005298] px-2 py-0.5 text-[10px] font-bold text-white">UNTUK KELUARGA</span>
+            <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-white">BARU</span>
             Pertumbuhan, imunisasi, dan banyak lagi
           </p>
           <h1 className="mx-auto mt-8 max-w-[680px] text-[2.25rem] leading-[1.16] font-extrabold tracking-[-0.035em] sm:text-5xl sm:leading-[1.14]">Pantau tumbuh kembang si kecil <span className="text-[#005298]">lebih tenang.</span></h1>
           <p className="mx-auto mt-5 max-w-[580px] text-base leading-7 text-slate-600">Catatan pertumbuhan, usia koreksi bayi prematur, dan jadwal imunisasi dalam satu tempat yang mudah dijangkau.</p>
           <div className="mx-auto mt-8 grid max-w-[330px] gap-3 sm:flex sm:max-w-none sm:justify-center">
-            <Link href="/register" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#005298] px-8 text-sm font-bold text-white shadow-sm hover:bg-[#003f75] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005298]">Mulai pantau gratis <ArrowRight aria-hidden="true" className="size-4" /></Link>
+            <Link href="/register" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-8 text-sm font-bold text-white shadow-sm hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950">Mulai pantau gratis <ArrowRight aria-hidden="true" className="size-4" /></Link>
             <a href="#fitur" className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-200 bg-white px-8 text-sm font-semibold text-slate-800 hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005298]">Jelajahi fitur</a>
           </div>
           {/* <p className="mt-5 text-sm text-slate-500">Gratis untuk mulai mencatat satu anak</p> */}
@@ -100,7 +100,7 @@ export default async function RootPage() {
             <div role="region" aria-label="Kartu fitur, geser ke samping untuk melihat semuanya" tabIndex={0} className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 scroll-px-4 focus-visible:outline-2 focus-visible:outline-[#005298] sm:mx-0 sm:mt-6 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
               {features.map(({ icon: Icon, title, description, art, color }) => (
                 <article key={title} className={`flex w-[82%] max-w-[300px] shrink-0 snap-start flex-col rounded-3xl p-5 sm:w-auto sm:max-w-none ${color}`}>
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-[#005298]"><Icon aria-hidden="true" className="size-6 shrink-0" />{title}</h3>
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-950"><Icon aria-hidden="true" className="size-6 shrink-0" />{title}</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-700 pb-4">{description}</p>
                   <div className="relative mt-auto self-end pt-6 after:absolute after:bottom-1 after:left-1/2 after:h-2 after:w-20 after:-translate-x-1/2 after:rounded-full after:bg-slate-950/20 after:blur-sm">
                     <Image src={art.src} alt="" width={art.width} height={art.height} sizes="(max-width: 640px) 30vw, 120px" className="relative z-10 h-24 w-auto object-contain sm:h-30" />
@@ -114,10 +114,10 @@ export default async function RootPage() {
 
           <aside className="mx-auto flex max-w-[760px] gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-600"><ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#005298]" /> Tumbuh Kembang membantu mencatat dan memantau. Aplikasi ini tidak menggantikan konsultasi atau penilaian tenaga kesehatan.</aside>
 
-          <section className="mx-auto max-w-[760px] rounded-3xl bg-[#005298] px-5 py-10 text-center text-white sm:px-10">
+          <section className="mx-auto max-w-[760px] rounded-3xl bg-slate-950 px-5 py-10 text-center text-white sm:px-10">
             <h2 className="text-2xl leading-8 font-extrabold sm:text-3xl">Mulai pantau tumbuh kembang hari ini.</h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-300">Catat perjalanan si kecil, satu langkah pada satu waktu.</p>
-            <Link href="/register" className="mt-6 inline-flex min-h-12 w-full max-w-[320px] items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-[#005298] hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Daftar gratis <ArrowRight aria-hidden="true" className="size-4" /></Link>
+            <Link href="/register" className="mt-6 inline-flex min-h-12 w-full max-w-[320px] items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-slate-950 hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Daftar gratis <ArrowRight aria-hidden="true" className="size-4" /></Link>
           </section>
         </div>
       </main>
