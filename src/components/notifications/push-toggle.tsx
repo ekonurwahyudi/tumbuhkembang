@@ -126,15 +126,14 @@ export function PushToggle({
           aria-checked={state === "on"}
           disabled={busy || !["on", "off"].includes(state)}
           onClick={state === "on" ? disable : enable}
-          className="ml-auto flex shrink-0 items-center gap-2 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
+          className="ml-auto shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
         >
           <span
             aria-hidden="true"
-            className={`relative h-7 w-12 rounded-full transition-colors ${state === "on" ? "bg-primary" : "bg-muted-foreground/40"}`}
+            className={`relative block h-7 w-12 rounded-full transition-colors ${state === "on" ? "bg-primary" : "bg-muted-foreground/40"}`}
           >
-            <span className={`bg-card absolute top-1 size-5 rounded-full shadow-sm transition-transform ${state === "on" ? "translate-x-6" : "translate-x-1"}`} />
+            <span className={`bg-card absolute top-1 size-5 rounded-full shadow-sm ${state === "on" ? "right-1" : "left-1"}`} />
           </span>
-          <span className="text-body-sm font-bold">{state === "on" ? "On" : "Off"}</span>
         </button>
       )}
     </div>

@@ -23,6 +23,8 @@ describe("PushToggle", () => {
     expect(html).toContain('aria-checked="false"');
     expect(html).toContain("disabled");
     expect(html).toContain("belum tersedia");
+    expect(html).toContain("left-1");
+    expect(html).not.toContain(">Off<");
   });
 
   it("halaman notifikasi memakai tombol aktifkan, bukan sakelar", () => {
