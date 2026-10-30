@@ -4,42 +4,50 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { removeChildPhotoAction, uploadChildPhotoAction } from "@/lib/actions/children";
-import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES } from "@/lib/storage-limits";
+import { ALLOWED_PHOTO_TYPES } from "@/lib/storage-limits";
 import { compressToWebp } from "@/lib/compress-image";
+import { formatPhotoSize, photoSizeError, photoTypeError } from "@/lib/photo-rules";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ChildAvatar } from "./child-avatar";
 import type { Child } from "@/db/schema";
 
-const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
-
-export const formatSize = (bytes: number) =>
-  bytes >= 1024 * 1024
-    ? `${(bytes / 1024 / 1024).toLocaleString("id-ID", { maximumFractionDigits: 1 })} MB`
-    : `${Math.max(1, Math.round(bytes / 1024)).toLocaleString("id-ID")} KB`;
+/** Diteruskan dari photo-rules: satu pemformat ukuran untuk seluruh aplikasi. */
+export const formatSize = formatPhotoSize;
 
 /**
- * Validasi pilihan pengguna lalu kompresi. Dipakai dua mode di bawah supaya
- * aturan ukuran dan format tidak ditulis dua kali.
+ * Validasi pilihan pengguna lalu kompresi. Dipakai semua form foto supaya aturan
+ * ukuran dan format tidak ditulis berkali-kali.
+ *
+ * KOMPRESI DULU, BARU DIUKUR. Urutan ini penting dan pernah terbalik: dulu
+ * berkas >5 MB ditolak sebelum sempat dikompres, padahal `compressToWebp`
+ * menyusutkannya ke sisi terpanjang 512px — foto 8 MB dari kamera HP berakhir di
+ * puluhan KB. Menolaknya di muka berarti menyuruh orang tua "perkecil dulu"
+ * untuk pekerjaan yang justru sudah dilakukan aplikasi ini sendiri.
+ *
+ * Yang diukur sekarang HASIL kompresinya. Itu tetap perlu: `compressToWebp`
+ * mengembalikan berkas asli apa adanya bila browser tidak bisa mengencode WebP
+ * (Safari lama) atau berkasnya bukan gambar yang bisa didekode — dan di jalur itu
+ * ukurannya memang tidak berubah.
  *
  * Cek di sini hanya untuk memberi tahu lebih cepat — server tetap memvalidasi,
  * karena permintaan bisa dibuat tanpa lewat form sama sekali.
  */
 export async function pickPhoto(file: File): Promise<{ file: File } | { error: string }> {
-  if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number]))
-    return { error: "Gunakan berkas JPG, PNG, atau WebP." };
+  const typeError = photoTypeError(file.type);
+  if (typeError) return { error: typeError };
 
-  if (file.size > MAX_PHOTO_BYTES)
-    return {
-      error:
-        `Ukuran foto ${formatSize(file.size)}, melebihi batas ${MB} MB. ` +
-        "Pilih foto lain atau perkecil dulu.",
-    };
+  const compressed = await compressToWebp(file);
 
-  return { file: await compressToWebp(file) };
+  const sizeError = photoSizeError(compressed.size);
+  if (sizeError) return { error: sizeError };
+
+  return { file: compressed };
 }
 
-const HINT = `Opsional. JPG, PNG, atau WebP, maksimal ${MB} MB. Foto otomatis dikecilkan dan diubah ke WebP agar ringan. Hanya bisa dilihat oleh akun Anda.`;
+const HINT =
+  "Opsional. JPG, PNG, atau WebP. Foto otomatis dikecilkan dan diubah ke WebP agar ringan, " +
+  "jadi foto besar dari kamera pun bisa langsung dipilih. Hanya bisa dilihat oleh akun Anda.";
 
 /** Kerangka tampilan yang sama untuk kedua mode, juga dipakai foto MyRegistry. */
 export function PhotoRow({

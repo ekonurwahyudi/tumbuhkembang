@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { removeRegistryPhotoAction, uploadRegistryPhotoAction } from "@/lib/actions/registry";
-import { MAX_PHOTO_BYTES } from "@/lib/storage-limits";
 import type { ActionResult } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -26,8 +25,10 @@ import type { RegistryItem } from "@/db/schema";
  * pemanggil lamanya tidak berubah.
  */
 export const MAX_PHOTOS = 5;
-const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
-const HINT = `Opsional, sampai ${MAX_PHOTOS} foto (maksimal ${MB} MB per foto, JPG/PNG/WebP). Foto pertama jadi foto utama. Foto ini terlihat oleh siapa pun yang membuka tautan wishlist Anda.`;
+const HINT =
+  `Opsional, sampai ${MAX_PHOTOS} foto (JPG/PNG/WebP). Foto otomatis dikecilkan, jadi foto ` +
+  "besar dari kamera pun bisa langsung dipilih. Foto pertama jadi foto utama, dan terlihat " +
+  "oleh siapa pun yang membuka tautan wishlist Anda.";
 
 /** Apa yang membedakan satu modul dari modul lain — tidak lebih dari ini. */
 export type PhotoOwner = {

@@ -159,7 +159,26 @@ export function RegistryItemForm({
             return compressToWebp(new File([blob], `${brand}-${index + 1}.${ext}`, { type: blob.type }));
           }),
         );
-        setPhotos((prev) => [...prev, ...files].slice(0, photoRoom));
+        /*
+          Di mode UBAH barangnya sudah punya id, jadi fotonya diunggah saat itu
+          juga — pemilih foto di form ini hanya ada di mode tambah, dan tanpa
+          unggahan langsung foto hasil "Baca" tidak akan pernah sampai ke mana pun.
+
+          Di mode tambah, foto ditahan di state sampai barangnya tersimpan dan
+          punya id (lihat `useFormAction` di bawah).
+        */
+        if (item) {
+          if (files.length > 0) {
+            const fd = new FormData();
+            for (const f of files) fd.append("photo", f);
+            const res = await uploadRegistryPhotoAction(item.id, fd);
+            if (res.success) router.refresh();
+            else toast.warning("Data terbaca, tetapi fotonya gagal diunggah.");
+          }
+        } else {
+          setPhotos((prev) => [...prev, ...files].slice(0, photoRoom));
+        }
+
         toast.success(
           `Data ${STORE_BRAND[brand].label} dibaca. ${files.length} foto ditambahkan.` +
             (description ? "" : " Deskripsi produk tidak tersedia, isi manual.") +
@@ -231,13 +250,21 @@ export function RegistryItemForm({
         </p>
       </fieldset>
 
-      {photoRoom > 0 && (
+      {/*
+        Hanya di mode TAMBAH. Di mode ubah, <RegistryPhotoField> di halaman edit
+        sudah berdiri di atas form ini dan mengunggah langsung ke barang yang
+        sudah punya id — dua pemilih foto di satu halaman membuat orang menebak
+        mana yang berlaku, dan yang di bawah hanya tersimpan setelah form di-submit.
+
+        Foto hasil tombol "Baca" tetap ada jalannya di mode ubah: lihat catatan di
+        `readLink`, yang mengunggahnya langsung alih-alih menumpuknya di state.
+      */}
+      {!item && photoRoom > 0 && (
         <RegistryPhotoPicker
           files={photos}
           onChange={setPhotos}
           max={photoRoom}
           disabled={reading}
-          label={item ? "Foto Tambahan" : "Foto Barang Impian"}
         />
       )}
 

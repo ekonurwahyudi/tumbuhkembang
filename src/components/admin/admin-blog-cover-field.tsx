@@ -8,7 +8,6 @@ import {
   removeBlogCoverAction,
   uploadBlogCoverAction,
 } from "@/lib/actions/blog";
-import { MAX_PHOTO_BYTES } from "@/lib/storage-limits";
 import { PhotoField } from "@/components/registry/registry-photo-field";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -26,8 +25,6 @@ import type { BlogPost } from "@/db/schema";
  * dan mengganti berarti menghapus dulu. `photoKeys` dibentuk jadi array berisi nol
  * atau satu key supaya cocok dengan bentuk yang diminta `PhotoOwner`.
  */
-const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
-
 export function AdminBlogCoverField({ post }: { post: BlogPost }) {
   const router = useRouter();
   const [url, setUrl] = useState("");
@@ -66,7 +63,7 @@ export function AdminBlogCoverField({ post }: { post: BlogPost }) {
           src: (id) => `/blog/${post.slug}/cover?v=${encodeURIComponent(post.coverKey ?? id)}`,
           max: 1,
           label: "Gambar Sampul",
-          hint: `Opsional, satu gambar (maksimal ${MB} MB, JPG/PNG/WebP). Tampil di kartu daftar artikel dan di kepala artikelnya.`,
+          hint: "Opsional, satu gambar (JPG/PNG/WebP, otomatis dikecilkan). Tampil di kartu daftar artikel dan di kepala artikelnya.",
         }}
       />
 

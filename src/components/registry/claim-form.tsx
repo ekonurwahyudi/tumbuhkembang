@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { claimItemAction, uploadClaimPhotoAction } from "@/lib/actions/registry";
 import { useFormAction } from "@/lib/use-form-action";
-import { MAX_PHOTO_BYTES } from "@/lib/storage-limits";
 import { MAX_NOTE_CHARS } from "@/schemas/registry";
 import { cn } from "@/lib/utils";
 import { FieldError } from "@/components/auth/field-error";
@@ -36,7 +35,6 @@ import { Textarea } from "@/components/ui/textarea";
  */
 type ProofMode = "later" | "resi" | "foto";
 
-const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
 
 /**
  * Formulir klaim di halaman publik. Diisi orang tanpa akun, jadi hanya meminta
@@ -361,7 +359,7 @@ function ClaimPhotoPicker({
   return (
     <PhotoRow
       label="Foto Barang"
-      hint={`Satu foto (maksimal ${MB} MB, JPG/PNG/WebP). Terkirim bersama klaim Anda; hanya orang tua yang bisa melihatnya.`}
+      hint="Satu foto (JPG/PNG/WebP, otomatis dikecilkan). Terkirim bersama klaim Anda; hanya orang tua yang bisa melihatnya."
       error={error}
       inputRef={inputRef}
       onFiles={(files) => {

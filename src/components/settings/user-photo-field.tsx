@@ -4,12 +4,10 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { removeUserPhotoAction, uploadUserPhotoAction } from "@/lib/actions/account";
-import { compressToWebp } from "@/lib/compress-image";
-import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES } from "@/lib/storage-limits";
+import { ALLOWED_PHOTO_TYPES } from "@/lib/storage-limits";
+import { pickPhoto } from "@/components/children/child-photo-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icon } from "@/components/ui/icon";
-
-const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
 
 /**
  * Avatar profil yang bisa diklik untuk ganti foto. Berkas dikompresi di client
@@ -31,18 +29,18 @@ export function UserPhotoField({
 
   const onFile = (file: File) =>
     startTransition(async () => {
-      if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number])) {
-        setError("Gunakan berkas JPG, PNG, atau WebP.");
-        return;
-      }
-      if (file.size > MAX_PHOTO_BYTES) {
-        setError(`Ukuran foto melebihi batas ${MB} MB.`);
+      // `pickPhoto` dipakai, bukan salinan aturannya: ia yang memegang urutan
+      // "kompres dulu, baru ukur" — salinan di sini dulu menolak berkas besar
+      // sebelum sempat dikecilkan.
+      const picked = await pickPhoto(file);
+      if ("error" in picked) {
+        setError(picked.error);
         return;
       }
       setError(null);
 
       const formData = new FormData();
-      formData.set("photo", await compressToWebp(file));
+      formData.set("photo", picked.file);
 
       const res = await uploadUserPhotoAction(formData);
       if (res.success) {

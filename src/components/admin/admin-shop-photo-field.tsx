@@ -2,7 +2,6 @@
 
 import { removeShopPhotoAction, uploadShopPhotoAction } from "@/lib/actions/shop";
 import { MAX_SHOP_PHOTOS } from "@/schemas/shop";
-import { MAX_PHOTO_BYTES } from "@/lib/storage-limits";
 import { PhotoField } from "@/components/registry/registry-photo-field";
 import type { ShopProduct } from "@/db/schema";
 
@@ -10,10 +9,8 @@ import type { ShopProduct } from "@/db/schema";
  * Foto produk katalog. Hanya penyuntik prop untuk `<PhotoField>` — kompresi,
  * validasi, dan petak thumbnail-nya milik satu komponen bersama, bukan salinan.
  */
-const MB = Math.round(MAX_PHOTO_BYTES / 1024 / 1024);
-
 export const SHOP_PHOTO_HINT =
-  `Sampai ${MAX_SHOP_PHOTOS} foto (maksimal ${MB} MB per foto, JPG/PNG/WebP). ` +
+  `Sampai ${MAX_SHOP_PHOTOS} foto (JPG/PNG/WebP, otomatis dikecilkan). ` +
   "Foto pertama jadi foto utama di kartu katalog. Terlihat oleh semua orang tua yang masuk.";
 
 export function AdminShopPhotoField({ product }: { product: ShopProduct }) {
