@@ -21,7 +21,7 @@ import { currentSubscription, enablePush, pushSupported } from "@/lib/push-clien
  * ditarik lagi dari dalam aplikasi.
  *
  * Yang melihatnya: perangkat yang MAMPU push, belum berlangganan, dan belum
- * menolak. Di iPhone sebelum dipasang ke Layar Utama, `PushManager` tidak ada —
+ * memutuskan izin. Di iPhone sebelum dipasang ke Layar Utama, `PushManager` tidak ada —
  * di sana `InstallPrompt` yang bicara, dan komponen ini diam supaya beranda tidak
  * menampilkan dua ajakan sekaligus.
  */
@@ -61,9 +61,9 @@ export function PushPrompt({ subscribed }: { subscribed: boolean }) {
     supported &&
     !closed &&
     hasSub === false &&
-    // Sudah pernah ditolak: dialognya tidak akan muncul lagi, jadi tombol di sini
-    // tidak berguna. Petunjuk membuka blokirnya ada di halaman Pemberitahuan.
-    Notification.permission !== "denied" &&
+    // Hanya ajak saat izin belum diputuskan. Izin granted tanpa langganan
+    // tetap bisa diaktifkan lewat Pengaturan atau halaman Pemberitahuan.
+    Notification.permission === "default" &&
     !storedDismiss() &&
     // iPhone di dalam tab belum bisa push sama sekali — InstallPrompt dulu.
     !(isIOS() && !isStandalone());

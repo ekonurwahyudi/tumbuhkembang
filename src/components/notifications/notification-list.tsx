@@ -86,7 +86,7 @@ function NotificationItem({ n }: { n: NotificationRow }) {
     <li
       /* Yang belum dibaca berlatar aksen DAN membawa titik + label "Baru":
          warna tidak pernah jadi satu-satunya penanda. */
-      className={`flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm transition-colors ${
+      className={`relative flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-ring ${
         n.read ? "bg-card" : "bg-accent/40 border-[var(--color-sky-tint)]"
       } ${pending ? "opacity-50" : ""}`}
     >
@@ -109,7 +109,7 @@ function NotificationItem({ n }: { n: NotificationRow }) {
           {n.url && (
             <Link
               href={n.url}
-              className="text-primary text-label-sm inline-flex items-center gap-0.5 font-bold hover:underline"
+              className="text-primary text-label-sm inline-flex items-center gap-0.5 font-bold before:absolute before:inset-0 hover:underline focus-visible:outline-none"
             >
               Lihat
               <Icon name="chevron_right" className="text-[16px]" />
@@ -125,8 +125,9 @@ function NotificationItem({ n }: { n: NotificationRow }) {
         disabled={pending}
         onClick={remove}
         aria-label={`Hapus pemberitahuan: ${n.title}`}
+        className="relative z-10 text-destructive hover:text-destructive"
       >
-        <Icon name="close" className="text-[18px]" />
+        <Icon name="delete" className="text-[18px]" />
       </Button>
     </li>
   );

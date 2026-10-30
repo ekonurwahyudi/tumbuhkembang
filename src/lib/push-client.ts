@@ -97,12 +97,13 @@ export async function enablePush(): Promise<EnableResult> {
   }
 }
 
-/** Cabut langganan browser ini. Baris servernya dihapus dulu, lalu langganannya. */
+/** Cabut langganan browser ini. Hentikan jika penghapusan di server gagal. */
 export async function disablePush(): Promise<boolean> {
   try {
     const sub = await currentSubscription();
     if (sub) {
-      await unsubscribePushAction(sub.endpoint);
+      const res = await unsubscribePushAction(sub.endpoint);
+      if (!res.success) return false;
       await sub.unsubscribe();
     }
     return true;

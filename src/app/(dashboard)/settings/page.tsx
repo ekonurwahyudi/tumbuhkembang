@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { hasSubscription } from "@/lib/data/notifications";
 import { listChildrenWithLatestForViewer, listSharesByOwner } from "@/lib/data/children";
 import { LogoutButton } from "@/components/logout-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { EditProfileDialog } from "@/components/settings/edit-profile-dialog";
 import { PartnerAccessDialog } from "@/components/settings/partner-access-dialog";
 import { SettingsChildCard } from "@/components/settings/settings-child-card";
+import { PushToggle } from "@/components/notifications/push-toggle";
 
 export const metadata: Metadata = { title: "Profil" };
 
@@ -24,7 +26,7 @@ const initials = (name: string) =>
 export default async function SettingsPage() {
   const user = await requireUser();
 
-  const [[row], children, shares] = await Promise.all([
+  const [[row], children, shares, pushSubscribed] = await Promise.all([
     db
       .select({ phone: users.phone, passwordHash: users.passwordHash, photoKey: users.photoKey })
       .from(users)
@@ -32,6 +34,7 @@ export default async function SettingsPage() {
       .limit(1),
     listChildrenWithLatestForViewer(user.id),
     listSharesByOwner(user.id),
+    hasSubscription(user.id),
   ]);
 
   const owned = children.filter((c) => c.role === "OWNER");
@@ -249,6 +252,13 @@ export default async function SettingsPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <span className="text-muted-foreground text-label-sm px-1 font-bold tracking-wider uppercase">
+          NOTIFIKASI APLIKASI
+        </span>
+        <PushToggle subscribed={pushSubscribed} />
       </section>
 
       {/* Logout. Latar merah penuh, bukan outline: keluar adalah satu-satunya aksi
