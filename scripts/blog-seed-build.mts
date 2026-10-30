@@ -43,7 +43,13 @@ const posts = blocks.map((block) => {
     Jadi ia ditempel sebagai paragraf penutup di dalam isinya, kecuali artikelnya
     sudah menyebut tautan itu sendiri.
   */
-  const body = html.replace(/^---\s*$/m, "").trim();
+  /*
+    Dipotong di `---` PERTAMA, bukan sekadar dibuang penandanya: artikel terakhir
+    tidak punya blok `SLUG:` sesudahnya, jadi tanpa pemotongan ini catatan
+    verifikasi di kaki laporan ikut terserap jadi isi artikel. Itu sudah pernah
+    terjadi dan lolos sampai ke basis data.
+  */
+  const body = html.split(/^---\s*$/m)[0].trim();
   const contentHtml = body.includes(sourceUrl)
     ? body
     : `${body}\n<p>Sumber: <a href="${escapeHtml(sourceUrl)}">${escapeHtml(sourceName)}</a>.</p>`;

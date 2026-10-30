@@ -10,10 +10,12 @@ import { cn } from "@/lib/utils";
 const ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/registry", label: "My Kado", icon: "card_giftcard" },
-  { href: "/notifikasi", label: "Notifikasi", icon: "notifications" },
+  /* Artikel menggantikan Notifikasi — seragam dengan nav bawah. Notifikasi pindah
+     ke lonceng tersendiri di AppHeader, di sebelah menu akun. */
+  { href: "/blog", label: "Artikel", icon: "menu_book" },
 ];
 
-export function TopNav({ unread = 0 }: { unread?: number }) {
+export function TopNav() {
   const pathname = usePathname();
 
   /* Dipakai pil tautan DAN pembuka "Lainnya": keduanya harus sebentuk. */
@@ -29,24 +31,15 @@ export function TopNav({ unread = 0 }: { unread?: number }) {
       <ul className="bg-muted flex items-center gap-1 rounded-full p-1">
         {ITEMS.map(({ href, label, icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
-          const badge = href === "/notifikasi" ? unread : 0;
           return (
             <li key={href}>
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                aria-label={badge > 0 ? `${label}, ${badge} belum dibaca` : undefined}
                 className={pillClass(active)}
               >
                 <Icon name={icon} filled={active} className="text-[20px]" />
                 {label}
-                {badge > 0 && (
-                  /* Angkanya tertulis, dan aria-label di atas menyebutkannya:
-                     warna bukan satu-satunya penanda. */
-                  <span className="bg-destructive text-label-sm grid min-w-[18px] place-items-center rounded-full px-1 font-bold text-white">
-                    {badge > 9 ? "9+" : badge}
-                  </span>
-                )}
               </Link>
             </li>
           );

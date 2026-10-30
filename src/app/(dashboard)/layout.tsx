@@ -46,7 +46,6 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
           dateOfBirth: c.dateOfBirth,
           photoKey: c.photoKey,
         }))}
-        unread={unread}
       />
     </div>
   );

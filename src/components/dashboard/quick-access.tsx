@@ -83,12 +83,10 @@ export function QuickAccess({
       href: `/children/${childId}/feeding`,
       tone: TONE.violet,
     },
-    {
-      label: "Grafik WHO",
-      icon: "analytics",
-      href: `/children/${childId}/growth`,
-      tone: TONE.orange,
-    },
+    // Grafik WHO tidak hilang: jalan masuknya ada di kartu Tumbuh Kembang tepat di
+    // atas Akses Cepat, dan di profil anak. Artikel sebelumnya tidak punya jalan
+    // masuk dari beranda sama sekali.
+    { label: "Artikel", icon: "menu_book", href: "/blog", tone: TONE.orange },
     { label: "Shop", icon: "card_giftcard", href: "/shop", tone: TONE.rose },
     {
       label: "List Kado",
@@ -97,9 +95,7 @@ export function QuickAccess({
       // badge: registryClaims > 0 ? String(registryClaims) : undefined,
       tone: TONE.amber,
     },
-    // Artikel menggantikan satu ubin "Soon": gridnya 4×2, dan menambah ubin
-    // kesembilan berarti baris ketiga berisi satu ubin sendirian.
-    { label: "Artikel", icon: "menu_book", href: "/blog", tone: TONE.teal },
+    { label: "Nakes Care", icon: "medical_services", badge: "Soon", tone: TONE.teal },
     { label: "Babysitter", icon: "family_restroom", badge: "Soon", tone: TONE.fuchsia },
   ];
 

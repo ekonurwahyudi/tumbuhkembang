@@ -16,7 +16,15 @@ import { cn } from "@/lib/utils";
 const ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/registry", label: "List Kado", icon: "card_giftcard" },
-  { href: "/notifikasi", label: "Notifikasi", icon: "notifications" },
+  /*
+    Artikel, bukan Notifikasi: yang terakhir dibuka sesekali, sementara artikel
+    adalah isi yang memang ingin dibaca berulang.
+
+    Notifikasi TIDAK kehilangan jalan masuk — di HP, lonceng di sapaan beranda
+    (lihat `Greeting` di dashboard/page.tsx) menuju ke sana lengkap dengan
+    penghitung belum-terbacanya, dan di desktop loncengnya ada di AppHeader.
+  */
+  { href: "/blog", label: "Artikel", icon: "menu_book" },
 ];
 
 /**
@@ -28,7 +36,6 @@ const ITEMS: { href: string; label: string; icon: IconName }[] = [
  */
 export function BottomNav({
   quickRecordChildren,
-  unread = 0,
 }: {
   quickRecordChildren: {
     id: string;
@@ -36,8 +43,6 @@ export function BottomNav({
     dateOfBirth: string;
     photoKey: string | null;
   }[];
-  /** Jumlah pemberitahuan belum terbaca; jadi titik di tab Notifikasi. */
-  unread?: number;
 }) {
   const pathname = usePathname();
   const [left, right] = [ITEMS.slice(0, 2), ITEMS.slice(2)];
@@ -54,29 +59,16 @@ export function BottomNav({
 
   const tab = ({ href, label, icon }: (typeof ITEMS)[number]) => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
-    const badge = href === "/notifikasi" ? unread : 0;
     return (
       <li key={href} className="flex-1">
         <Link
           href={href}
           aria-current={active ? "page" : undefined}
-          aria-label={badge > 0 ? `${label}, ${badge} belum dibaca` : undefined}
           className={tabClass(active)}
         >
-          {/* flex+leading-none: <span> pembungkus badge kalau tidak akan membawa
-              line-height teks dan menambah ruang mati di bawah ikon. */}
-          <span className="relative flex leading-none">
-            {/* 26px: sama dengan ikon "add" di tombol Catat. */}
-            <Icon name={icon} filled={active} className="text-[26px]" />
-            {badge > 0 && (
-              /* Angkanya tertulis, bukan titik polos, dan aria-label di atas
-                 menyebutkannya: warna bukan satu-satunya penanda. */
-              <span className="bg-destructive text-label-sm ring-card absolute -top-1.5 -right-2 grid min-w-[18px] place-items-center rounded-full px-1 leading-[16px] text-white ring-2">
-                {badge > 9 ? "9+" : badge}
-              </span>
-            )}
-          </span>
-          {/* nowrap: "Notifikasi" akan pecah dua baris dan merusak tinggi h-16. */}
+          {/* 26px: sama dengan ikon "add" di tombol Catat. */}
+          <Icon name={icon} filled={active} className="text-[26px]" />
+          {/* nowrap: "List Kado" akan pecah dua baris dan merusak tinggi h-16. */}
           <span className="leading-none whitespace-nowrap">{label}</span>
         </Link>
       </li>

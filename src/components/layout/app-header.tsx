@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { AdminHelpdeskLink, AdminNav } from "@/components/admin/admin-nav";
+import { Icon } from "@/components/ui/icon";
 import { AccountMenu } from "./account-menu";
 import { TopNav } from "./top-nav";
 import type { UserRole } from "@/db/schema";
@@ -72,16 +73,37 @@ export function AppHeader({
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Lonceng terpisah dihapus: tab "Notifikasi" di nav sudah jadi pintu
-              masuknya, dan dua tautan ke halaman yang sama hanya membingungkan.
-              Jumlah belum terbaca ikut ke nav, di desktop maupun di HP. */}
           {admin ? (
             <>
               <AdminNav />
               <AdminHelpdeskLink />
             </>
           ) : (
-            <TopNav unread={unread} />
+            <>
+              <TopNav />
+              {/*
+                Lonceng kembali berdiri sendiri: tab "Notifikasi" di nav digantikan
+                "Artikel", dan tanpa lonceng ini notifikasi kehilangan SATU-SATUNYA
+                jalan masuk di desktop. Di HP perannya dipegang lonceng di sapaan
+                beranda, yang memang sudah ada.
+              */}
+              <Link
+                href="/notifikasi"
+                aria-label={
+                  unread > 0 ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"
+                }
+                className="bg-muted text-muted-foreground hover:text-foreground relative grid size-9 shrink-0 place-items-center rounded-full transition-colors"
+              >
+                <Icon name="notifications" className="text-[20px]" />
+                {unread > 0 && (
+                  /* Angkanya tertulis dan ikut di aria-label: warna bukan
+                     satu-satunya penanda. */
+                  <span className="bg-destructive text-label-sm ring-card absolute -top-0.5 -right-0.5 grid min-w-[18px] place-items-center rounded-full px-1 leading-[16px] font-bold text-white ring-2">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </Link>
+            </>
           )}
           <AccountMenu
             name={name}
