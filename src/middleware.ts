@@ -52,7 +52,8 @@ export const config = {
   // `banks` ikut karena alasan yang SAMA, dan tanpanya logo bank di halaman kado
   // publik dialihkan ke /login — halaman itu dibuka orang yang memang tidak punya
   // akun, jadi logonya tidak pernah muncul dan panel rekening tampak kotak kosong.
+  // `landing` berisi tangkapan layar data demo dan ikon untuk halaman publik.
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|fonts|stores|banks|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
+    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|fonts|stores|banks|landing/|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
   ],
 };

@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<meta content="mobile_tab" name="shell-type"/>
+<title>TumbuhCeria — Smart Baby Growth Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: "#0F172A",
+              primary: "#005298",
+              emerald: "#059669",
+              coral: "#E11D48",
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    @layer base {
+      html, body {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: #FAFCFE;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: #0F172A;
+      }
+      body {
+        overscroll-behavior: none;
+      }
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+      .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+    }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="bg-[#FAFCFE] text-slate-900 font-sans flex flex-col min-h-screen selection:bg-slate-900 selection:text-white antialiased relative overflow-x-hidden">
+<!-- Subtle Ambient Glow Mesh Inspired by ownaa.app -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+<div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[650px] h-[650px] bg-gradient-to-b from-sky-100/70 via-emerald-50/40 to-transparent rounded-full blur-3xl opacity-70"></div>
+<div class="absolute top-[45%] -right-32 w-80 h-80 bg-blue-50/50 rounded-full blur-3xl opacity-60"></div>
+<div class="absolute top-[75%] -left-28 w-80 h-80 bg-amber-50/50 rounded-full blur-3xl opacity-50"></div>
+</div>
+<!-- Sleek Minimal Header -->
+<header class="fixed top-0 w-full z-50 pt-safe bg-[#FAFCFE]/80 backdrop-blur-xl border-b border-slate-200/60">
+<div class="h-16 px-5 flex items-center justify-between">
+<!-- Brand Logo & Title -->
+<a class="flex items-center gap-2.5 group" href="#">
+<div class="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-95">
+<span class="material-symbols-outlined text-[19px]">child_care</span>
+</div>
+<div class="flex flex-col">
+<span class="font-extrabold text-[17px] tracking-tight text-slate-900 leading-none">tumbuhceria</span>
+</div>
+</a>
+<!-- Header Action Items -->
+<div class="flex items-center gap-2.5">
+<button class="w-9 h-9 rounded-full border border-slate-200 bg-white/80 text-slate-600 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-2xs">
+<span class="material-symbols-outlined text-[19px]">wb_sunny</span>
+</button>
+<button class="h-9 px-3.5 rounded-full border border-slate-200 bg-white/90 text-slate-800 text-[13px] font-semibold flex items-center gap-1.5 hover:bg-slate-50 transition-colors shadow-2xs">
+<span class="text-sm">🇮🇩</span>
+<span>ID</span>
+<span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+</button>
+<button class="h-9 px-4 rounded-full bg-slate-900 text-white text-[13px] font-semibold flex items-center gap-1 hover:bg-slate-800 transition-all shadow-sm">
+<span>Unduh</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Body -->
+<main class="flex flex-col relative w-full pt-20 pb-32 z-10">
+<!-- HERO SECTION (Ultra Clean, Big Type, ownaa.app Style) -->
+<section class="px-5 pt-8 pb-10 flex flex-col items-center text-center">
+<!-- New Pill Badge -->
+<div class="inline-flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full bg-white border border-slate-200 shadow-xs mb-8 transition-transform hover:scale-[1.02]">
+<span class="px-2 py-0.5 rounded-full bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase">New</span>
+<span class="text-[13px] font-medium text-slate-700 flex items-center gap-1">
+          Standar Medis IDAI, WHO &amp; Fenton
+          <span class="material-symbols-outlined text-[15px] text-slate-400">arrow_forward_ios</span>
+</span>
+</div>
+<!-- Headline -->
+<h1 class="text-[34px] sm:text-4xl font-extrabold tracking-tight text-slate-950 leading-[1.15] max-w-sm sm:max-w-md mx-auto">
+        Pantau Tumbuh Kembang Si Kecil Lebih Tenang.
+      </h1>
+<!-- Subtitle -->
+<p class="mt-4 text-[15px] leading-relaxed text-slate-500 max-w-xs sm:max-w-md mx-auto font-normal">
+        Satu aplikasi cerdas berstandar klinis dokter spesialis anak. Kurva Z-Score otomatis, kalkulator usia prematur, vaksin, hingga wishlist kado.
+      </p>
+<!-- CTA Action Pill Buttons (ownaa.app style) -->
+<div class="mt-7 flex flex-col sm:flex-row items-center gap-3 w-full max-w-xs">
+<button class="w-full h-12 rounded-full bg-slate-900 text-white text-[14px] font-semibold flex items-center justify-center gap-2 shadow-md hover:bg-slate-800 active:scale-[0.98] transition-all">
+<span>Mulai Pantau Gratis</span>
+<span class="text-sm leading-none font-sans font-bold">↗</span>
+</button>
+<button class="w-full h-12 rounded-full bg-white text-slate-800 border border-slate-200 text-[14px] font-semibold flex items-center justify-center gap-2 shadow-xs hover:bg-slate-50 active:scale-[0.98] transition-all">
+<span>Jelajahi Fitur</span>
+</button>
+</div>
+<!-- Rating and Trust Micro-line -->
+<div class="mt-5 flex items-center justify-center gap-3 text-xs text-slate-500">
+<div class="flex items-center gap-1 font-semibold text-slate-800">
+<span class="material-symbols-outlined text-amber-500 text-[15px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span>4.9 / 5</span>
+</div>
+<span class="w-1 h-1 rounded-full bg-slate-300"></span>
+<span>12.000+ Orang Tua Aktif</span>
+</div>
+<!-- FLOATING INTERACTIVE HERO PRODUCT WIDGET -->
+<div class="mt-10 w-full max-w-md mx-auto">
+<div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-[0_20px_45px_-15px_rgba(15,23,42,0.07)] text-left relative overflow-hidden">
+<!-- Baby Top Profile Strip -->
+<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+<div class="flex items-center gap-3">
+<div class="relative w-12 h-12 rounded-full overflow-hidden ring-2 ring-slate-100 bg-slate-100 shrink-0">
+<img class="w-full h-full object-cover" data-alt="Baby portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoHp6XAHt6tib2BrIBdpGqWNuOVllLkLHfaL6gEmQ2GTb1AEcufDvg49dxTz4yLKdwHIFXAJxDnNWIlZ1b7p8P79P_6NbOfGJ5UP0wkAKYlYa7bWyeG35meWyY3WRSzK_iR1Bzp6APE4lMRtQM0Nifdn-0uaEFWugji-5lr2HGpqMb8LaxCFHN5ohMj9tMzmtd-jGBWAWKRG2I4HSEhLveZ2RFsuhI05_daeoX25o"/>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-[15px] text-slate-900 leading-tight">Zaynab Bunayya</h3>
+<span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 font-semibold text-[10px]">Prematur</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Lahir 32 mg · BBLR 1.800 gr</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-100">
+<span class="material-symbols-outlined text-[18px]">sync_alt</span>
+</button>
+</div>
+<!-- Dual Age Comparison Banner -->
+<div class="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Usia Kronologis</span>
+<span class="text-[13px] font-bold text-slate-800">3 Bulan 2 Hari</span>
+</div>
+<div class="h-7 w-px bg-slate-200"></div>
+<div class="flex flex-col text-right">
+<span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Usia Koreksi Medis</span>
+<span class="text-[13px] font-bold text-emerald-700">1 Bulan 16 Hari</span>
+</div>
+</div>
+<!-- 3-Metrics Grid -->
+<div class="grid grid-cols-3 gap-2.5">
+<div class="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 flex flex-col justify-between">
+<span class="text-[11px] font-medium text-slate-500">Berat (BB)</span>
+<div class="my-1.5">
+<span class="text-xl font-extrabold text-slate-900">3,30</span>
+<span class="text-[11px] text-slate-400 font-medium">kg</span>
+</div>
+<span class="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[13px]">trending_up</span>+180g
+              </span>
+</div>
+<div class="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 flex flex-col justify-between">
+<span class="text-[11px] font-medium text-slate-500">Panjang (PB)</span>
+<div class="my-1.5">
+<span class="text-xl font-extrabold text-slate-900">51,2</span>
+<span class="text-[11px] text-slate-400 font-medium">cm</span>
+</div>
+<span class="text-[10px] font-medium text-slate-500">Z-Score: -0.85</span>
+</div>
+<div class="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 flex flex-col justify-between">
+<span class="text-[11px] font-medium text-slate-500">Lingkar Kpl</span>
+<div class="my-1.5">
+<span class="text-xl font-extrabold text-slate-900">36,5</span>
+<span class="text-[11px] text-slate-400 font-medium">cm</span>
+</div>
+<span class="text-[10px] font-semibold text-emerald-600">Normosefal</span>
+</div>
+</div>
+<!-- Target ASI / Kebutuhan Nutrisi Row -->
+<div class="mt-3 p-3 rounded-2xl bg-sky-50/60 border border-sky-100 flex items-center justify-between text-xs">
+<div class="flex items-center gap-2 text-slate-700 font-medium">
+<div class="w-6 h-6 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[14px]">local_cafe</span>
+</div>
+<span>Kebutuhan ASI Harian:</span>
+</div>
+<div class="font-bold text-slate-900">495 - 594 ml <span class="font-normal text-slate-500 text-[11px]">(~65ml/3jam)</span></div>
+</div>
+</div>
+</div>
+</section>
+<!-- CONTENT SECTIONS IN AIRY CARDS CONTAINER -->
+<div class="px-5 space-y-12">
+<!-- SECTION 1: KURVA MEDIS WHO & FENTON 2013 -->
+<section class="space-y-4">
+<div class="space-y-1.5">
+<div class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">stacked_line_chart</span>
+<span>Akurasi Klinis Pediatrik</span>
+</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">
+            Kurva Medis WHO &amp; Fenton
+          </h2>
+<p class="text-sm text-slate-500 leading-relaxed">
+            Tidak ada lagi kecemasan salah banding. Pantau grafik tumbuh kembang bayi aterm maupun prematur secara ilmiah.
+          </p>
+</div>
+<div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
+<!-- Toggle Curve Switcher -->
+<div class="grid grid-cols-2 p-1 bg-slate-100 rounded-full text-center text-xs font-semibold">
+<button class="py-2 rounded-full bg-white text-slate-900 shadow-xs transition-all" id="btn-who">
+              WHO Standard (0-5 Thn)
+            </button>
+<button class="py-2 rounded-full text-slate-500 hover:text-slate-900 transition-all" id="btn-fenton">
+              Fenton Prematur 2013
+            </button>
+</div>
+<!-- Minimalist Chart Graphic -->
+<div class="relative bg-slate-50/60 rounded-2xl p-4 border border-slate-100 overflow-hidden">
+<div class="flex items-center justify-between pb-3 text-xs">
+<span class="text-slate-500 font-medium">Persentil Berat Badan (Z-Score)</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-100/80 text-emerald-800 font-bold text-[10px]">P50 (Median Ideal)</span>
+</div>
+<svg class="w-full h-36" fill="none" viewbox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+<line stroke="#E2E8F0" stroke-dasharray="3 3" x1="0" x2="300" y1="20" y2="20"></line>
+<line stroke="#E2E8F0" stroke-dasharray="3 3" x1="0" x2="300" y1="60" y2="60"></line>
+<line stroke="#E2E8F0" stroke-dasharray="3 3" x1="0" x2="300" y1="100" y2="100"></line>
+<!-- +2 SD Curve -->
+<path d="M0,80 Q75,65 150,45 T300,15" fill="none" stroke="#93C5FD" stroke-width="1.5"></path>
+<!-- Median Curve -->
+<path d="M0,95 Q75,82 150,65 T300,38" fill="none" stroke="#059669" stroke-width="2"></path>
+<!-- -2 SD Curve -->
+<path d="M0,110 Q75,100 150,85 T300,60" fill="none" stroke="#FCA5A5" stroke-width="1.5"></path>
+<!-- Plot Data points -->
+<path d="M0,112 L45,104 L95,94 L150,81 L195,68" fill="none" stroke="#0F172A" stroke-linecap="round" stroke-width="3"></path>
+<circle cx="0" cy="112" fill="#0F172A" r="3.5"></circle>
+<circle cx="45" cy="104" fill="#0F172A" r="3.5"></circle>
+<circle cx="95" cy="94" fill="#0F172A" r="3.5"></circle>
+<circle cx="150" cy="81" fill="#0F172A" r="3.5"></circle>
+<circle cx="195" cy="68" fill="#0F172A" r="5" stroke="#FFFFFF" stroke-width="2.5"></circle>
+<!-- Pin Tooltip Callout -->
+<rect fill="#0F172A" height="24" rx="6" width="92" x="185" y="32"></rect>
+<text fill="#FFFFFF" font-family="'Plus Jakarta Sans'" font-size="9.5" font-weight="700" text-anchor="middle" x="231" y="47.5">3.30 kg (Normal)</text>
+</svg>
+<div class="flex items-center justify-between pt-2 text-[10px] text-slate-400 font-medium">
+<span>Lahir</span>
+<span>1 Bulan</span>
+<span>2 Bulan</span>
+<span class="text-slate-700 font-bold">Saat Ini (Bln 3)</span>
+<span>6 Bulan</span>
+</div>
+</div>
+<!-- Medical Diagnostic Insight Card -->
+<div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-start gap-3">
+<div class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+</div>
+<div>
+<p class="font-bold text-xs text-emerald-950">Status: Tumbuh Kejar Positif (Catch-up Growth)</p>
+<p class="text-xs text-emerald-800/80 mt-0.5 leading-relaxed">
+                Laju penambahan berat badan berada di kurva aman. Tidak ditemukan indikasi faltering growth.
+              </p>
+</div>
+</div>
+</div>
+</section><!-- SECTION BARU 1: SEMUA YANG KAMU BUTUHKAN (Inspirasi Image 3) -->
+<section class="space-y-4 pt-2">
+<div class="text-center space-y-1.5 max-w-sm mx-auto">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 text-sky-700 font-bold text-[11px] border border-sky-100 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[15px]">grid_view</span>
+<span>Fitur Terpadu Si Kecil</span>
+</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">
+      Semua yang Kamu Butuhkan
+    </h2>
+<p class="text-xs text-slate-500 leading-relaxed">
+      Semua fitur cerdas untuk dampingi tumbuh kembang si kecil dengan tenang dan presisi.
+    </p>
+</div>
+<!-- 4 Pastel Cards Grid (Mobile 2-col or vertical stacked clean cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+<!-- Card 1: Warm Pastel -->
+<div class="p-5 rounded-3xl border border-amber-200/60 bg-[#fdfbf7] shadow-xs flex flex-col justify-between space-y-4 relative overflow-hidden group">
+<div class="space-y-2 relative z-10">
+<div class="w-10 h-10 rounded-2xl bg-amber-100/80 text-amber-700 flex items-center justify-center shadow-2xs">
+<span class="material-symbols-outlined text-[22px]">inventory_2</span>
+</div>
+<h3 class="text-[15px] font-bold text-slate-900 leading-snug">Catat Tumbuh Kembang</h3>
+<p class="text-xs text-slate-500 leading-relaxed font-normal">
+          Simpan riwayat berat badan, panjang badan, lingkar kepala &amp; Z-Score di satu tempat yang rapi.
+        </p>
+</div>
+<div class="h-24 w-full rounded-2xl bg-gradient-to-tr from-amber-50 to-amber-100/50 flex items-center justify-center border border-amber-200/40 relative">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white shadow-2xs text-xs font-semibold text-amber-800">
+<span class="material-symbols-outlined text-amber-600 text-[18px]">scale</span>
+<span>Plotting Otomatis WHO</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Lavender / Purple Pastel -->
+<div class="p-5 rounded-3xl border border-purple-100 bg-[#f9f7fe] shadow-xs flex flex-col justify-between space-y-4 relative overflow-hidden group">
+<div class="space-y-2 relative z-10">
+<div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center shadow-2xs">
+<span class="material-symbols-outlined text-[22px]">alarm_on</span>
+</div>
+<h3 class="text-[15px] font-bold text-slate-900 leading-snug">Pengingat Pintar Medis</h3>
+<p class="text-xs text-slate-500 leading-relaxed font-normal">
+          Anti lewat jadwal vaksinasi IDAI, jadwal MPASI, jadwal minum vitamin, dan kontrol dokter spesialis anak.
+        </p>
+</div>
+<div class="h-24 w-full rounded-2xl bg-gradient-to-tr from-purple-50 to-purple-100/50 flex items-center justify-center border border-purple-200/40 relative">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white shadow-2xs text-xs font-semibold text-purple-900">
+<span class="material-symbols-outlined text-purple-600 text-[18px]">notifications_active</span>
+<span>Alarm &amp; WhatsApp Reminder</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Baby Blue Pastel -->
+<div class="p-5 rounded-3xl border border-sky-100 bg-[#f4f8fe] shadow-xs flex flex-col justify-between space-y-4 relative overflow-hidden group">
+<div class="space-y-2 relative z-10">
+<div class="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center shadow-2xs">
+<span class="material-symbols-outlined text-[22px]">verified_user</span>
+</div>
+<h3 class="text-[15px] font-bold text-slate-900 leading-snug">Akurat &amp; Sesuai Medis</h3>
+<p class="text-xs text-slate-500 leading-relaxed font-normal">
+          Berdasarkan standar kurva WHO 2006, Fenton 2013, serta protokol klinis IDAI untuk bayi cukup bulan maupun prematur.
+        </p>
+</div>
+<div class="h-24 w-full rounded-2xl bg-gradient-to-tr from-sky-50 to-sky-100/50 flex items-center justify-center border border-sky-200/40 relative">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white shadow-2xs text-xs font-semibold text-sky-900">
+<span class="material-symbols-outlined text-sky-600 text-[18px]">check_circle</span>
+<span>Tervalidasi Pediatrik</span>
+</div>
+</div>
+</div>
+<!-- Card 4: Mint Green Pastel -->
+<div class="p-5 rounded-3xl border border-emerald-100 bg-[#f3faf6] shadow-xs flex flex-col justify-between space-y-4 relative overflow-hidden group">
+<div class="space-y-2 relative z-10">
+<div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-2xs">
+<span class="material-symbols-outlined text-[22px]">auto_awesome</span>
+</div>
+<h3 class="text-[15px] font-bold text-slate-900 leading-snug">AI Tumbuh Kembang</h3>
+<p class="text-xs text-slate-500 leading-relaxed font-normal">
+          Deteksi risiko keterlambatan (red flags) &amp; rekomendasi stimulasi cerdas sesuai usia koreksi si kecil.
+        </p>
+</div>
+<div class="h-24 w-full rounded-2xl bg-gradient-to-tr from-emerald-50 to-emerald-100/50 flex items-center justify-center border border-emerald-200/40 relative">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white shadow-2xs text-xs font-semibold text-emerald-900">
+<span class="material-symbols-outlined text-emerald-600 text-[18px]">psychology</span>
+<span>Analisis &amp; Rekomendasi Pintar</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION BARU 2: DETAIL FITUR INTERAKTIF (Inspirasi Image 2) -->
+<section class="space-y-4 pt-2">
+<div class="space-y-1.5 text-center max-w-sm mx-auto">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 font-bold text-[11px] border border-purple-100 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[15px]">checklist_rtl</span>
+<span>Dashboard Terintegrasi</span>
+</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900 leading-tight">
+      Dirancang Buat Bunda &amp; Ayah Tetap Terorganisir
+    </h2>
+<p class="text-xs text-slate-500 leading-relaxed">
+      Semua yang kamu butuhkan untuk catat, pantau, dan rawat si kecil di satu tempat yang mudah.
+    </p>
+</div>
+<!-- Feature Tabs / Pills Navigation (Inspirasi Kiri Gambar 2) -->
+<div class="space-y-2 pt-1">
+<!-- Tab 1 (Inactive) -->
+<div class="p-3.5 rounded-2xl bg-white border border-slate-200/70 shadow-2xs flex items-center justify-between transition-all hover:bg-slate-50 cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+</div>
+<div>
+<h4 class="text-[13px] font-bold text-slate-800 leading-tight">Pencatatan Pertumbuhan Lengkap</h4>
+<p class="text-[11px] text-slate-400 mt-0.5">Simpan grafik WHO &amp; Z-Score</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 text-[18px]">chevron_right</span>
+</div>
+<!-- Tab 2 (Active Highlighted Tab - Sesuai Gambar 2 Pengingat Pintar) -->
+<div class="p-3.5 rounded-2xl bg-gradient-to-r from-purple-50/90 to-purple-50/40 border-2 border-purple-500/30 shadow-xs flex items-center justify-between relative overflow-hidden">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+<span class="material-symbols-outlined text-[20px]">notifications_active</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h4 class="text-[13px] font-extrabold text-purple-950 leading-tight">Pengingat Pintar</h4>
+<span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold text-[9px]">Aktif</span>
+</div>
+<p class="text-[11px] text-purple-700/80 mt-0.5 font-medium">Gak bakal kelewat jadwal penting lagi</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-purple-600 text-[20px]">check</span>
+</div>
+<!-- Tab 3 (Inactive) -->
+<div class="p-3.5 rounded-2xl bg-white border border-slate-200/70 shadow-2xs flex items-center justify-between transition-all hover:bg-slate-50 cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">hourglass_empty</span>
+</div>
+<div>
+<h4 class="text-[13px] font-bold text-slate-800 leading-tight">Evaluasi Usia Koreksi</h4>
+<p class="text-[11px] text-slate-400 mt-0.5">Pantau milestone prematur vs aterm</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 text-[18px]">chevron_right</span>
+</div>
+<!-- Tab 4 (Inactive) -->
+<div class="p-3.5 rounded-2xl bg-white border border-slate-200/70 shadow-2xs flex items-center justify-between transition-all hover:bg-slate-50 cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">vaccines</span>
+</div>
+<div>
+<h4 class="text-[13px] font-bold text-slate-800 leading-tight">Jadwal Vaksinasi &amp; Imunisasi</h4>
+<p class="text-[11px] text-slate-400 mt-0.5">Jaga imunitas si kecil tetap prima</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 text-[18px]">chevron_right</span>
+</div>
+<!-- Tab 5 (Inactive) -->
+<div class="p-3.5 rounded-2xl bg-white border border-slate-200/70 shadow-2xs flex items-center justify-between transition-all hover:bg-slate-50 cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+</div>
+<div>
+<h4 class="text-[13px] font-bold text-slate-800 leading-tight">AI-Powered Insight</h4>
+<p class="text-[11px] text-slate-400 mt-0.5">Rekomendasi stimulasi &amp; gizi MPASI</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 text-[18px]">chevron_right</span>
+</div>
+</div>
+<!-- Large Showcase Card (Inspirasi Panel Kanan Gambar 2) -->
+<div class="bg-[#fafcff] rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
+<div class="space-y-2">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100/70 text-purple-700 font-bold text-[10px]">
+<span class="material-symbols-outlined text-[13px]">event_upcoming</span>
+<span>Fitur Terpilih</span>
+</div>
+<h3 class="text-lg font-extrabold text-purple-900 leading-tight">
+        Pengingat Pintar Medis &amp; Harian
+      </h3>
+<p class="text-xs text-slate-600 leading-relaxed font-normal">
+        Buat pengingat otomatis untuk vaksinasi IDAI, kontrol dokter spesialis anak, jadwal pemberian obat/vitamin, serta pumping &amp; MPASI. Dapatkan notifikasi proaktif sebelum tanggal penting sehingga bunda tidak cemas terlewat. Tandai selesai dengan catatan dan foto buat simpan riwayat lengkap.
+      </p>
+</div>
+<!-- Phone Screen Mockup & Notification Stack Visual -->
+<div class="bg-slate-900 rounded-2xl p-4 text-white space-y-3 shadow-md relative overflow-hidden">
+<!-- Top status bar inside phone mockup -->
+<div class="flex items-center justify-between text-[11px] text-slate-400 pb-2 border-b border-slate-800">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+<span class="font-bold text-slate-200 text-xs">Pengingat Si Kecil</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded-full bg-purple-900/60 text-purple-300 text-[10px] font-semibold">3 Aktif</span>
+<span class="material-symbols-outlined text-[15px] text-slate-400">more_vert</span>
+</div>
+</div>
+<!-- Reminders Items (Mirip item list di HP Gambar 2) -->
+<div class="space-y-2 pt-1">
+<!-- Reminder 1 (Overdue / High Priority) -->
+<div class="p-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>
+<div>
+<p class="text-xs font-bold text-white leading-tight">Vaksin BCG &amp; Polio 1</p>
+<p class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[11px]">calendar_today</span>
+                Besok · 09.00 di RSIA Bunda
+              </p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded bg-rose-900/70 text-rose-300 text-[9px] font-bold shrink-0">Mendesak</span>
+</div>
+<!-- Reminder 2 (Upcoming normal) -->
+<div class="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></div>
+<div>
+<p class="text-xs font-bold text-white leading-tight">Minum Vitamin D3 &amp; Zat Besi</p>
+<p class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[11px]">schedule</span>
+                Hari ini · 14.00 (Rutinitas)
+              </p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[9px] font-bold shrink-0">Hari ini</span>
+</div>
+<!-- Reminder 3 (Routine) -->
+<div class="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-2 h-2 rounded-full bg-sky-400 shrink-0"></div>
+<div>
+<p class="text-xs font-bold text-white leading-tight">Jadwal Tummy Time &amp; Stimulasi</p>
+<p class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[11px]">schedule</span>
+                16.30 · 15 Menit
+              </p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[9px] font-bold shrink-0">16.30</span>
+</div>
+</div>
+<div class="pt-1">
+<button class="w-full h-9 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[15px]">add_circle</span>
+<span>Tambah Pengingat Baru</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: KALKULATOR USIA KOREKSI -->
+<section class="space-y-4">
+<div class="space-y-1.5">
+<div class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">hourglass_top</span>
+<span>Pejuang NICU &amp; Prematur</span>
+</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">
+            Kalkulator Usia Koreksi
+          </h2>
+<p class="text-sm text-slate-500 leading-relaxed">
+            Perkembangan motorik kasar &amp; jadwal MPASI dihitung dari Hari Perkiraan Lahir (HPL), bukan tanggal lahir sesungguhnya.
+          </p>
+</div>
+<div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3.5">
+<!-- Comparative Age Block 1 -->
+<div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Usia Kronologis (KTP)</span>
+<div class="text-lg font-extrabold text-slate-900 mt-0.5">3 Bulan 2 Hari</div>
+<span class="text-xs text-slate-500">Digunakan untuk jadwal vaksin</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-600 text-[11px] font-semibold">Vaksin</span>
+</div>
+<!-- Comparative Age Block 2 -->
+<div class="p-4 rounded-2xl bg-sky-50/70 border border-sky-100 flex items-center justify-between">
+<div>
+<span class="text-[10px] font-bold text-sky-700 uppercase tracking-wider">Usia Koreksi Medis</span>
+<div class="text-lg font-extrabold text-sky-900 mt-0.5">1 Bulan 16 Hari</div>
+<span class="text-xs text-sky-800/80">Digunakan untuk stimulasi &amp; MPASI</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-sky-600 text-white text-[11px] font-semibold">Milestone</span>
+</div>
+<!-- Milestone Targets Checklist -->
+<div class="pt-2 space-y-2">
+<span class="text-xs font-bold text-slate-700">Target Milestone Usia Koreksi Saat Ini:</span>
+<div class="space-y-2 text-xs text-slate-600">
+<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+<span class="material-symbols-outlined text-emerald-600 text-[18px]">check_circle</span>
+<span>Merespons senyuman sosial saat diajak interaksi</span>
+</div>
+<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+<span class="material-symbols-outlined text-emerald-600 text-[18px]">check_circle</span>
+<span>Mengangkat kepala sesaat saat tummy time 45°</span>
+</div>
+<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+<span class="material-symbols-outlined text-slate-400 text-[18px]">radio_button_unchecked</span>
+<span>Mengikuti arah pandang objek sejauh 180°</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: JADWAL & NOTIFIKASI VAKSINASI IDAI -->
+<section class="space-y-4">
+<div class="space-y-1.5">
+<div class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">vaccines</span>
+<span>Jadwal Imunisasi Nasional</span>
+</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">
+            Jadwal Vaksinasi IDAI
+          </h2>
+<p class="text-sm text-slate-500 leading-relaxed">
+            Pengingat otomatis lengkap dengan interval minimal dan syarat bobot lahir bayi prematur.
+          </p>
+</div>
+<div class="space-y-3">
+<!-- Completed Vaccine Card -->
+<div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs space-y-2">
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-400 font-medium">Usia 0–24 Jam</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200/60">Selesai Diberikan</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-slate-900">Hepatitis B (HB0)</h3>
+<p class="text-xs text-slate-500">25 Agu 2026 di RSIA Bunda</p>
+</div>
+</div>
+<!-- Upcoming/Urgent Vaccine Card -->
+<div class="bg-white rounded-2xl p-4 border-2 border-slate-900 shadow-sm space-y-3 relative overflow-hidden">
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-500 font-semibold">Usia 1 Bulan (BBLR &gt;2000g)</span>
+<span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold text-[10px] border border-rose-200">Jadwal Minggu Ini</span>
+</div>
+<div>
+<h3 class="font-extrabold text-[15px] text-slate-900">BCG &amp; Polio Tetes 1</h3>
+<p class="text-xs text-slate-500 mt-0.5">Syarat prematur: Berat badan bayi stabil &gt; 2.000 gram.</p>
+</div>
+<button class="w-full h-10 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-colors" onclick="alert('Pengingat WhatsApp berhasil diaktifkan!')">
+<span class="material-symbols-outlined text-[16px]">notifications_active</span>
+<span>Ingatkan via WhatsApp &amp; Kalender</span>
+</button>
+</div>
+<!-- Future Vaccine Card -->
+<div class="bg-white/70 rounded-2xl p-4 border border-slate-200/60 space-y-1">
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-400">Usia 2 Bulan</span>
+<span class="text-[11px] text-slate-400">Mendatang</span>
+</div>
+<h3 class="font-semibold text-sm text-slate-700">DPT-HB-Hib 1, Polio 2, PCV 1, Rotavirus 1</h3>
+<p class="text-xs text-slate-400">Proteksi difteri, pertusis, radang paru dan diare anak.</p>
+</div>
+</div>
+</section>
+<!-- SECTION 4: EDUKASI & PANDUAN PRAKTIS -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="space-y-1">
+<div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Artikel Medis</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">Panduan Dokter Anak</h2>
+</div>
+<a class="text-xs font-bold text-slate-900 flex items-center gap-0.5 hover:underline" href="#">
+            Semua <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+<div class="space-y-3">
+<!-- Article 1 -->
+<div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-2xs flex items-center gap-3.5 hover:border-slate-300 transition-all">
+<div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100">
+<img class="w-full h-full object-cover" data-alt="MPASI recipe" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_EMECCpdSZceDLADLnwRRkQefyTm2mGBYQKEL-X2X9kVlT3LiEohsbJH0g7RUhNwYPNDbOURVdf-vntFaalf5-lJR4O_0Y-BGCW37EiRZ66LTLbG_0z0uuamRFbF7AOIyhrNHxGzWB6UB3lrXyJj9TaD8CONS4LknNzZNjaYilo8ZWV2ZysBCbdD9rOeawkgBCsc-jZYoqvf5VtWNcD3IVfrdUzhBVeIVMfU3U1c"/>
+</div>
+<div class="min-w-0 space-y-0.5">
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">MPASI</span>
+<h3 class="text-xs font-bold text-slate-900 line-clamp-1 leading-snug">Tekstur &amp; Menu MPASI Pertama Usia 6 Bulan</h3>
+<p class="text-[11px] text-slate-400">dr. Tiara Sp.A · 4 mnt baca</p>
+</div>
+</div>
+<!-- Article 2 -->
+<div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-2xs flex items-center gap-3.5 hover:border-slate-300 transition-all">
+<div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100">
+<img class="w-full h-full object-cover" data-alt="Baby care" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6d13EqBk0-lN4gZlU8bH876Q4N0VqXydKNhhR44L5KRHGsCWZktoQQ2FhwVpzx49F6blPzg24m6-1kETYqQrZKOgaEIsOT-12J1nq9rIWvMM650EXbDzShTy0ZqQ15NMjDKT4UZ1L7glR8Db6XXgimJWDPMRzae_sSsECpWWE6GoagWx8KVssxGg9IiKMXakiGyWarDu8FFjuR5vRw6D_duWgvl4i87tiEhTbgj0"/>
+</div>
+<div class="min-w-0 space-y-0.5">
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">Pasca Vaksin</span>
+<h3 class="text-xs font-bold text-slate-900 line-clamp-1 leading-snug">Mengatasi Demam &amp; Reaksi Rewel Imunisasi DPT</h3>
+<p class="text-[11px] text-slate-400">Tim Pediatri IDAI · 3 mnt baca</p>
+</div>
+</div>
+<!-- Article 3 -->
+<div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-2xs flex items-center gap-3.5 hover:border-slate-300 transition-all">
+<div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100">
+<img class="w-full h-full object-cover" data-alt="Tummy time" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_oq04qmu2BK4THkWaw2rw-iVEmN0B3mQqd9hmwrzEZavKPcY_7kd_y5EA17o8GXcVv_W3PUxRqgK55ph8dnnsq2i94CKyrwaEuR6M8KCTLXJc0_K_ta-DdZD8OQ97fWH12Y5QL0-86xbNIXrvX81F2tFtgCcDN4FcCAMeRRAPETJdw-jkT3sv5kXOX7Tn6dSd4lpMAqrLB4S0TE_PlTRwWSC67spn5Z8EJ0BjwNQ"/>
+</div>
+<div class="min-w-0 space-y-0.5">
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">Fisioterapi</span>
+<h3 class="text-xs font-bold text-slate-900 line-clamp-1 leading-snug">Durasi Tummy Time Ideal Agar Otot Leher Kuat</h3>
+<p class="text-[11px] text-slate-400">Klinik Tumbuh Kembang · 5 mnt baca</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 5: WISHLIST KADO & BABY REGISTRY (ANTI-DOBEL) -->
+<section class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">featured_seasonal_and_gifts</span>
+<span>Baby Registry</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">1 / 5 Diklaim</span>
+</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">
+            Wishlist Kado Anti-Dobel
+          </h2>
+<p class="text-sm text-slate-500 leading-relaxed">
+            Bagikan link registry ke kerabat. Hadiah yang dibeli otomatis terkunci sehingga tidak mubazir.
+          </p>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<!-- Registry Item 1 -->
+<div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-2xs flex flex-col justify-between space-y-2.5">
+<div class="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100">
+<img class="w-full h-full object-cover" data-alt="Food Steamer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkje2INAqLt_MpxV8AEhXe_14RYf6ouDYqOE7VeUVCuAT2LkRHwnZNBfVwGBJ_m4JiTc0mV5saK__uGkku_5u16YG_qNeh0v_2DnDqE703BpAvPWUxZWdtjF9Y0IFzWUR3aRZZqPZqhNfxikoud2ns5n4D5rv6Oa7JfzvLJIPx1Y5g6j3TC6feXJgbirNjWw-WlFMIAP9em3ApfyTa7Fb7CZEfN54-erHalQ8zX8I"/>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-slate-900 text-white font-bold text-[9px]">Dibutuhkan</span>
+</div>
+<div>
+<h4 class="font-bold text-xs text-slate-900 line-clamp-1">Baby Food Steamer</h4>
+<p class="text-xs font-extrabold text-slate-900 mt-0.5">Rp 650.000</p>
+<p class="text-[10px] text-slate-400">0/1 dibeli kerabat</p>
+</div>
+<button class="w-full h-8 rounded-full bg-slate-900 text-white text-[11px] font-semibold flex items-center justify-center gap-1 hover:bg-slate-800 transition-colors">
+<span>Beri Kado Ini</span>
+</button>
+</div>
+<!-- Registry Item 2 (Claimed) -->
+<div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-2xs flex flex-col justify-between space-y-2.5">
+<div class="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100">
+<img class="w-full h-full object-cover" data-alt="Playpen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOFxK7pAktaX9TdOOcJhVf7f-KepD6mKtD_v3_9UmdG_Ts6cVj5JrC1pSUDgQlN0740Awvk1EPAoEkPOLRXodZU6ygJ2IuV6ZkeAl9TbNd9PBiazetZSmp4EmjyUU2kVdNiM7zjZAby3VPn3G-6gNUgoXRDEfLYmC-Lt5OyDdOyluo5r96gDiXKjsVhLYzin7nKQdL5lgTF8v66vJKB1eDtlGwQ9Wgxcb8iPc0JfM"/>
+<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[9px]">Diklaim</span>
+</div>
+<div>
+<h4 class="font-bold text-xs text-slate-900 line-clamp-1">PlayPark Pen Lipat</h4>
+<p class="text-xs font-semibold text-slate-400 mt-0.5">Rp 820.000</p>
+<p class="text-[10px] text-emerald-600 font-semibold">Oleh Tante Rina ✓</p>
+</div>
+<div class="w-full h-8 rounded-full bg-slate-100 text-slate-400 text-[11px] font-semibold flex items-center justify-center gap-1">
+<span>Sudah Ada</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 6: KATALOG BUNDA TERKURASI -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="space-y-1">
+<div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Peralatan Teruji</div>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">Shop Katalog Bunda</h2>
+</div>
+<a class="text-xs font-bold text-slate-900 flex items-center gap-0.5 hover:underline" href="#">
+            Katalog <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<!-- Product 1 -->
+<div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-2xs flex flex-col justify-between space-y-2.5">
+<div class="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100">
+<img class="w-full h-full object-cover" data-alt="Wearable pump" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWB111tObm4gTRwMk81-K3NDOe90WztEJbqvbDMKi0S8CeCzKOw9rESTdy2koFB_9LQrhVMySogndfEZ1-kNsW7TSrdgjeWwALTnqxs4HwoaSt8fsD26axGykK0sQLGSp5MqvpYFisNe-7SeFffzQ37BtOmepK3ZVfvaRcWC3O8E7UVj7LDPQrup_b9xjwY8GTcsEehndJjoztil2X3JjWdt6WdaNSWQApxL0_mrU"/>
+<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-extrabold text-[9px]">-45%</span>
+</div>
+<div>
+<h4 class="font-bold text-xs text-slate-900 line-clamp-1">Wearable Pump S1</h4>
+<p class="text-xs font-extrabold text-slate-900 mt-0.5">Rp 1.100.000</p>
+<p class="text-[10px] text-slate-400 line-through">Rp 2.000.000</p>
+</div>
+<button class="w-full h-8 rounded-full bg-slate-900 text-white text-[11px] font-semibold flex items-center justify-center gap-1 hover:bg-slate-800 transition-colors">
+<span>Beli Produk</span>
+</button>
+</div>
+<!-- Product 2 -->
+<div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-2xs flex flex-col justify-between space-y-2.5">
+<div class="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100">
+<img class="w-full h-full object-cover" data-alt="Baby carrier" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPH6wqOkT14YmjVQiBuEF1w4ggRG4OZM3tTUxXTKdpk8Ad_mv4FIfykOsPSqnh543rvkEYKtWs-E7i41jZvgNn9ny3hY4vXfRJ-eR1J-Qyu1UdABKfgy6qfSFfFoZERXs2dXKD_0iwmh72-RKAOEU3zllyRHN6ggxsgGPmlBBS6pmqmJCLUCIcdTP-gpEvNL4GZGCWOEPhSocy7D4UPElMvfOJC28--hboVADuJWk"/>
+<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-extrabold text-[9px]">-20%</span>
+</div>
+<div>
+<h4 class="font-bold text-xs text-slate-900 line-clamp-1">Gendongan SSC M-Shape</h4>
+<p class="text-xs font-extrabold text-slate-900 mt-0.5">Rp 480.000</p>
+<p class="text-[10px] text-slate-400 line-through">Rp 600.000</p>
+</div>
+<button class="w-full h-8 rounded-full bg-slate-900 text-white text-[11px] font-semibold flex items-center justify-center gap-1 hover:bg-slate-800 transition-colors">
+<span>Beli Produk</span>
+</button>
+</div>
+</div>
+</section>
+<!-- TESTIMONIALS & TRUST SECTION -->
+<section class="space-y-4">
+<div class="text-center space-y-1">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Testimoni Nyata</span>
+<h2 class="text-2xl font-extrabold tracking-tight text-slate-900">Dipercaya 50.000+ Keluarga</h2>
+</div>
+<div class="space-y-3">
+<!-- Parent Testimonial -->
+<div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+<div class="flex items-center gap-1 text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="text-xs leading-relaxed text-slate-600 italic">
+              “Anak saya lahir di minggu ke-31 dengan BB 1,5 kg. Dulu overthinking setiap ke dokter. Grafik Fenton &amp; kalkulator usia koreksi di TumbuhCeria membuat saya paham milestone sesungguhnya.”
+            </p>
+<div class="flex items-center gap-3 pt-1 border-t border-slate-100">
+<div class="w-9 h-9 rounded-full overflow-hidden bg-slate-100 shrink-0">
+<img class="w-full h-full object-cover" data-alt="Bunda Cindy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDL33mklPaOIUTaAgkV_hrGCutKDsBt9H4zs-9KfrQPoAozFBb3F-MljLlanaAYvcmM4Xyg_QSoib0JswDjE-4i17VIjO9Kyx1GRxoZIfdWbBmH0JOnpQgqQ3U1g1KHFaJ7QACIIyp7_HoThR4Mx6ClnxyyMXJs-Fcnm4gXMbFxzqqQMAwBhBifPBu6wJ37X-44LI0Tcaw1M61IQYdag24sxpnsWk2z6AagzhIfukk"/>
+</div>
+<div>
+<p class="font-bold text-xs text-slate-900 leading-tight">Bunda Cindy Novita</p>
+<p class="text-[11px] text-slate-400">Mama Kenzo (Prematur 31 Minggu)</p>
+</div>
+</div>
+</div>
+<!-- Doctor Testimonial -->
+<div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200/50">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+<span>Rekomendasi Spesialis Anak</span>
+</div>
+<p class="text-xs leading-relaxed text-slate-600 italic">
+              “Sangat terbantu saat orang tua pasien membawa data riwayat rapi dari TumbuhCeria. Plotting Z-Score WHO &amp; Fenton-nya presisi dan memudahkan evaluasi gizi.”
+            </p>
+<div class="flex items-center gap-3 pt-1 border-t border-slate-100">
+<div class="w-9 h-9 rounded-full overflow-hidden bg-slate-100 shrink-0">
+<img class="w-full h-full object-cover" data-alt="dr Farhan" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqd6YObTwTyuCi-3j7UMN3gbYSc5xDx8rFmnuBCZdwizctqw7Pj--SI_QkfPIEQ99Q8H_j1zuqkN0MaRYX5D8FUJdp4d7dO_2p6RuVq7-ubWLhO5gmKepXQksCvsJCenYh5vZCv3h2JpjbhWLsC7xDSjXfcBhA0mrzO06nUjpVuU7L234wEHbqX5tdJO9-4eZynxVe4UvjuyAG4xt1UojpotWQOjOvasn4MwzbPMQ"/>
+</div>
+<div>
+<p class="font-bold text-xs text-slate-900 leading-tight">dr. Farhan Malik, Sp.A</p>
+<p class="text-[11px] text-slate-400">Dokter Spesialis Anak RSIA Permata</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- OFFICIAL CLINICAL DISCLAIMER -->
+<section class="p-4 rounded-2xl bg-slate-100/70 border border-slate-200/60 flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-slate-500 mt-0.5">shield</span>
+<p class="text-xs text-slate-500 leading-relaxed">
+          TumbuhCeria adalah sarana pemantauan mandiri dan referensi orang tua. Tidak menggantikan konsultasi langsung dengan dokter spesialis anak (Sp.A) atau tenaga medis profesional.
+        </p>
+</section>
+<!-- BOTTOM CALL TO ACTION CARD (Clean Dark Pill Theme) -->
+<section class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 text-center space-y-5 shadow-xl relative overflow-hidden">
+<div class="space-y-2 relative z-10">
+<h2 class="text-2xl font-extrabold tracking-tight">
+            Mulai Pantau Tumbuh Kembang Hari Ini
+          </h2>
+<p class="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+            Gratis tanpa langganan untuk fitur grafik WHO dasar, usia koreksi, dan jadwal vaksin.
+          </p>
+</div>
+<div class="flex flex-col items-center gap-2 relative z-10">
+<button class="w-full max-w-xs h-12 rounded-full bg-white text-slate-950 font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-100 active:scale-[0.98] transition-all shadow-md">
+<span>Pasang Aplikasi Gratis</span>
+<span class="text-sm font-sans">↗</span>
+</button>
+<span class="text-[11px] text-slate-500">Kompatibel untuk iOS &amp; Android</span>
+</div>
+</section>
+</div>
+</main>
+<!-- Sleek Bottom Navigation Tab Bar -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe bg-white/80 backdrop-blur-xl border-t border-slate-200/70">
+<div class="flex items-center justify-around h-16 px-3">
+<a aria-current="page" class="flex flex-col items-center justify-center min-w-[48px] py-1 text-slate-900 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">cottage</span>
+<span class="text-[10px] font-bold mt-0.5 tracking-tight">Beranda</span>
+</a>
+<a class="flex flex-col items-center justify-center min-w-[48px] py-1 text-slate-400 hover:text-slate-900 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]">show_chart</span>
+<span class="text-[10px] font-medium mt-0.5 tracking-tight">Grafik</span>
+</a>
+<a class="flex flex-col items-center justify-center min-w-[48px] py-1 text-slate-400 hover:text-slate-900 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]">vaccines</span>
+<span class="text-[10px] font-medium mt-0.5 tracking-tight">Vaksin</span>
+</a>
+<a class="flex flex-col items-center justify-center min-w-[48px] py-1 text-slate-400 hover:text-slate-900 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]">auto_stories</span>
+<span class="text-[10px] font-medium mt-0.5 tracking-tight">Panduan</span>
+</a>
+<a class="flex flex-col items-center justify-center min-w-[48px] py-1 text-slate-400 hover:text-slate-900 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]">redeem</span>
+<span class="text-[10px] font-medium mt-0.5 tracking-tight">Kado</span>
+</a>
+</div>
+</nav>
+<script>
+    // Tab Curve Switcher Logic
+    const btnWho = document.getElementById('btn-who');
+    const btnFenton = document.getElementById('btn-fenton');
+
+    if (btnWho && btnFenton) {
+      btnWho.addEventListener('click', () => {
+        btnWho.className = 'py-2 rounded-full bg-white text-slate-900 shadow-xs transition-all';
+        btnFenton.className = 'py-2 rounded-full text-slate-500 hover:text-slate-900 transition-all';
+      });
+
+      btnFenton.addEventListener('click', () => {
+        btnFenton.className = 'py-2 rounded-full bg-white text-slate-900 shadow-xs transition-all';
+        btnWho.className = 'py-2 rounded-full text-slate-500 hover:text-slate-900 transition-all';
+      });
+    }
+  </script>
+</body></html>
