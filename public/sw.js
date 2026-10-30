@@ -9,6 +9,7 @@
  * Mutasi offline (antrean tulis) belum diaktifkan: strategi konflik/sync-nya
  * harus ditentukan lebih dulu sebelum catatan medis boleh ditulis tanpa jaringan.
  */
+const DEV = new URL(self.location.href).searchParams.has("dev");
 const VERSION = "v3";
 const CACHE = `tk-static-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -21,6 +22,10 @@ const PRECACHE = [
 ];
 
 self.addEventListener("install", (event) => {
+  if (DEV) {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
   event.waitUntil(
     caches
       .open(CACHE)
@@ -54,6 +59,8 @@ function isStaticAsset(url) {
 }
 
 self.addEventListener("fetch", (event) => {
+  // Di dev hanya push: cache aset Next akan mengganggu HMR.
+  if (DEV) return;
   const { request } = event;
 
   // Hanya GET. Mutasi selalu ke jaringan.

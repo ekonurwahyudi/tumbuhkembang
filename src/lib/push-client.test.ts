@@ -9,12 +9,12 @@ vi.mock("@/lib/actions/notifications", () => ({
 // `currentSubscription` menunggu service worker; uji kedua hasil server tanpa browser asli.
 const unsubscribe = vi.fn();
 const subscription = { endpoint: "https://push.example/sub", unsubscribe };
+const getRegistration = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal("navigator", {
-    serviceWorker: { ready: Promise.resolve({ pushManager: { getSubscription: () => subscription } }) },
-  });
+  getRegistration.mockResolvedValue({ pushManager: { getSubscription: () => subscription } });
+  vi.stubGlobal("navigator", { serviceWorker: { getRegistration } });
 });
 
 describe("disablePush", () => {
@@ -31,5 +31,14 @@ describe("disablePush", () => {
     const { disablePush } = await import("./push-client");
     expect(await disablePush()).toBe(true);
     expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+});
+
+
+describe("currentSubscription", () => {
+  it("mengembalikan null bila worker belum terdaftar tanpa menunggu selamanya", async () => {
+    getRegistration.mockResolvedValue(null);
+    const { currentSubscription } = await import("./push-client");
+    expect(await currentSubscription()).toBeNull();
   });
 });

@@ -34,6 +34,7 @@ type InstallEvent = Event & {
 };
 
 const DISMISSED_KEY = "tk-install-dismissed";
+let pendingInstallEvent: InstallEvent | null = null;
 
 function storedDismiss(): boolean {
   try {
@@ -44,18 +45,22 @@ function storedDismiss(): boolean {
   }
 }
 
-export function InstallPrompt() {
+export function InstallPrompt({ settings = false }: { settings?: boolean }) {
   const hydrated = useHydrated();
-  const [event, setEvent] = useState<InstallEvent | null>(null);
+  const [event, setEvent] = useState<InstallEvent | null>(pendingInstallEvent);
   const [closed, setClosed] = useState(false);
   const [howTo, setHowTo] = useState(false);
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
       e.preventDefault();
-      setEvent(e as InstallEvent);
+      pendingInstallEvent = e as InstallEvent;
+      setEvent(pendingInstallEvent);
     };
-    const onInstalled = () => setEvent(null);
+    const onInstalled = () => {
+      pendingInstallEvent = null;
+      setEvent(null);
+    };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
@@ -75,9 +80,8 @@ export function InstallPrompt() {
   */
   const ios = hydrated && isIOS();
   const android = hydrated && isAndroid();
-  const show =
-    hydrated && !closed && !isStandalone() && !storedDismiss() && (event !== null || ios);
-  if (!show) return null;
+  const installed = hydrated && isStandalone();
+  const show = hydrated && !closed && !installed && !storedDismiss() && (event !== null || ios);
 
   const close = () => {
     try {
@@ -89,11 +93,33 @@ export function InstallPrompt() {
   };
 
   const install = async () => {
-    if (!event) return;
+    if (!event) {
+      setHowTo(true);
+      return;
+    }
     await event.prompt();
     await event.userChoice;
+    pendingInstallEvent = null;
     setEvent(null);
   };
+
+  if (settings)
+    return hydrated ? (
+      <>
+        <Button
+          type="button"
+          size="sm"
+          disabled={installed}
+          onClick={ios ? () => setHowTo(true) : install}
+        >
+          <Icon name="download" className="text-[16px]" />
+          {installed ? "Sudah Terpasang" : "Pasang Aplikasi"}
+        </Button>
+        <InstallHowTo open={howTo} onClose={() => setHowTo(false)} ios={ios} />
+      </>
+    ) : null;
+
+  if (!show) return null;
 
   return (
     <>
@@ -143,34 +169,41 @@ export function InstallPrompt() {
         </div>
       </section>
 
-      {ios && <IosHowTo open={howTo} onClose={() => setHowTo(false)} />}
+      {ios && <InstallHowTo open={howTo} onClose={() => setHowTo(false)} ios />}
     </>
   );
 }
 
 /**
- * Petunjuk pemasangan iOS. Dialog, bukan halaman: langkahnya dilakukan DI browser
+ * Petunjuk pemasangan manual. Dialog, bukan halaman: langkahnya dilakukan DI browser
  * yang sedang terbuka, jadi berpindah halaman justru menjauhkan orang dari tombol
  * Bagikan yang harus ia tekan.
  */
-function IosHowTo({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const steps = [
-    "Ketuk tombol Bagikan di bilah bawah Safari (kotak dengan panah ke atas).",
-    "Gulir ke bawah, pilih “Tambahkan ke Layar Utama”.",
-    "Ketuk “Tambah” di pojok kanan atas.",
-  ];
+function InstallHowTo({ open, onClose, ios }: { open: boolean; onClose: () => void; ios: boolean }) {
+  const steps = ios
+    ? [
+        "Ketuk tombol Bagikan di bilah bawah Safari (kotak dengan panah ke atas).",
+        "Gulir ke bawah, pilih “Tambahkan ke Layar Utama”.",
+        "Ketuk “Tambah” di pojok kanan atas.",
+      ]
+    : [
+        "Buka menu browser (biasanya ikon tiga titik).",
+        "Pilih Pasang aplikasi atau Tambahkan ke layar utama.",
+        "Konfirmasi pemasangan bila browser memintanya.",
+      ];
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <span className="bg-accent text-primary grid size-12 place-items-center rounded-2xl">
-            <AppleGlyph className="size-6" />
+            {ios ? <AppleGlyph className="size-6" /> : <AndroidGlyph className="size-6" />}
           </span>
-          <DialogTitle className="mt-2">Pasang di iPhone atau iPad</DialogTitle>
+          <DialogTitle className="mt-2">Pasang aplikasi</DialogTitle>
           <DialogDescription>
-            Safari tidak punya tombol pasang otomatis, jadi langkahnya tiga ketukan lewat menu
-            Bagikan.
+            {ios
+              ? "Safari memasang aplikasi lewat menu Bagikan."
+              : "Jika browser tidak menawarkan pemasangan otomatis, gunakan menu browser."}
           </DialogDescription>
         </DialogHeader>
 

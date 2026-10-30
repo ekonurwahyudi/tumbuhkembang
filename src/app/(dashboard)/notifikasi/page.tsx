@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
-import { hasSubscription, listNotifications } from "@/lib/data/notifications";
+import { listNotifications } from "@/lib/data/notifications";
 import { formatRelative } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 import { NotificationList } from "@/components/notifications/notification-list";
@@ -10,10 +10,7 @@ export const metadata: Metadata = { title: "Pemberitahuan" };
 
 export default async function NotificationsPage() {
   const user = await requireUser();
-  const [rows, subscribed] = await Promise.all([
-    listNotifications(user.id),
-    hasSubscription(user.id),
-  ]);
+  const rows = await listNotifications(user.id);
 
   // Waktu relatif dihitung di server: satu sumber jam, dan tidak ada Date yang
   // perlu menyeberang ke klien.
@@ -28,7 +25,7 @@ export default async function NotificationsPage() {
         </p>
       </header>
 
-      <PushToggle subscribed={subscribed} />
+      <PushToggle />
 
       {rows.length === 0 ? (
         <EmptyState

@@ -52,8 +52,8 @@ export function pushSupported(): boolean {
 
 /** Langganan di browser ini. Kebenarannya di browser, bukan di DB. */
 export async function currentSubscription(): Promise<PushSubscription | null> {
-  const reg = await navigator.serviceWorker.ready;
-  return reg.pushManager.getSubscription();
+  const reg = await navigator.serviceWorker.getRegistration();
+  return reg?.pushManager.getSubscription() ?? null;
 }
 
 export type EnableResult =
