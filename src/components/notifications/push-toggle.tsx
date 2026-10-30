@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { isIOS, isStandalone, useHydrated } from "@/lib/platform";
 import { currentSubscription, disablePush, enablePush, pushSupported } from "@/lib/push-client";
@@ -17,7 +18,13 @@ import { currentSubscription, disablePush, enablePush, pushSupported } from "@/l
 
 type State = "loading" | "unsupported" | "ios-needs-install" | "off" | "on" | "blocked";
 
-export function PushToggle() {
+export function PushToggle({
+  publicKey,
+  mode = "switch",
+}: {
+  publicKey: string;
+  mode?: "switch" | "button";
+}) {
   const hydrated = useHydrated();
   const [busy, setBusy] = useState(false);
   /*
@@ -29,7 +36,7 @@ export function PushToggle() {
   const [hasSub, setHasSub] = useState<boolean | null>(null);
   const [denied, setDenied] = useState(false);
 
-  const supported = hydrated && pushSupported();
+  const supported = hydrated && pushSupported(publicKey);
 
   useEffect(() => {
     if (!supported) return;
@@ -62,7 +69,7 @@ export function PushToggle() {
 
   const enable = async () => {
     setBusy(true);
-    const res = await enablePush();
+    const res = await enablePush(publicKey);
     setBusy(false);
 
     if (res.ok) {
@@ -95,34 +102,41 @@ export function PushToggle() {
         <p className="text-muted-foreground text-body-sm">
           {state === "ios-needs-install"
             ? "Pasang aplikasi ini ke Layar Utama dulu — iPhone hanya mengizinkan pemberitahuan untuk aplikasi yang sudah terpasang."
-              : state === "unsupported"
-                ? "Pemberitahuan belum tersedia di perangkat atau konfigurasi aplikasi ini."
-                : state === "loading"
-                  ? "Memeriksa status pemberitahuan di perangkat ini..."
-                  : state === "blocked"
-                    ? "Pemberitahuan diblokir di setelan browser. Izinkan dari setelan situs, lalu buka halaman ini lagi."
-                    : state === "on"
-                      ? "Aktif di perangkat ini. Kami mengabari saat kado diklaim dan jadwal vaksin mendekat."
-                      : "Dapatkan kabar saat kado diklaim dan saat jadwal vaksin si kecil mendekat."}
+            : state === "unsupported"
+              ? "Pemberitahuan belum tersedia di perangkat atau konfigurasi aplikasi ini."
+              : state === "loading"
+                ? "Memeriksa status pemberitahuan di perangkat ini..."
+                : state === "blocked"
+                  ? "Pemberitahuan diblokir di setelan browser. Izinkan dari setelan situs, lalu buka halaman ini lagi."
+                  : state === "on"
+                    ? "Aktif di perangkat ini. Kami mengabari saat kado diklaim dan jadwal vaksin mendekat."
+                    : "Dapatkan kabar saat kado diklaim dan saat jadwal vaksin si kecil mendekat."}
         </p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-label="Pemberitahuan di HP"
-        aria-checked={state === "on"}
-        disabled={busy || !["on", "off"].includes(state)}
-        onClick={state === "on" ? disable : enable}
-        className="ml-auto shrink-0 flex items-center gap-2 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
-      >
-        <span
-          aria-hidden="true"
-          className={`relative h-7 w-12 rounded-full transition-colors ${state === "on" ? "bg-primary" : "bg-muted-foreground/40"}`}
+      {mode === "button" ? (
+        <Button type="button" size="sm" disabled={busy || state !== "off"} onClick={enable}>
+          <Icon name="notifications" className="text-[16px]" />
+          {state === "on" ? "Aktif" : busy ? "Mengaktifkan..." : "Aktifkan Notifikasi"}
+        </Button>
+      ) : (
+        <button
+          type="button"
+          role="switch"
+          aria-label="Pemberitahuan di HP"
+          aria-checked={state === "on"}
+          disabled={busy || !["on", "off"].includes(state)}
+          onClick={state === "on" ? disable : enable}
+          className="ml-auto flex shrink-0 items-center gap-2 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
         >
-          <span className={`bg-card absolute top-1 size-5 rounded-full shadow-sm transition-transform ${state === "on" ? "translate-x-6" : "translate-x-1"}`} />
-        </span>
-        <span className="text-body-sm font-bold">{state === "on" ? "On" : "Off"}</span>
-      </button>
+          <span
+            aria-hidden="true"
+            className={`relative h-7 w-12 rounded-full transition-colors ${state === "on" ? "bg-primary" : "bg-muted-foreground/40"}`}
+          >
+            <span className={`bg-card absolute top-1 size-5 rounded-full shadow-sm transition-transform ${state === "on" ? "translate-x-6" : "translate-x-1"}`} />
+          </span>
+          <span className="text-body-sm font-bold">{state === "on" ? "On" : "Off"}</span>
+        </button>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { pushPublicKey } from "@/lib/push";
 import { listChildrenWithLatestForViewer, listSharesByOwner } from "@/lib/data/children";
 import { LogoutButton } from "@/components/logout-button";
 import { InstallPrompt } from "@/components/install-prompt";
@@ -203,7 +204,7 @@ export default async function SettingsPage() {
         <span className="text-muted-foreground text-label-sm px-1 font-bold tracking-wider uppercase">
           NOTIFIKASI APLIKASI
         </span>
-        <PushToggle />
+        <PushToggle publicKey={pushPublicKey()} />
       </section>
 
       {/* Aplikasi */}

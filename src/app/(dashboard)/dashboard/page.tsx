@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
+import { pushPublicKey } from "@/lib/push";
 import { listChildrenWithLatestForViewer } from "@/lib/data/children";
 import { listMeasurements } from "@/lib/data/measurements";
 import { listVaccinations } from "@/lib/data/vaccinations";
@@ -114,7 +115,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
       {/* Setelah InstallPrompt, dan salah satunya selalu diam: di iPhone dalam tab
           push belum mungkin, jadi memasang dulu yang benar. */}
-      <PushPrompt subscribed={pushSubscribed} />
+      <PushPrompt subscribed={pushSubscribed} publicKey={pushPublicKey()} />
 
       {greeting}
 

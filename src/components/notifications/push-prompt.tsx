@@ -37,7 +37,7 @@ function storedDismiss(): boolean {
   }
 }
 
-export function PushPrompt({ subscribed }: { subscribed: boolean }) {
+export function PushPrompt({ subscribed, publicKey }: { subscribed: boolean; publicKey: string }) {
   const hydrated = useHydrated();
   const [busy, setBusy] = useState(false);
   const [closed, setClosed] = useState(false);
@@ -48,7 +48,7 @@ export function PushPrompt({ subscribed }: { subscribed: boolean }) {
   */
   const [hasSub, setHasSub] = useState<boolean | null>(null);
 
-  const supported = hydrated && pushSupported();
+  const supported = hydrated && pushSupported(publicKey);
 
   useEffect(() => {
     if (!supported) return;
@@ -81,7 +81,7 @@ export function PushPrompt({ subscribed }: { subscribed: boolean }) {
 
   const enable = async () => {
     setBusy(true);
-    const res = await enablePush();
+    const res = await enablePush(publicKey);
     setBusy(false);
 
     if (res.ok) {

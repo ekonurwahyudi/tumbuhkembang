@@ -21,10 +21,16 @@ import {
  * lalu diisikan ke NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT.
  */
 
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+// Runtime lookup: Docker memberi env setelah build; akses statis NEXT_PUBLIC dibekukan saat build.
+const publicKeyName = "NEXT_PUBLIC_VAPID_PUBLIC_KEY";
+const PUBLIC_KEY = process.env[publicKeyName];
 const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 // Apple menolak push tanpa subject yang sah; mailto: milik pengelola sudah cukup.
 const SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:admin@tumbuhkembang.app";
+
+export function pushPublicKey(): string {
+  return PUBLIC_KEY && PRIVATE_KEY ? PUBLIC_KEY : "";
+}
 
 let configured = false;
 

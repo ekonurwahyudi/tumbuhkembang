@@ -18,10 +18,16 @@ import { PushToggle } from "./push-toggle";
 
 describe("PushToggle", () => {
   it("tetap menampilkan sakelar off dan alasan ketika push tidak tersedia", () => {
-    const html = renderToStaticMarkup(createElement(PushToggle));
+    const html = renderToStaticMarkup(createElement(PushToggle, { publicKey: "" }));
     expect(html).toContain('role="switch"');
     expect(html).toContain('aria-checked="false"');
     expect(html).toContain("disabled");
     expect(html).toContain("belum tersedia");
+  });
+
+  it("halaman notifikasi memakai tombol aktifkan, bukan sakelar", () => {
+    const html = renderToStaticMarkup(createElement(PushToggle, { publicKey: "", mode: "button" }));
+    expect(html).toContain("Aktifkan Notifikasi");
+    expect(html).not.toContain('role="switch"');
   });
 });

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
+import { pushPublicKey } from "@/lib/push";
 import { listNotifications } from "@/lib/data/notifications";
 import { formatRelative } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
@@ -25,7 +26,7 @@ export default async function NotificationsPage() {
         </p>
       </header>
 
-      <PushToggle />
+      <PushToggle publicKey={pushPublicKey()} mode="button" />
 
       {rows.length === 0 ? (
         <EmptyState

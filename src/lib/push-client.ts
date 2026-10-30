@@ -21,8 +21,6 @@ import { subscribePushAction, unsubscribePushAction } from "@/lib/actions/notifi
  * 3. Kunci VAPID publik wajib ada. Tanpa env-nya, langganan tidak mungkin dibuat.
  */
 
-const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
 /**
  * base64url → Uint8Array; bentuk yang diminta `applicationServerKey`.
  *
@@ -40,9 +38,10 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 }
 
 /** Perangkat ini bisa berlangganan push sama sekali. Panggil setelah terhidrasi. */
-export function pushSupported(): boolean {
+export function pushSupported(publicKey: string): boolean {
   return (
-    Boolean(VAPID) &&
+    Boolean(publicKey) &&
+    typeof Notification !== "undefined" &&
     typeof navigator !== "undefined" &&
     "serviceWorker" in navigator &&
     typeof window !== "undefined" &&
@@ -70,19 +69,30 @@ export type EnableResult =
  * Langganan yang sudah ada dipakai ulang alih-alih dibuat baru: `subscribe()`
  * dua kali dengan kunci yang sama akan melempar, dan endpoint lama tetap sah.
  */
-export async function enablePush(): Promise<EnableResult> {
+export async function enablePush(publicKey: string): Promise<EnableResult> {
   try {
+    if (!pushSupported(publicKey))
+      return {
+        ok: false,
+        reason: "error",
+        message: "Pemberitahuan tidak tersedia di perangkat atau konfigurasi aplikasi ini.",
+      };
+    // Izin diminta langsung dari klik, sebelum pekerjaan async lain menghilangkan gestur pengguna.
     const permission = await Notification.requestPermission();
     if (permission !== "granted")
       return { ok: false, reason: permission === "denied" ? "denied" : "dismissed" };
 
+    // Daftar di sini juga agar tidak bergantung pada efek pendaftaran saat halaman dimuat.
+    await navigator.serviceWorker.register(
+      process.env.NODE_ENV === "production" ? "/sw.js" : "/sw.js?dev=1",
+    );
     const reg = await navigator.serviceWorker.ready;
     const sub =
       (await reg.pushManager.getSubscription()) ??
       (await reg.pushManager.subscribe({
         // Wajib true di semua browser modern: push diam-diam tidak diizinkan lagi.
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID!),
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
       }));
 
     const res = await subscribePushAction(sub.toJSON());
