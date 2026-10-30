@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminGetBlogPost } from "@/lib/data/blog";
+import { AdminBlogCoverField } from "@/components/admin/admin-blog-cover-field";
 import { AdminBlogForm } from "@/components/admin/admin-blog-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -37,7 +38,10 @@ export default async function AdminEditBlogPostPage({
               : "Artikel ini masih draf dan belum terlihat orang tua."}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        {/* Sampul di atas form, bukan di dalamnya: ia punya action sendiri, jadi
+            mengganti gambar tidak perlu menyimpan ulang form — dan sebaliknya. */}
+        <CardContent className="space-y-5">
+          <AdminBlogCoverField post={post} />
           <AdminBlogForm post={post} />
         </CardContent>
       </Card>

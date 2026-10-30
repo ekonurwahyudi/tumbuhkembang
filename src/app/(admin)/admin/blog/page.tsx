@@ -68,7 +68,6 @@ export default async function AdminBlogPage({ searchParams }: PageProps<"/admin/
                 <TableHead className="w-10 text-right">No.</TableHead>
                 <TableHead>Judul</TableHead>
                 <TableHead>Kategori</TableHead>
-                <TableHead>Sumber</TableHead>
                 <TableHead>Diperbarui</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
@@ -81,24 +80,31 @@ export default async function AdminBlogPage({ searchParams }: PageProps<"/admin/
                     {i + 1}
                   </TableCell>
                   <TableCell className="font-bold">
-                    <span className="block max-w-[18rem] truncate">{p.title}</span>
-                    <span className="text-muted-foreground block max-w-[18rem] truncate font-normal">
-                      /blog/{p.slug}
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                      {/* Thumbnail sampul: pada daftar panjang, gambar lebih cepat
+                          dikenali daripada judul yang mirip-mirip. */}
+                      <span className="bg-accent text-primary grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg">
+                        {p.coverKey ? (
+                          /* eslint-disable-next-line @next/next/no-img-element -- route sampul berotorisasi, bukan aset statis untuk next/image */
+                          <img
+                            src={`/blog/${p.slug}/cover`}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <Icon name="menu_book" filled className="text-[18px]" />
+                        )}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block max-w-[16rem] truncate">{p.title}</span>
+                        <span className="text-muted-foreground block max-w-[16rem] truncate font-normal">
+                          /blog/{p.slug}
+                        </span>
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {BLOG_CATEGORY_LABEL[p.category]}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <a
-                      href={p.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-foreground inline-flex items-center gap-1"
-                    >
-                      <Icon name="link" className="text-[13px]" />
-                      <span className="max-w-[8rem] truncate">{p.sourceName}</span>
-                    </a>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDate(p.updatedAt.toISOString().slice(0, 10))}

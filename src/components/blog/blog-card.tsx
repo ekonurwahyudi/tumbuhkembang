@@ -18,32 +18,61 @@ export const BLOG_TONE: Record<string, string> = {
   IBU: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-300",
 };
 
-export function BlogCard({ post }: { post: BlogPost }) {
+/**
+ * Kartu artikel. Gambarnya kartu tersendiri yang membulat penuh, bukan gambar yang
+ * menempel di tepi atas — lalu teksnya duduk DI BAWAH kartu itu tanpa latar sendiri.
+ * Bentuk ini membuat deretan kartu terbaca sebagai galeri, bukan tumpukan kotak.
+ *
+ * Tanpa sampul, petak kategori berwarna menggantikan gambarnya: ruang kosong
+ * setinggi gambar terbaca seperti gambar yang gagal dimuat.
+ */
+export function BlogCard({ post, relative }: { post: BlogPost; relative?: string }) {
   return (
-    <Link
-      href={`/blog/${post.slug}`}
-      className="bg-card flex h-full flex-col gap-2 rounded-2xl p-4 shadow-sm transition-all hover:brightness-[0.98] active:scale-[0.99]"
-    >
-      <span
-        className={`text-label-sm w-fit rounded-full px-2.5 py-1 font-bold ${
-          BLOG_TONE[post.category] ?? BLOG_TONE.TUMBUH_KEMBANG
-        }`}
-      >
-        {BLOG_CATEGORY_LABEL[post.category]}
+    <Link href={`/blog/${post.slug}`} className="group flex h-full flex-col gap-2.5">
+      <span className="bg-muted relative block aspect-square w-full overflow-hidden rounded-2xl">
+        {post.coverKey ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- route sampul berotorisasi, bukan aset statis untuk next/image */
+          <img
+            src={`/blog/${post.slug}/cover`}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className={`grid size-full place-items-center ${
+              BLOG_TONE[post.category] ?? BLOG_TONE.TUMBUH_KEMBANG
+            }`}
+          >
+            <Icon name="menu_book" filled className="text-[36px] opacity-50" />
+          </span>
+        )}
+
+        {/* Keping kategori di atas gambar, seperti keping tandai di contoh:
+            satu penanda bulat di sudut, bukan baris label yang memakan tinggi. */}
+        <span
+          className={`text-label-sm absolute top-2.5 left-2.5 rounded-full px-2.5 py-1 font-bold shadow-sm backdrop-blur-sm ${
+            BLOG_TONE[post.category] ?? BLOG_TONE.TUMBUH_KEMBANG
+          }`}
+        >
+          {BLOG_CATEGORY_LABEL[post.category]}
+        </span>
       </span>
 
-      <h3 className="text-headline-sm line-clamp-2">{post.title}</h3>
-      <p className="text-muted-foreground text-body-sm line-clamp-3 flex-1">{post.excerpt}</p>
+      <h3 className="text-headline-sm line-clamp-2 leading-snug">{post.title}</h3>
 
-      <p className="text-muted-foreground text-label-sm flex items-center gap-2">
-        <span className="flex items-center gap-1">
-          <Icon name="schedule" className="text-[13px]" />
-          {readingMinutes(post.contentHtml)} menit baca
-        </span>
-        <span aria-hidden>•</span>
-        {/* Sumber tampil di kartu, bukan hanya di dalam artikel: pembaca berhak
-            tahu dari mana klaimnya berasal sebelum memutuskan membukanya. */}
-        <span className="truncate">{post.sourceName}</span>
+      {/* Satu baris meta kecil di kaki kartu — bukan ringkasan tiga baris:
+          di grid dua kolom, ringkasan membuat tiap kartu setinggi layar. */}
+      <p className="text-muted-foreground text-label-sm mt-auto flex items-center gap-1.5">
+        <Icon name="schedule" className="text-[13px]" />
+        {readingMinutes(post.contentHtml)} menit
+        {relative && (
+          <>
+            <span aria-hidden>·</span>
+            <span className="truncate">{relative}</span>
+          </>
+        )}
       </p>
     </Link>
   );

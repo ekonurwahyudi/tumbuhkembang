@@ -37,7 +37,14 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
         Semua Artikel
       </Link>
 
-      <header className="space-y-2">
+      {post.coverKey && (
+        <span className="bg-muted block aspect-[16/10] w-full overflow-hidden rounded-3xl shadow-sm sm:aspect-[2/1]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- route sampul berotorisasi, bukan aset statis untuk next/image */}
+          <img src={`/blog/${post.slug}/cover`} alt="" className="size-full object-cover" />
+        </span>
+      )}
+
+      <header className="space-y-2.5">
         <span
           className={`text-label-sm w-fit rounded-full px-2.5 py-1 font-bold ${
             BLOG_TONE[post.category] ?? BLOG_TONE.TUMBUH_KEMBANG
@@ -68,25 +75,18 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
         dan tidak perlu dependency baru.
       */}
       <div
-        className="text-body-md [&_h2]:text-headline-md [&_h3]:text-headline-sm [&_a]:text-primary space-y-3 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_h2]:mt-5 [&_h3]:mt-4 [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ul]:list-disc [&_ul]:space-y-1"
+        /* `max-w-[68ch]`: baris teks yang melebihi ~70 karakter membuat mata
+           kehilangan baris berikutnya saat kembali ke kiri. */
+        className="text-body-md [&_h2]:text-headline-md [&_h3]:text-headline-sm [&_a]:text-primary max-w-[68ch] space-y-3.5 leading-relaxed [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_h2]:mt-6 [&_h3]:mt-5 [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ul]:list-disc [&_ul]:space-y-1.5"
         dangerouslySetInnerHTML={{ __html: post.contentHtml }}
       />
 
       {/*
-        Sumber dan penyangkalan medis, bukan hiasan: aplikasi ini tidak menilai
-        kondisi medis sendiri, dan pembaca harus bisa memeriksa klaimnya sendiri.
+        Penyangkalan medis, bukan hiasan: aplikasi ini tidak menilai kondisi medis
+        sendiri, dan pembaca harus tahu batas gunanya artikel ini.
       */}
-      <aside className="bg-muted space-y-2 rounded-2xl p-4">
-        <p className="text-label-sm font-bold tracking-wider uppercase">Sumber</p>
-        <a
-          href={post.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary text-body-sm flex items-center gap-1.5 font-bold break-all"
-        >
-          <Icon name="link" className="shrink-0 text-[15px]" />
-          {post.sourceName}
-        </a>
+      <aside className="bg-muted flex items-start gap-2 rounded-2xl p-4">
+        <Icon name="info" className="text-muted-foreground mt-0.5 shrink-0 text-[15px]" />
         <p className="text-muted-foreground text-label-sm">
           Artikel ini ringkasan edukasi, bukan pengganti pemeriksaan tenaga kesehatan. Konsultasikan
           kondisi anak Anda ke dokter atau bidan.
@@ -94,9 +94,9 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
       </aside>
 
       {related.length > 0 && (
-        <section className="space-y-2.5">
+        <section className="space-y-3">
           <h2 className="text-headline-sm">Bacaan Lain</h2>
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3">
             {related.map((r) => (
               <li key={r.id}>
                 <BlogCard post={r} />

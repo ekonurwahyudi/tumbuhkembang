@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { blogPostSchema, slugify } from "./blog";
+import { BLOG_CATEGORIES, BLOG_VIDEO_TOPIC, blogPostSchema, slugify } from "./blog";
+import { TOPIC_QUERIES } from "@/lib/video/youtube";
+import { VIDEO_TOPICS } from "./video";
 
 const base = {
   title: "Kapan Bayi Mulai MPASI",
   excerpt: "Ringkasan singkat artikel.",
   contentHtml: "<p>Isi artikel.</p>",
   category: "NUTRISI",
-  sourceName: "WHO",
-  sourceUrl: "https://www.who.int/x",
 };
 
 describe("slugify", () => {
@@ -21,6 +21,22 @@ describe("slugify", () => {
     const slug = slugify("a".repeat(100));
     expect(slug).toHaveLength(80);
     expect(slug.endsWith("-")).toBe(false);
+  });
+});
+
+/**
+ * Peta ini menghubungkan DUA enum di modul berbeda. Tanpa tes ini, menambah
+ * kategori artikel atau mengganti nama topik video lolos typecheck di satu sisi
+ * tapi membuat rak videonya diam-diam salah topik — atau meledak saat dirender.
+ */
+describe("BLOG_VIDEO_TOPIC", () => {
+  it("memetakan setiap kategori artikel ke topik video yang benar-benar ada", () => {
+    for (const c of BLOG_CATEGORIES) {
+      const topic = BLOG_VIDEO_TOPIC[c];
+      expect(VIDEO_TOPICS).toContain(topic);
+      // Kata kuncinya harus ada juga — itu yang dikirim ke YouTube.
+      expect(TOPIC_QUERIES[topic]).toBeTruthy();
+    }
   });
 });
 
@@ -52,13 +68,14 @@ describe("blogPostSchema", () => {
     expect(r.success === false && r.error.issues[0].path[0]).toBe("slug");
   });
 
-  it("mewajibkan sumber — artikel kesehatan tanpa sumber tidak bisa diperiksa", () => {
-    expect(blogPostSchema.safeParse({ ...base, sourceName: "" }).success).toBe(false);
-    expect(blogPostSchema.safeParse({ ...base, sourceUrl: "" }).success).toBe(false);
-    expect(blogPostSchema.safeParse({ ...base, sourceUrl: "bukan-url" }).success).toBe(false);
-    expect(
-      blogPostSchema.safeParse({ ...base, sourceUrl: "javascript:alert(1)" }).success,
-    ).toBe(false);
+  it("tautan sumber di dalam isi tetap lolos dan dapat rel pengaman", () => {
+    // Sumber tidak punya kolom sendiri lagi — ia ditulis sebagai tautan di isinya.
+    const r = blogPostSchema.parse({
+      ...base,
+      contentHtml: '<p>Sumber: <a href="https://www.who.int/x">WHO</a>.</p>',
+    });
+    expect(r.contentHtml).toContain('href="https://www.who.int/x"');
+    expect(r.contentHtml).toContain('rel="noopener noreferrer nofollow"');
   });
 
   it("membatasi panjang judul dan ringkasan", () => {

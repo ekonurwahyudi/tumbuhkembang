@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { optionalInt, tidyText } from "./registry";
+import { tidyText } from "./registry";
 import { sanitizeHtml } from "@/lib/sanitize-html";
+import type { VideoTopicValue } from "./video";
 
 /**
  * Validasi artikel blog. Yang menulis hanya superadmin, tapi `contentHtml` tetap
@@ -38,6 +39,28 @@ export const isBlogCategory = (v: unknown): v is BlogCategoryValue =>
   typeof v === "string" && (BLOG_CATEGORIES as readonly string[]).includes(v);
 
 /**
+ * Topik video yang sepadan dengan tiap kategori artikel, dipakai menyaring rak
+ * video saat orang memilih kategori.
+ *
+ * Peta ke topik TETAP, bukan kata kunci bebas: tiap kata kunci unik berarti satu
+ * `search.list` (100 unit) dengan entri cache sendiri, dan kuota YouTube cuma
+ * 10.000 unit/hari. Enam kategori = enam kata kunci yang berulang terus, jadi
+ * cache-nya benar-benar kena. Lihat catatan kuota di `schemas/video.ts`.
+ *
+ * Dua kategori boleh menunjuk topik yang sama — "Imunisasi" dan "Kesehatan Anak"
+ * sama-sama dilayani video kesehatan, dan memaksakan topik terpisah hanya menambah
+ * satu kata kunci tanpa menambah video yang relevan.
+ */
+export const BLOG_VIDEO_TOPIC: Record<BlogCategoryValue, VideoTopicValue> = {
+  NUTRISI: "MPASI",
+  TUMBUH_KEMBANG: "GROWTH",
+  IMUNISASI: "HEALTH",
+  KESEHATAN: "HEALTH",
+  PERAWATAN: "SLEEP",
+  IBU: "ASI",
+};
+
+/**
  * Slug URL: huruf kecil, angka, dan tanda hubung. Dibuat dari judul bila admin
  * mengosongkannya — mengetik slug adalah pekerjaan yang bisa dihindari.
  */
@@ -58,21 +81,6 @@ export const MAX_BLOG_TITLE = 160;
 export const MAX_BLOG_EXCERPT = 300;
 /** ~15 ribu kata; di atas ini hampir pasti tempelan yang tidak disengaja. */
 export const MAX_BLOG_CONTENT = 100_000;
-
-/** Sumber wajib http(s) — alasan yang sama dengan `storeUrl` di registry. */
-const sourceUrl = z
-  .string()
-  .trim()
-  .min(1, "URL sumber wajib diisi")
-  .max(500, "URL sumber terlalu panjang")
-  .refine((v) => {
-    try {
-      const u = new URL(v);
-      return u.protocol === "https:" || u.protocol === "http:";
-    } catch {
-      return false;
-    }
-  }, "URL sumber harus diawali http:// atau https://");
 
 export const blogPostSchema = z
   .object({
@@ -101,17 +109,10 @@ export const blogPostSchema = z
       .transform(sanitizeHtml)
       .refine((v) => v.length > 0, "Isi artikel wajib diisi"),
     category: z.enum(BLOG_CATEGORIES, { message: "Kategori wajib dipilih" }),
-    sourceName: z
-      .string()
-      .trim()
-      .min(1, "Nama sumber wajib diisi")
-      .max(120, "Nama sumber maksimal 120 karakter"),
-    sourceUrl,
     isPublished: z.coerce
       .boolean()
       .optional()
       .transform((v) => v === true),
-    sortOrder: optionalInt(9999, "Urutan").transform((v) => v ?? 0),
   })
   .transform((d) => ({ ...d, slug: d.slug || slugify(d.title) }))
   // Judul yang seluruhnya non-ASCII (mis. hanja) menghasilkan slug kosong, dan

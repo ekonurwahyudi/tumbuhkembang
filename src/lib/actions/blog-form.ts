@@ -19,10 +19,7 @@ export function parseBlogPostForm(formData: FormData) {
     excerpt: formData.get("excerpt"),
     contentHtml: formData.get("contentHtml"),
     category: formData.get("category"),
-    sourceName: formData.get("sourceName"),
-    sourceUrl: formData.get("sourceUrl"),
     isPublished: checked(formData.get("isPublished")),
-    sortOrder: formData.get("sortOrder"),
   });
 }
 
@@ -37,8 +34,5 @@ export const toBlogPostRow = (d: ReturnType<typeof blogPostSchema.parse>): BlogP
   excerpt: d.excerpt,
   contentHtml: d.contentHtml,
   category: d.category,
-  sourceName: d.sourceName,
-  sourceUrl: d.sourceUrl,
   isPublished: d.isPublished,
-  sortOrder: d.sortOrder,
 });

@@ -12,33 +12,27 @@ import {
   MAX_BLOG_TITLE,
   slugify,
 } from "@/schemas/blog";
-import { sanitizeHtml } from "@/lib/sanitize-html";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "./rich-text-editor";
 import type { BlogPost } from "@/db/schema";
 
 const SELECT_CLASS =
   "border-input bg-background focus-visible:ring-ring aria-invalid:border-destructive h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]";
 
 /**
- * Form artikel blog. Isinya HTML yang diketik/ditempel admin, dan itu disengaja:
- * artikel butuh heading, daftar, dan tautan.
+ * Form artikel blog. Isinya disunting lewat `RichTextEditor` — `contenteditable`
+ * bawaan, bukan pustaka editor; alasannya ada di berkas itu.
  *
- * Pratinjau di sini memakai `sanitizeHtml` YANG SAMA dengan jalur simpannya, jadi
- * yang terlihat admin persis yang akan tersimpan — termasuk tag yang dibuang.
- * Pembersihan sungguhannya tetap di server (`blogPostSchema`); yang di sini hanya
- * supaya admin tidak perlu menyimpan dulu untuk tahu hasilnya.
+ * Yang tersimpan tetap dibersihkan di server (`blogPostSchema`), jadi apa pun yang
+ * lolos dari editor tidak bisa masuk basis data apa adanya.
  */
 export function AdminBlogForm({ post }: { post?: BlogPost }) {
   const router = useRouter();
-  const [preview, setPreview] = useState(false);
-  const [html, setHtml] = useState(post?.contentHtml ?? "");
   const [excerptLen, setExcerptLen] = useState(post?.excerpt.length ?? 0);
 
   const { action, fields, formError, values } = useFormAction(
@@ -139,92 +133,17 @@ export function AdminBlogForm({ post }: { post?: BlogPost }) {
       </fieldset>
 
       <fieldset className="space-y-3 rounded-2xl border p-4">
-        <legend className="px-1 text-sm font-medium">Isi Artikel (HTML)</legend>
-
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-muted-foreground text-xs">
-            Tag yang diizinkan: <code>p h2 h3 h4 ul ol li strong em blockquote br hr a</code>.
-            Selain itu dibuang otomatis.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => setPreview(!preview)}
-          >
-            <Icon name={preview ? "edit" : "visibility"} className="text-[14px]" />
-            {preview ? "Sunting" : "Pratinjau"}
-          </Button>
-        </div>
-
-        {/* Textarea tetap ada di DOM saat pratinjau terbuka — ia yang membawa
-            nilainya ke FormData. Disembunyikan dengan `hidden`, bukan dilepas. */}
-        <Textarea
-          id="contentHtml"
+        <legend className="px-1 text-sm font-medium">Isi Artikel</legend>
+        <RichTextEditor
           name="contentHtml"
-          required
-          rows={18}
-          value={html}
-          onChange={(e) => setHtml(e.target.value)}
-          hidden={preview}
-          placeholder={"<h2>Subjudul</h2>\n<p>Paragraf pertama...</p>"}
-          className="font-mono text-xs"
-          aria-invalid={!!fields?.contentHtml}
-          aria-describedby={fields?.contentHtml ? "content-error" : undefined}
+          defaultValue={post?.contentHtml}
+          invalid={!!fields?.contentHtml}
         />
-
-        {preview && (
-          <div
-            className="text-body-md [&_h2]:text-headline-md [&_h3]:text-headline-sm [&_a]:text-primary bg-muted min-h-40 space-y-3 rounded-xl p-3 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_h2]:mt-4 [&_h3]:mt-3 [&_li]:ml-4 [&_ol]:list-decimal [&_ul]:list-disc"
-            /* Hasil sanitizer yang sama dengan jalur simpan — lihat catatan kepala. */
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
-          />
-        )}
         <FieldError id="content-error" message={fields?.contentHtml} />
       </fieldset>
 
-      <fieldset className="space-y-4 rounded-2xl border p-4">
-        <legend className="px-1 text-sm font-medium">Sumber</legend>
-        <p className="text-muted-foreground text-xs">
-          Wajib. Artikel kesehatan tanpa sumber tidak bisa diperiksa pembacanya.
-        </p>
-
-        <div className="space-y-2">
-          <Label htmlFor="sourceName">Nama Sumber</Label>
-          <Input
-            id="sourceName"
-            name="sourceName"
-            required
-            maxLength={120}
-            placeholder="WHO, IDAI, Kemenkes RI..."
-            defaultValue={values.sourceName ?? post?.sourceName ?? ""}
-            aria-invalid={!!fields?.sourceName}
-            aria-describedby={fields?.sourceName ? "source-name-error" : undefined}
-          />
-          <FieldError id="source-name-error" message={fields?.sourceName} />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="sourceUrl">URL Sumber</Label>
-          <Input
-            id="sourceUrl"
-            name="sourceUrl"
-            type="url"
-            inputMode="url"
-            required
-            maxLength={500}
-            placeholder="https://www.who.int/..."
-            defaultValue={values.sourceUrl ?? post?.sourceUrl ?? ""}
-            aria-invalid={!!fields?.sourceUrl}
-            aria-describedby={fields?.sourceUrl ? "source-url-error" : undefined}
-          />
-          <FieldError id="source-url-error" message={fields?.sourceUrl} />
-        </div>
-      </fieldset>
-
       <fieldset className="space-y-3 rounded-2xl border p-4">
-        <legend className="px-1 text-sm font-medium">Tampilan &amp; Urutan</legend>
+        <legend className="px-1 text-sm font-medium">Terbitkan</legend>
 
         <label className="flex items-start gap-3">
           <input
@@ -236,30 +155,11 @@ export function AdminBlogForm({ post }: { post?: BlogPost }) {
           <span>
             <span className="text-body-sm block font-bold">Terbitkan ke Halaman Artikel</span>
             <span className="text-muted-foreground text-label-sm block">
-              Selama mati, artikel ini hanya terlihat di halaman admin.
+              Selama mati, artikel ini hanya terlihat di halaman admin. Artikel terbaru tampil
+              paling atas.
             </span>
           </span>
         </label>
-
-        <div className="space-y-2">
-          <Label htmlFor="sortOrder">Urutan Tampil</Label>
-          <Input
-            id="sortOrder"
-            name="sortOrder"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={9999}
-            step={1}
-            defaultValue={values.sortOrder ?? post?.sortOrder ?? 0}
-            aria-invalid={!!fields?.sortOrder}
-            aria-describedby={fields?.sortOrder ? "sort-error" : "sort-hint"}
-          />
-          <p id="sort-hint" className="text-muted-foreground text-xs">
-            Angka kecil tampil lebih dulu. Yang sama urutannya diurutkan dari yang terbaru.
-          </p>
-          <FieldError id="sort-error" message={fields?.sortOrder} />
-        </div>
       </fieldset>
 
       <SubmitButton pendingLabel="Menyimpan...">

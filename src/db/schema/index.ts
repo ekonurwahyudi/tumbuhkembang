@@ -413,8 +413,9 @@ export const shopProducts = pgTable(
  * sebelum disimpan — kolom ini berisi hasil yang sudah bersih, dan penjaganya ada
  * di schema Zod, bukan di komponen yang merendernya.
  *
- * `source_name`/`source_url` wajib diisi: artikel kesehatan tanpa sumber tidak
- * bisa diperiksa pembacanya, dan aplikasi ini tidak menilai kondisi medis sendiri.
+ * `cover_key` satu objek R2, bukan array seperti shop_products: artikel punya
+ * tepat satu gambar sampul, dan kolom array untuk satu nilai hanya menambah
+ * pertanyaan "yang mana yang dipakai".
  */
 export const blogPosts = pgTable(
   "blog_posts",
@@ -427,16 +428,27 @@ export const blogPosts = pgTable(
     excerpt: text("excerpt").notNull(),
     contentHtml: text("content_html").notNull(),
     category: blogCategoryEnum("category").notNull().default("TUMBUH_KEMBANG"),
-    sourceName: text("source_name").notNull(),
-    sourceUrl: text("source_url").notNull(),
+    coverKey: text("cover_key"),
+    /*
+      Sumber TIDAK lagi punya kolom isian di form admin — sumber kini ditulis
+      sebagai tautan di dalam isi artikel. Kolomnya sendiri dipertahankan beserta
+      datanya: artikel lama menyimpan rujukannya di sini, dan membuangnya berarti
+      menghapus asal klaim kesehatan yang sudah terbit.
+
+      `default('')` supaya baris baru yang tidak mengisinya tetap bisa disimpan.
+    */
+    sourceName: text("source_name").notNull().default(""),
+    sourceUrl: text("source_url").notNull().default(""),
     isPublished: boolean("is_published").notNull().default(false),
+    /** Tak lagi dipakai mengurutkan (kini selalu terbaru dulu); datanya dibiarkan. */
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("blog_posts_slug_unique").on(t.slug),
-    index("blog_posts_published_idx").on(t.isPublished, t.sortOrder),
+    // Urutan tampilnya kini selalu terbaru dulu — indeksnya ikut createdAt.
+    index("blog_posts_published_idx").on(t.isPublished, t.createdAt),
   ],
 );
 

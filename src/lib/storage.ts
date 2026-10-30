@@ -116,3 +116,9 @@ export const putClaimPhoto = (claimId: string, body: Uint8Array, ct: string) =>
 export const putShopPhoto = (productId: string, body: Uint8Array, ct: string) =>
   putPhoto("shop", productId, body, ct);
 export const getShopPhoto = (key: string) => getPhoto(key);
+
+// Sampul artikel blog. Prefix sendiri, dan route pembacanya TANPA sesi: artikel
+// yang sudah terbit memang bacaan publik, jadi sampulnya ikut publik.
+export const putBlogCover = (postId: string, body: Uint8Array, ct: string) =>
+  putPhoto("blog", postId, body, ct);
+export const getBlogCover = (key: string) => getPhoto(key);

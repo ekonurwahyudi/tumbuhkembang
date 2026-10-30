@@ -127,6 +127,20 @@
       "when": 1793264890285,
       "tag": "0017_add_blog_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793266889113,
+      "tag": "0018_blog_add_cover",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793266961027,
+      "tag": "0019_blog_source_optional",
+      "breakpoints": true
     }
   ]
 }
