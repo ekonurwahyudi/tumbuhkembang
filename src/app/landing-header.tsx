@@ -22,9 +22,9 @@ export default function LandingHeader() {
           <span className="text-sm sm:text-base">Tumbuh Kembang</span>
         </Link>
         <nav aria-label="Navigasi utama" className="hidden items-center gap-7 text-sm font-semibold text-slate-700 md:flex">
-          <a href="#grafik" className="hover:text-[#005298] focus-visible:outline-2 focus-visible:outline-[#005298]">Grafik</a>
-          <a href="#fitur" className="hover:text-[#005298] focus-visible:outline-2 focus-visible:outline-[#005298]">Fitur</a>
-          <a href="#imunisasi" className="hover:text-[#005298] focus-visible:outline-2 focus-visible:outline-[#005298]">Imunisasi</a>
+          <Link href="/#unggulan" className="hover:text-[#005298] focus-visible:outline-2 focus-visible:outline-[#005298]">Grafik</Link>
+          <Link href="/#fitur" className="hover:text-[#005298] focus-visible:outline-2 focus-visible:outline-[#005298]">Fitur</Link>
+          <Link href="/#unggulan" className="hover:text-[#005298] focus-visible:outline-2 focus-visible:outline-[#005298]">Imunisasi</Link>
         </nav>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <Link href="/login" className="inline-flex min-h-11 items-center rounded-full px-2 text-xs font-semibold text-slate-700 hover:text-[#005298] focus-visible:outline-2 focus-visible:outline-[#005298] sm:px-4 sm:text-sm">Masuk</Link>
