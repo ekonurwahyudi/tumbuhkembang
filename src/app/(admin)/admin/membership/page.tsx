@@ -5,6 +5,9 @@ import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Keanggotaan" };
 
+/** Query DB di tingkat atas, dan build Docker tidak punya DB. */
+export const dynamic = "force-dynamic";
+
 const TIER_LABEL: Record<string, string> = {
   FREEMIUM: "Freemium",
   VIP: "VIP",
