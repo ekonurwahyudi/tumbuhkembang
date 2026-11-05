@@ -169,6 +169,20 @@
       "when": 1793850876921,
       "tag": "0023_membership_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793857394448,
+      "tag": "0024_kpsp_answers",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793859041378,
+      "tag": "0025_kpsp_answer_values",
+      "breakpoints": true
     }
   ]
 }

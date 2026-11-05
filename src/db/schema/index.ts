@@ -568,6 +568,41 @@ export const usersRelations = relations(users, ({ many }) => ({
  * `url` sengaja relatif — tautan absolut mengunci host, sedangkan aplikasi ini
  * hidup di beberapa origin (lokal, pratinjau, produksi).
  */
+/**
+ * Jawaban KPSP (Kuesioner Pra-Skrining Perkembangan) per anak.
+ *
+ * Satu baris per pertanyaan yang sudah dijawab Ya/Tidak; baris yang belum ada berarti
+ * belum dijawab. Skor dihitung hanya bila seluruh 10 item terisi pada versi katalog yang sama.
+ *
+ * `ageMonths` adalah kelompok usia KUESIONER yang dipakai (3, 6, 9, ...), bukan usia
+ * anak saat menjawab: anak yang sama akan mengisi beberapa kuesioner seiring
+ * tumbuhnya, dan tiap kuesioner punya jawabannya sendiri.
+ *
+ * `questionKey` cocok dengan key di src/lib/kpsp/catalog.ts. Teks pertanyaan TIDAK
+ * disalin ke sini: bila katalog direvisi, versi yang tersimpan mencegah jawaban lama
+ * dihitung sebagai hasil formulir baru tanpa peninjauan.
+ */
+export const kpspAnswers = pgTable(
+  "kpsp_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    childId: uuid("child_id")
+      .notNull()
+      .references(() => children.id, { onDelete: "cascade" }),
+    ageMonths: integer("age_months").notNull(),
+    questionKey: text("question_key").notNull(),
+    answer: boolean("answer").notNull().default(true),
+    catalogVersion: text("catalog_version").notNull().default("sdidtk-2022-08-22"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("kpsp_answers_child_id_idx").on(t.childId),
+    // Satu jawaban Ya/Tidak per anak dan formulir usia; kosong berarti belum dinilai.
+    uniqueIndex("kpsp_answers_child_question_unique").on(t.childId, t.ageMonths, t.questionKey),
+  ],
+);
+
 export const notifications = pgTable(
   "notifications",
   {
@@ -715,6 +750,7 @@ export type ShopCategory = (typeof shopCategoryEnum.enumValues)[number];
 export type ShopFavorite = typeof shopFavorites.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type BlogCategory = (typeof blogCategoryEnum.enumValues)[number];
+export type KpspAnswer = typeof kpspAnswers.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type NotificationKind = (typeof notificationKindEnum.enumValues)[number];
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

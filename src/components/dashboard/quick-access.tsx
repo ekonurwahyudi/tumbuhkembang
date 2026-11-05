@@ -19,7 +19,7 @@ type Tile = {
 };
 
 /**
- * Warna keping ikon per layanan. Delapan ubin biru seragam terbaca sebagai satu
+ * Warna keping ikon per layanan. Ubin biru seragam terbaca sebagai satu
  * blok yang harus dibaca kata per kata; warna berbeda membuat tiap ubin punya
  * bentuk ingatan sendiri, jadi orang tua yang sudah hafal bisa menujunya langsung.
  *
@@ -59,14 +59,7 @@ const TONE = {
 const GLASS =
   "relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/60 before:via-white/15 before:to-transparent before:content-[''] shadow-[inset_0_1px_0_rgb(255_255_255/0.7)] backdrop-blur-sm dark:before:from-white/15 dark:before:via-white/5 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.12)]";
 
-export function QuickAccess({
-  childId,
-  registryClaims = 0,
-}: {
-  childId: string;
-  /** Jumlah klaim kado masuk — jadi badge, satu-satunya kabar ke orang tua. */
-  registryClaims?: number;
-}) {
+export function QuickAccess({ childId }: { childId: string }) {
   const tiles: Tile[] = [
     { label: "Profil Anak", icon: "child_care", href: `/children/${childId}`, tone: TONE.sky },
     {
@@ -86,15 +79,15 @@ export function QuickAccess({
     // Grafik WHO tidak hilang: jalan masuknya ada di kartu Tumbuh Kembang tepat di
     // atas Akses Cepat, dan di profil anak. Artikel sebelumnya tidak punya jalan
     // masuk dari beranda sama sekali.
-    { label: "Artikel", icon: "menu_book", href: "/blog", tone: TONE.orange },
+    // { label: "Artikel", icon: "menu_book", href: "/blog", tone: TONE.orange },
     { label: "Shop", icon: "card_giftcard", href: "/shop", tone: TONE.rose },
     {
       label: "List Kado",
       icon: "list_alt",
       href: "/registry",
-      // badge: registryClaims > 0 ? String(registryClaims) : undefined,
       tone: TONE.amber,
     },
+    { label: "Skrining KPSP", icon: "psychology", href: `/children/${childId}/kpsp`, tone: TONE.sky },
     { label: "Nakes Care", icon: "medical_services", badge: "Soon", tone: TONE.teal },
     { label: "Babysitter", icon: "family_restroom", badge: "Soon", tone: TONE.fuchsia },
   ];
@@ -109,7 +102,11 @@ export function QuickAccess({
       </h2>
       <p className="text-muted-foreground text-body-sm mt-0.5">Layanan utama si kecil</p>
 
-      {/* Grid 4 kolom, dua baris — semua layanan terlihat sekaligus tanpa digeser.
+      {/* Empat kolom di mana pun: jumlah ubinnya kelipatan 4, jadi barisnya selalu
+          penuh dan tidak ada lubang di tengah. Dulu ada `col-start-2` untuk memusatkan
+          sisa baris terakhir — itu untuk jumlah ubin yang lain, dan begitu jumlahnya
+          berubah ia justru yang membuat gridnya bolong. Biarkan grid yang mengatur.
+
           `gap-1` di bawah 360px: dengan celah 10px, tiga celah memakan 30px dari
           ~288px ruang isi dan menyisakan ubin ~59px, terlalu sempit untuk labelnya. */}
       <ul className="mt-3.5 grid grid-cols-4 gap-1 min-[360px]:gap-2.5">
@@ -165,7 +162,11 @@ function TileBody({ label, icon, badge, href, tone }: Tile) {
           Kembali ke grid berarti lebar ubin kembali terkunci seperempat layar: 13px
           muat di 390px, tapi di 320px ubinnya hanya ~59px dan "Babysitter" terpotong.
           Jadi 11px di bawah 360px, 13px di atasnya — diukur, bukan ditebak. */}
-      <span className="block w-full text-[11px] leading-[15px] font-normal min-[360px]:text-[13px] min-[360px]:leading-[17px]">
+      {/* Dasar dua baris: "Skrining KPSP" membungkus, "Shop" tidak, dan tanpa ini
+          ubin satu baris jadi beda tinggi. `min-h`, bukan `h`: di 320px label
+          terpanjang butuh tiga baris, dan tinggi mati akan memotongnya. Ubin tetap
+          sama tinggi karena `items-stretch` bawaan grid. */}
+      <span className="block min-h-[30px] w-full text-[11px] leading-[15px] font-normal min-[360px]:min-h-[34px] min-[360px]:text-[13px] min-[360px]:leading-[17px]">
         {label}
       </span>
       {badge && (

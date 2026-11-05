@@ -98,8 +98,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     hasSubscription(user.id),
   ]);
 
-  const claimCount = registryRows.reduce((n, r) => n + r.claims.length, 0);
-
   const latest = measurements[0];
   const currentWeightGrams =
     latest?.weightKg != null ? Math.round(Number(latest.weightKg) * 1000) : child.birthWeightGrams;
@@ -157,7 +155,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         />
       )}
 
-      <QuickAccess childId={child.id} registryClaims={claimCount} />
+      <QuickAccess childId={child.id} />
 
       <VaccineSlider
         childId={child.id}
