@@ -88,6 +88,12 @@ export function BottomNav({
       `bottom` membawa safe-area, bukan `paddingBottom`: pita yang sudah lepas dari
       tepi layar harus naik UTUH di atas home indicator iPhone, bukan menumbuhkan
       padding di dalam dirinya sendiri.
+
+      Safe-area dipakai sebagai LANTAI, bukan tambahan. `inset + 0.5rem` dulu
+      menaikkan pita 42px di iPhone (inset 34px) tapi hanya 8px di Android
+      (inset 0) — di iPhone 12 Pro Max hasilnya terbaca menggantung. `max()`
+      membuat jaraknya 12px di perangkat tanpa home indicator, dan tepat setinggi
+      indicator di perangkat yang punya: sama-sama bersih, tanpa jarak ganda.
     */
     /*
       Kaca ala iOS. Tiga lapis yang membuatnya terbaca sebagai kaca, bukan sekadar
@@ -108,7 +114,7 @@ export function BottomNav({
     <nav
       aria-label="Navigasi utama"
       className="bg-card/95 supports-[backdrop-filter]:bg-card/70 fixed inset-x-3 z-40 rounded-[28px] border border-white/40 shadow-[0_8px_32px_rgb(15_23_42/0.12),inset_0_1px_0_rgb(255_255_255/0.6)] backdrop-blur-2xl backdrop-saturate-150 md:hidden dark:border-white/10 dark:shadow-[0_8px_32px_rgb(0_0_0/0.4),inset_0_1px_0_rgb(255_255_255/0.08)]"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+      style={{ bottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
     >
       <ul className="mx-auto flex h-16 max-w-md items-stretch px-1">
         {left.map(tab)}
