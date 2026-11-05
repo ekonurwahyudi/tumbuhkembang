@@ -77,7 +77,7 @@ export default async function RootPage() {
           </div>
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:text-sm">
             <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] font-bold text-white">BARU</span>
-            Skrining Perkembang IDAI
+            Skrining Perkembang Anak - IDAI 
           </p>
           <h1 className="mx-auto mt-8 max-w-[680px] text-[2.25rem] leading-[1.16] font-extrabold tracking-[-0.035em] sm:text-5xl sm:leading-[1.14]">Pantau tumbuh kembang si kecil <span className="text-[#005298]">lebih tenang.</span></h1>
           <p className="mx-auto mt-5 max-w-[580px] text-base leading-7 text-slate-600">Catatan pertumbuhan, usia koreksi bayi prematur, dan jadwal imunisasi dalam satu tempat yang mudah dijangkau.</p>

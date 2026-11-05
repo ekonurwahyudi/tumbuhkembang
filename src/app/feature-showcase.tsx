@@ -2,59 +2,91 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { BookOpen, CalendarDays, ChartNoAxesCombined, Clock3, Gift, ShoppingBag } from "lucide-react";
+import { BookOpen, CalendarDays, ChartNoAxesCombined, Check, Clock3, Gift, ShoppingBag } from "lucide-react";
 
 const highlights = [
   {
     title: "Grafik WHO & Fenton",
     subtitle: "Pantau pertumbuhan sesuai usia",
-    description: "Ikuti berat, panjang badan, dan lingkar kepala. Referensi WHO tersedia sesuai usia; Fenton 2013 digunakan untuk bayi prematur selama usia pascamenstruasi berada dalam cakupan datanya.",
+    description: "Setiap kali kamu menimbang dan mengukur si kecil, angkanya langsung masuk ke kurva pertumbuhan. Berat badan, panjang atau tinggi badan, dan lingkar kepala punya grafiknya sendiri, lengkap dengan rentang normal di sekitarnya, sehingga kamu bisa melihat arah pertumbuhan dari waktu ke waktu, bukan hanya angka hari ini.",
+    points: [
+      "Berat, panjang badan, dan lingkar kepala tersimpan dalam satu riwayat.",
+      "Setiap pengukuran dilengkapi z-score dan persentil terakhir.",
+      "Kurva Fenton 2013 dipakai untuk bayi prematur selama usia pascamenstruasi masih tercakup datanya.",
+    ],
     note: "Referensi ditampilkan sesuai cakupan, bukan digabung dalam satu sumbu.",
-    screenshot: "growth.webp",
-    art: { src: "/landing/growth-baby.png", width: 390, height: 656 },
+    screenshot: { src: "/landing/Grafik-WHO.webp", width: 465, height: 957 },
     alt: "Tampilan grafik WHO dengan titik pengukuran dari data contoh",
     icon: ChartNoAxesCombined,
   },
   {
     title: "Usia kronologis & koreksi",
     subtitle: "Dua usia, satu pandangan jelas",
-    description: "Lihat usia sejak lahir dan usia yang disesuaikan dengan tanggal perkiraan lahir. Keduanya tampil berdampingan pada beranda anak prematur.",
+    description: "Untuk bayi prematur, usia di kalender sering berbeda dengan usia yang dipakai menilai pertumbuhan. Beranda anak menampilkan keduanya berdampingan, jadi kamu tidak perlu menghitung ulang setiap kali mengisi catatan atau menyiapkan pertanyaan untuk tenaga kesehatan.",
+    points: [
+      "Usia kronologis dihitung sejak tanggal lahir si kecil.",
+      "Usia koreksi mengikuti usia kehamilan saat lahir.",
+      "Ringkasan pengukuran terakhir tampil di layar yang sama.",
+    ],
     note: "Usia koreksi tidak menggantikan tanggal lahir.",
-    screenshot: "home.webp",
-    art: { src: "/landing/premature.png", width: 317, height: 423 },
+    screenshot: { src: "/landing/usia-kronologis.webp", width: 523, height: 1076 },
     alt: "Tampilan beranda data contoh dengan usia kronologis dan usia koreksi",
     icon: Clock3,
   },
   {
     title: "Jadwal imunisasi",
     subtitle: "Ingat jadwal vaksin si kecil",
-    description: "Lihat jadwal vaksinasi, catat imunisasi yang diberikan, dan siapkan langkah berikutnya dengan pengingat.",
+    description: "Daftar vaksin tersusun rapi beserta status masing-masing, sehingga kamu tahu mana yang sudah diberikan dan mana yang menunggu giliran. Setelah imunisasi selesai, cukup catat tanggalnya dan daftar ikut diperbarui.",
+    points: [
+      "Status vaksin terbagi jelas: sudah, perlu diberikan, dan belum waktunya.",
+      "Tanggal pemberian dicatat langsung dari daftar.",
+      "Pengingat disiapkan untuk jadwal berikutnya.",
+    ],
     note: "Jadwal dan riwayat tersimpan bersama catatan anak.",
-    screenshot: "vaccine-schedule.webp",
-    art: { src: "/landing/vaksin.webp", width: 200, height: 195 },
+    screenshot: { src: "/landing/vaksin-all.webp", width: 465, height: 957 },
     alt: "Tampilan jadwal imunisasi anak dengan data contoh",
     icon: CalendarDays,
   },
   {
     title: "Tips imunisasi & MPASI",
     subtitle: "Bacaan untuk mendampingi keluarga",
-    description: "Baca artikel seputar imunisasi, MPASI, nutrisi, dan perawatan untuk membantu menyiapkan pertanyaan saat konsultasi.",
+    description: "Banyak pertanyaan muncul di luar jam praktik: kapan mulai MPASI, apa yang wajar setelah imunisasi, bagaimana membaca grafik pertumbuhan. Kumpulan artikel di dalam aplikasi membantu kamu menyiapkan jawaban sementara dan menyusun pertanyaan sebelum bertemu tenaga kesehatan.",
+    points: [
+      "Topik mencakup imunisasi, MPASI, nutrisi, dan perawatan harian.",
+      "Artikel dapat dicari berdasarkan judul atau topik.",
+      "Materi dirangkum dari rujukan lembaga kesehatan.",
+    ],
     note: "Konten edukasi tidak menggantikan konsultasi medis.",
-    art: { src: "/landing/prenant.png", width: 1254, height: 1254 },
+    screenshot: { src: "/landing/artikel.webp", width: 465, height: 957 },
+    alt: "Tampilan daftar artikel tumbuh kembang dengan data contoh",
     icon: BookOpen,
   },
   {
     title: "Wishlist kado",
     subtitle: "Bagikan kebutuhan si kecil",
-    description: "Susun daftar kebutuhan anak dan bagikan tautannya kepada keluarga atau teman agar mereka bisa memilih kado.",
+    description: "Saat keluarga dan teman bertanya si kecil butuh apa, kamu cukup membagikan satu tautan. Mereka melihat daftar kebutuhan yang kamu susun, memilih sendiri, lalu menandainya, sehingga kado tidak dobel dan kebutuhan yang benar-benar penting lebih cepat terpenuhi.",
+    points: [
+      "Tautan dibagikan lewat WhatsApp atau disalin manual.",
+      "Status terdaftar, dihadiahi, dan menunggu terlihat sekaligus.",
+      "Penerima tautan memilih kado tanpa perlu membuat akun.",
+    ],
     note: "Daftar dapat dibuat sesuai kebutuhan keluarga.",
+    screenshot: { src: "/landing/kado.webp", width: 465, height: 957 },
+    alt: "Tampilan wishlist kado dengan data contoh",
     icon: Gift,
   },
   {
     title: "Shop katalog",
     subtitle: "Temukan pilihan untuk keluarga",
-    description: "Jelajahi katalog produk anak dan simpan pilihan favorit saat produk tersedia.",
+    description: "Katalog mengumpulkan perlengkapan anak dalam satu halaman dengan kategori seperti alat kesehatan, menyusui, dan nutrisi. Harga dan potongan tampil langsung pada kartu produk, jadi kamu bisa membandingkan dulu sebelum memutuskan.",
+    points: [
+      "Produk dikelompokkan per kategori kebutuhan anak.",
+      "Harga dan potongan tampil pada setiap kartu.",
+      "Pilihan favorit disimpan untuk dilihat kembali.",
+    ],
     note: "Pilihan bergantung pada produk yang tersedia.",
+    screenshot: { src: "/landing/shop.webp", width: 465, height: 957 },
+    alt: "Tampilan katalog produk anak dengan data contoh",
     icon: ShoppingBag,
   },
 ];
@@ -93,13 +125,22 @@ export default function FeatureShowcase() {
             </button>
           ))}
         </div>
-        <div id="fitur-panel" role="tabpanel" aria-labelledby={`fitur-tab-${active}`} tabIndex={0} className="flex min-w-0 flex-col overflow-hidden rounded-3xl bg-[#f3f8fd] p-5 focus-visible:outline-2 focus-visible:outline-[#005298] sm:p-8 lg:min-h-[580px]">
-          <h3 className="text-xl font-extrabold text-[#005298] sm:text-2xl">{feature.title}</h3>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-700 sm:text-base sm:leading-7">{feature.description}</p>
-          <p className="mt-3 max-w-2xl text-xs leading-5 text-slate-600 sm:text-sm">{feature.note}</p>
-          <div className="relative mt-6 flex min-h-64 flex-1 items-end justify-center gap-4 overflow-hidden sm:min-h-80 sm:gap-8">
-            {feature.art && <Image src={feature.art.src} alt="" width={feature.art.width} height={feature.art.height} sizes="(max-width: 640px) 35vw, 220px" className="h-36 w-auto max-w-[38%] shrink-0 object-contain sm:h-52" />}
-            {feature.screenshot && <Image src={`/landing/${feature.screenshot}`} alt={feature.alt} width={390} height={844} sizes="(max-width: 640px) 45vw, 280px" className="h-auto w-[48%] max-w-[260px] self-end rounded-t-3xl border-4 border-slate-800 border-b-0 bg-white shadow-xl" />}
+        <div id="fitur-panel" role="tabpanel" aria-labelledby={`fitur-tab-${active}`} tabIndex={0} className="relative grid min-w-0 gap-6 overflow-hidden rounded-3xl bg-[#f3f8fd] p-5 focus-visible:outline-2 focus-visible:outline-[#005298] sm:p-8 lg:grid-cols-[1fr_0.95fr] lg:gap-6">
+          <div className="min-w-0 self-start">
+            <h3 className="text-xl font-extrabold text-[#005298] sm:text-2xl">{feature.title}</h3>
+            <p className="mt-4 text-sm leading-6 text-slate-700 sm:text-base sm:leading-7">{feature.description}</p>
+            <ul className="mt-5 grid gap-3">
+              {feature.points.map((point) => (
+                <li key={point} className="flex gap-2.5 text-sm leading-6 text-slate-700">
+                  <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[#005298]" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-xs leading-5 text-slate-600 sm:text-sm">{feature.note}</p>
+          </div>
+          <div className="relative -mr-5 -mb-5 min-h-[25rem] lg:-mr-8 lg:-mb-8 lg:min-h-0">
+            <Image src={feature.screenshot.src} alt={feature.alt} width={feature.screenshot.width} height={feature.screenshot.height} sizes="(max-width: 1024px) 80vw, 320px" className="absolute right-0 bottom-0 h-[110%] w-auto max-w-none origin-bottom-right translate-x-[12%] translate-y-[9%] -rotate-6 lg:h-[104%] drop-shadow-[0_18px_30px_#0f172a2e] lg:w-auto lg:max-w-[82%] lg:translate-y-[7%] xl:max-w-[92%]" />
           </div>
         </div>
       </div>
