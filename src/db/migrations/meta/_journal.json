@@ -155,6 +155,13 @@
       "when": 1793849033140,
       "tag": "0021_marvelous_harrier",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793850568993,
+      "tag": "0022_rename_free_to_freemium",
+      "breakpoints": true
     }
   ]
 }

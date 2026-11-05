@@ -21,7 +21,7 @@ describe("adminEditParentSchema", () => {
   const base = { name: "Budi", email: "budi@ex.com", phone: "" };
 
   it("menerima ketiga tingkat keanggotaan", () => {
-    for (const membershipTier of ["FREE", "VIP", "VVIP"] as const) {
+    for (const membershipTier of ["FREEMIUM", "VIP", "VVIP"] as const) {
       expect(adminEditParentSchema.parse({ ...base, membershipTier }).membershipTier).toBe(
         membershipTier,
       );
@@ -33,6 +33,10 @@ describe("adminEditParentSchema", () => {
       false,
     );
     expect(adminEditParentSchema.safeParse({ ...base, membershipTier: "vip" }).success).toBe(false);
+    // Nilai lama sebelum rename — ditolak, bukan diam-diam diterima.
+    expect(adminEditParentSchema.safeParse({ ...base, membershipTier: "FREE" }).success).toBe(
+      false,
+    );
     expect(adminEditParentSchema.safeParse(base).success).toBe(false);
   });
 

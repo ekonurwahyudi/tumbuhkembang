@@ -18,11 +18,11 @@ import { PushToggle } from "@/components/notifications/push-toggle";
 export const metadata: Metadata = { title: "Profil" };
 
 /**
- * FREE ikut ditampilkan, bukan disembunyikan: badge yang hanya muncul untuk VIP
- * membuat pemilik akun FREE mengira statusnya gagal dimuat.
+ * FREEMIUM ikut ditampilkan, bukan disembunyikan: badge yang hanya muncul untuk
+ * VIP membuat pemilik akun gratis mengira statusnya gagal dimuat.
  */
 const TIER_BADGE: Record<MembershipTier, { label: string; className: string }> = {
-  FREE: { label: "Free Member", className: "bg-muted text-muted-foreground" },
+  FREEMIUM: { label: "Freemium Member", className: "bg-muted text-muted-foreground" },
   VIP: { label: "VIP Member", className: "bg-amber-100 text-amber-900" },
   VVIP: { label: "VVIP Member", className: "bg-amber-100 text-amber-900" },
 };

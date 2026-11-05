@@ -19,11 +19,11 @@ import {
 export const metadata: Metadata = { title: "Data Orang Tua" };
 
 /**
- * FREE sengaja abu-abu, bukan tanda pisah "—": tiap akun selalu punya tier, dan
- * sel kosong di kolom ini terbaca seperti data yang gagal dimuat.
+ * FREEMIUM sengaja abu-abu, bukan tanda pisah "—": tiap akun selalu punya tier,
+ * dan sel kosong di kolom ini terbaca seperti data yang gagal dimuat.
  */
 const TIER_BADGE: Record<MembershipTier, string> = {
-  FREE: "bg-muted text-muted-foreground",
+  FREEMIUM: "bg-muted text-muted-foreground",
   VIP: "bg-amber-100 text-amber-900",
   VVIP: "bg-violet-100 text-violet-900",
 };

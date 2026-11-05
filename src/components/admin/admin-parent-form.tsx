@@ -89,7 +89,7 @@ export function AdminParentForm({
       </div>
 
       {/*
-        Tier hanya muncul saat mengubah, bukan saat membuat: akun baru selalu FREE,
+        Tier hanya muncul saat mengubah, bukan saat membuat: akun baru selalu FREEMIUM,
         sama seperti yang mendaftar sendiri. `<select>` bawaan dengan alasan yang sama
         seperti kategori di form Shop — di HP ia membuka picker asli sistem.
       */}
@@ -106,7 +106,7 @@ export function AdminParentForm({
             aria-invalid={!!fields?.membershipTier}
             className="border-input bg-background focus-visible:ring-ring aria-invalid:border-destructive h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
           >
-            <option value="FREE">Free</option>
+            <option value="FREEMIUM">Freemium</option>
             <option value="VIP">VIP</option>
             <option value="VVIP">VVIP</option>
           </select>
