@@ -50,6 +50,13 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         ready: true,
       },
       {
+        slug: "membership",
+        label: "Keanggotaan",
+        icon: "badge",
+        description: "Atur batas tiap paket: Freemium, VIP, dan VVIP",
+        ready: true,
+      },
+      {
         slug: "tarif",
         label: "Tarif Layanan",
         icon: "list_alt",

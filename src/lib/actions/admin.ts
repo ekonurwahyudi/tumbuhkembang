@@ -14,7 +14,12 @@ import {
   adminUpdateParent,
 } from "@/lib/data/admin";
 import { deleteChildPhoto, deletePhoto } from "@/lib/storage";
-import { adminEditParentSchema, adminNewParentSchema } from "@/schemas/account";
+import { setRegistryMax } from "@/lib/data/membership";
+import {
+  adminEditParentSchema,
+  adminNewParentSchema,
+  membershipLimitSchema,
+} from "@/schemas/account";
 import { parseChildForm, toChildRow } from "./child-form";
 
 /**
@@ -168,5 +173,30 @@ export async function adminDeleteChildAction(childId: string): Promise<ActionRes
     return ok(undefined);
   } catch (err) {
     return handleUnexpected("adminDeleteChildAction", err);
+  }
+}
+
+/**
+ * Ubah batas satu tier. Tidak menyentuh `users` sama sekali — mengubah batas
+ * Freemium berlaku untuk semua akun Freemium sekaligus, tanpa menulis ulang barisnya.
+ */
+export async function adminSetMembershipLimitAction(formData: FormData): Promise<ActionResult> {
+  try {
+    await requireSuperadmin();
+    const parsed = membershipLimitSchema.safeParse({
+      tier: formData.get("tier"),
+      registryMax: formData.get("registryMax") ?? "",
+    });
+    if (!parsed.success)
+      return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
+
+    await setRegistryMax(parsed.data.tier, parsed.data.registryMax);
+
+    revalidatePath("/admin/membership");
+    // Kuota tampil di halaman kado pemilik akun, jadi cache-nya ikut basi.
+    revalidatePath("/registry");
+    return ok(undefined);
+  } catch (err) {
+    return handleUnexpected("adminSetMembershipLimitAction", err);
   }
 }

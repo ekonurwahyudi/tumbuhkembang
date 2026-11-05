@@ -140,6 +140,20 @@ export const users = pgTable(
   ],
 );
 
+/**
+ * Batas tiap tingkat keanggotaan. Satu baris per tier, bukan kolom di `users`:
+ * batasnya milik tier, bukan milik orang. Disimpan di DB, bukan konstanta kode,
+ * supaya angkanya bisa diubah admin tanpa deploy.
+ *
+ * `registryMax` NULL berarti tanpa batas. Angka 0 berarti tidak boleh sama sekali —
+ * keduanya berbeda, jadi kolomnya nullable dan bukan memakai 0 sebagai "bebas".
+ */
+export const membershipLimits = pgTable("membership_limits", {
+  tier: membershipTierEnum("tier").primaryKey(),
+  registryMax: integer("registry_max"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const children = pgTable(
   "children",
   {
@@ -683,6 +697,7 @@ export type User = typeof users.$inferSelect;
 /** Satu-satunya sumber nilai peran — jangan tulis literalnya lagi di tempat lain. */
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type MembershipTier = (typeof membershipTierEnum.enumValues)[number];
+export type MembershipLimit = typeof membershipLimits.$inferSelect;
 export type Child = typeof children.$inferSelect;
 export type GrowthMeasurement = typeof growthMeasurements.$inferSelect;
 export type FeedingLog = typeof feedingLogs.$inferSelect;

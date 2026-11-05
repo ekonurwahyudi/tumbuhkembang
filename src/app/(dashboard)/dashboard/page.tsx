@@ -36,10 +36,16 @@ export const metadata: Metadata = { title: "Beranda" };
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   const user = await requireUser();
   const { anak } = await searchParams;
-  // Lonceng di sapaan butuh ini di kedua cabang, termasuk yang belum punya anak.
-  const [items, unread] = await Promise.all([
+  // Dibutuhkan di KEDUA cabang, termasuk yang belum punya anak: lonceng di sapaan,
+  // lalu List Kado dan katalog Shop. Keduanya tidak ber-scope anak — kado milik akun
+  // dan katalog milik bersama — jadi tidak ada alasan menyembunyikannya hanya karena
+  // profil anak belum dibuat.
+  const [items, unread, registryRows, shopProducts, favoriteIds] = await Promise.all([
     listChildrenWithLatestForViewer(user.id),
     unreadCount(user.id),
+    listRegistryItems(user.id),
+    listShopProducts({ limit: 5 }),
+    listFavoriteIds(user.id),
   ]);
 
   const greeting = (
@@ -64,6 +70,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
             </Button>
           }
         />
+
+        {/* RegistryStrip sendiri yang menampilkan ajakan saat daftarnya kosong. */}
+        <RegistryStrip rows={registryRows.slice(0, 5)} summary={registrySummary(registryRows)} />
+
+        <ShopStrip products={shopProducts} favoriteIds={favoriteIds} />
       </div>
     );
 
@@ -77,22 +88,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     vaccinations,
     skippedKeys,
     reminders,
-    registryRows,
-    shopProducts,
-    favoriteIds,
     pushSubscribed,
   ] = await Promise.all([
     listMeasurements(user.id, child.id, "desc"),
     listVaccinations(user.id, child.id),
     listSkippedCatalogKeys(user.id, child.id),
     listReminders(user.id, child.id),
-    // Daftar utuh, bukan registryClaimCount: strip List Kado butuh barangnya, dan
-    // badge klaim di Akses Cepat tinggal dijumlahkan dari baris yang sama.
-    listRegistryItems(user.id),
-    // Katalog milik bersama, jadi tidak ber-scope anak aktif. Lima, sejumlah kolom
-    // grid-nya di desktop: yang keenam akan berdiri sendirian di baris kedua.
-    listShopProducts({ limit: 5 }),
-    listFavoriteIds(user.id),
     // Nilai awal saja; PushPrompt memverifikasinya ke browser setelah terhidrasi.
     hasSubscription(user.id),
   ]);

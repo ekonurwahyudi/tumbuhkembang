@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { listRegistryChildren } from "@/lib/data/registry";
+import { registryQuota } from "@/lib/data/membership";
 import { RegistryItemForm } from "@/components/registry/registry-item-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -10,7 +12,14 @@ export const metadata: Metadata = { title: "Tambah Barang Impian" };
 
 export default async function NewRegistryItemPage() {
   const user = await requireUser();
-  const childList = await listRegistryChildren(user.id);
+  const [childList, quota] = await Promise.all([
+    listRegistryChildren(user.id),
+    registryQuota(user.id, user.membershipTier),
+  ]);
+
+  // Halaman ini bisa dibuka langsung lewat URL walau tombolnya mati di /registry.
+  // Dialihkan, bukan menampilkan form yang pasti ditolak server action.
+  if (!quota.canAdd) redirect("/registry");
 
   return (
     <div className="flex flex-col gap-4 pt-2">

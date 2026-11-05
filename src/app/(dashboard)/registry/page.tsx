@@ -10,6 +10,7 @@ import {
   listRegistryItems,
   registrySummary,
 } from "@/lib/data/registry";
+import { registryQuota } from "@/lib/data/membership";
 import { chronologicalAge, formatAge } from "@/lib/growth/age";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
@@ -25,13 +26,14 @@ export const metadata: Metadata = { title: "MyRegistry" };
 
 export default async function RegistryPage() {
   const user = await requireUser();
-  const [rows, claims, settings, shipping, childList, origin] = await Promise.all([
+  const [rows, claims, settings, shipping, childList, origin, quota] = await Promise.all([
     listRegistryItems(user.id),
     listRegistryClaims(user.id),
     getRegistrySettings(user.id),
     getShippingSettings(user.id),
     listRegistryChildren(user.id),
     requestOrigin(),
+    registryQuota(user.id, user.membershipTier),
   ]);
 
   const summary = registrySummary(rows);
@@ -100,13 +102,35 @@ export default async function RegistryPage() {
             Daftar barang impian yang bisa dihadiahi keluarga dan teman.
           </p>
         </div>
-        <Button asChild size="sm" className="shrink-0 rounded-full">
-          <Link href="/registry/new">
+        {/*
+          Kuota habis → tombol jadi teks mati, bukan disembunyikan: tombol yang
+          lenyap membuat orang mengira fiturnya rusak. Penjaga sebenarnya tetap di
+          server action — ini hanya supaya tidak ada yang mengisi form sia-sia.
+        */}
+        {quota.canAdd ? (
+          <Button asChild size="sm" className="shrink-0 rounded-full">
+            <Link href="/registry/new">
+              <Icon name="add" className="text-[16px]" />
+              Tambah
+            </Link>
+          </Button>
+        ) : (
+          <Button size="sm" className="shrink-0 rounded-full" disabled>
             <Icon name="add" className="text-[16px]" />
             Tambah
-          </Link>
-        </Button>
+          </Button>
+        )}
       </header>
+
+      {quota.max !== null && (
+        <p
+          className={`text-body-sm rounded-xl px-3 py-2 ${quota.canAdd ? "bg-muted text-muted-foreground" : "bg-amber-50 text-amber-900"}`}
+        >
+          {quota.canAdd
+            ? `Paket ${user.membershipTier}: ${quota.used} dari ${quota.max} kado terpakai.`
+            : `Paket ${user.membershipTier} dibatasi ${quota.max} kado. Naikkan ke VIP untuk menambah tanpa batas.`}
+        </p>
+      )}
 
       <RegistryShareCard
         token={settings?.token ?? null}

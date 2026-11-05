@@ -17,6 +17,24 @@ export const profileSchema = z.object({
 });
 
 /**
+ * Batas satu tier. Kosong = tanpa batas (disimpan NULL), bukan nol: nol berarti
+ * tidak boleh menambah sama sekali, dan keduanya perlu bisa dibedakan.
+ *
+ * `coerce` menolak "5abc" — input number mengirim string, dan Number("5abc") NaN.
+ */
+export const membershipLimitSchema = z.object({
+  tier: z.enum(membershipTierEnum.enumValues),
+  registryMax: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\d{1,5}$/.test(v), {
+      message: "Isi bilangan bulat 0-10000, atau kosongkan untuk tanpa batas",
+    })
+    .transform((v) => (v === "" ? null : Number(v)))
+    .refine((v) => v === null || v <= 10000, { message: "Terlalu besar" }),
+});
+
+/**
  * Ubah akun orang tua oleh admin: profil + tingkat keanggotaan.
  *
  * Tier hanya ada di form admin, bukan di profileSchema: profileSchema juga dipakai

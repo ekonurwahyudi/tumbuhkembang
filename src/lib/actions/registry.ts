@@ -22,6 +22,7 @@ import {
   updateClaimTracking,
   updateRegistryItem,
 } from "@/lib/data/registry";
+import { registryQuota } from "@/lib/data/membership";
 import {
   parseClaimForm,
   parseRegistryItemForm,
@@ -56,6 +57,16 @@ export async function createRegistryItemAction(
     const parsed = parseRegistryItemForm(formData);
     if (!parsed.success)
       return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
+
+    // Penjaga kuota ada di sini, bukan hanya di UI: tombol yang disembunyikan tidak
+    // menghentikan POST langsung. Dicek setelah validasi supaya pesan "data tidak
+    // valid" tetap muncul lebih dulu untuk form yang memang salah isi.
+    const quota = await registryQuota(user.id, user.membershipTier);
+    if (!quota.canAdd)
+      return fail(
+        "LIMIT_REACHED",
+        `Paket ${user.membershipTier} dibatasi ${quota.max} kado. Naikkan paket untuk menambah lagi.`,
+      );
 
     const row = await insertRegistryItem(user.id, toRegistryItemRow(parsed.data));
     await revalidateRegistry(user.id);

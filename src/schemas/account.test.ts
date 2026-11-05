@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { adminEditParentSchema, passwordChangeSchema, profileSchema } from "./account";
+import {
+  adminEditParentSchema,
+  membershipLimitSchema,
+  passwordChangeSchema,
+  profileSchema,
+} from "./account";
 
 describe("profileSchema", () => {
   it("menerima profil lengkap dan tanpa telepon", () => {
@@ -45,6 +50,24 @@ describe("adminEditParentSchema", () => {
     // menaikkan dirinya sendiri lewat form Profil. Tes ini gagal lebih dulu.
     const parsed = profileSchema.parse({ ...base, membershipTier: "VVIP" });
     expect(parsed).not.toHaveProperty("membershipTier");
+  });
+});
+
+describe("membershipLimitSchema", () => {
+  it("membedakan kosong (tanpa batas) dari nol (tidak boleh sama sekali)", () => {
+    expect(membershipLimitSchema.parse({ tier: "VIP", registryMax: "" }).registryMax).toBeNull();
+    expect(membershipLimitSchema.parse({ tier: "FREEMIUM", registryMax: "0" }).registryMax).toBe(0);
+    expect(membershipLimitSchema.parse({ tier: "FREEMIUM", registryMax: " 5 " }).registryMax).toBe(
+      5,
+    );
+  });
+
+  it("menolak angka yang bukan bilangan bulat non-negatif", () => {
+    for (const registryMax of ["5abc", "-1", "2.5", "abc", "999999"]) {
+      expect(membershipLimitSchema.safeParse({ tier: "FREEMIUM", registryMax }).success).toBe(
+        false,
+      );
+    }
   });
 });
 
