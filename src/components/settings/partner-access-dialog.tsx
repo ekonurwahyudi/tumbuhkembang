@@ -29,8 +29,6 @@ type ShareRow = {
 const FIELD =
   "h-12 border-transparent bg-white pl-11 text-[15px] text-[#0F172A] placeholder:text-[#94A3B8]/60 shadow-sm focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[#006194]/20";
 
-const STATUS_LABEL = { PENDING: "Menunggu", ACCEPTED: "Aktif" } as const;
-
 function ShareList({ shares }: { shares: ShareRow[] }) {
   const [rows, setRows] = useState(shares);
   const [pending, startTransition] = useTransition();
@@ -59,12 +57,16 @@ function ShareList({ shares }: { shares: ShareRow[] }) {
             <p className="truncate text-[13px] font-semibold text-[#0F172A]">
               {s.childName} → {s.inviteeEmail}
             </p>
+            {/* Akses yang sudah diterima tidak punya tanggal akhir — hanya tombol
+                Cabut di sebelah yang mengakhirinya. Yang masih menunggu tetap
+                menampilkan batas tautannya, sebab tautan itu memang bisa mati. */}
             <p className="text-muted-foreground text-[11px]">
-              {STATUS_LABEL[s.status]} • berlaku sampai{" "}
-              {new Date(s.expiresAt).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-              })}
+              {s.status === "ACCEPTED"
+                ? "Aktif • sampai Anda mencabutnya"
+                : `Menunggu • tautan berlaku sampai ${new Date(s.expiresAt).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                  })}`}
             </p>
           </div>
           <button
@@ -170,8 +172,12 @@ export function PartnerAccessDialog({
         {link && (
           <div className="bg-accent mt-4 flex flex-col gap-2 rounded-xl p-3">
             <span className="text-primary text-label-sm font-bold uppercase tracking-wider">
-              Link undangan (7 hari)
+              Link undangan
             </span>
+            <p className="text-primary/80 text-[11px]">
+              Tautan ini berlaku 7 hari. Setelah pasangan menerimanya, aksesnya tidak
+              berbatas waktu sampai Anda mencabutnya.
+            </p>
             <p className="text-primary/80 max-h-16 overflow-y-auto text-[12px] break-all">
               {link}
             </p>

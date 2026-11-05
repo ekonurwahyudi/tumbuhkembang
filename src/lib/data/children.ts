@@ -37,7 +37,9 @@ export type ViewerChild = { child: Child; role: "OWNER" | "PARTNER" };
 
 /**
  * Predikat SQL untuk query catatan anak (join ke `children`): baris terlihat
- * bila user pemilik anak ATAU penerima share ACCEPTED yang belum kedaluwarsa.
+ * bila user pemilik anak ATAU penerima share ACCEPTED. Tidak ada cek kedaluwarsa:
+ * akses pasangan berlaku sampai pemiliknya mencabut (lihat `revokeShare`).
+ * `expiresAt` hanya membatasi TAUTAN undangan yang belum diterima.
  * Dipakai data layer catatan (measurement/asupan/imunisasi) — profil anak
  * (hapus/ubah/foto) tetap memakai `eq(children.userId, userId)`.
  */
@@ -47,7 +49,6 @@ export function childVisibleTo(userId: string) {
     where ${childShares.childId} = ${children.id}
       and ${childShares.inviteeUserId} = ${userId}
       and ${childShares.status} = 'ACCEPTED'
-      and ${childShares.expiresAt} > now()
   ))`;
 }
 
@@ -63,7 +64,6 @@ export async function listChildrenForViewer(userId: string): Promise<ViewerChild
       and(
         eq(childShares.inviteeUserId, userId),
         eq(childShares.status, "ACCEPTED"),
-        gt(childShares.expiresAt, new Date()),
       ),
     );
 
@@ -117,7 +117,6 @@ export async function getChildForViewer(
         eq(childShares.childId, childId),
         eq(childShares.inviteeUserId, userId),
         eq(childShares.status, "ACCEPTED"),
-        gt(childShares.expiresAt, new Date()),
       ),
     )
     .limit(1);
@@ -278,7 +277,11 @@ async function listChildrenWithLatestMeasurementByChildIds(childIds: string[]) {
 // Akses Pasangan (child_shares)
 // ---------------------------------------------------------------------------
 
-/** Umur undangan sebelum kedaluwarsa. */
+/**
+ * Umur TAUTAN undangan yang belum diterima. Begitu undangan diterima, aksesnya
+ * tidak lagi ber-masa-berlaku — hanya pencabutan oleh pemilik yang mengakhirinya.
+ * Batas ini menjaga tautan yang terlanjur tersebar tidak hidup selamanya.
+ */
 const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**

@@ -14,6 +14,7 @@ import {
   findShareByToken,
   getChild,
   getChildForViewer,
+  revokeShare,
   insertChild,
   listChildren,
   listChildrenForViewer,
@@ -527,6 +528,36 @@ describe("akses pasangan (share)", () => {
         gestationalAgeDays: null,
       }),
     ).toBeUndefined();
+  });
+
+  it("akses yang sudah diterima tidak mati sendiri, hanya pencabutan yang mengakhirinya", async () => {
+    // Mulai bersih: blok tes di atas meninggalkan share ACCEPTED untuk pasangan
+    // yang sama, dan satu baris sisa akan tetap memberi akses setelah pencabutan.
+    await db.delete(childShares).where(eq(childShares.childId, aliceChild));
+
+    const share = await upsertShare({
+      childId: aliceChild,
+      ownerId: alice,
+      inviteeEmail: bobEmail,
+    });
+    await acceptShare(share.id, bob, bobEmail);
+
+    // Lewatkan jauh melewati masa berlaku tautan undangannya.
+    await db
+      .update(childShares)
+      .set({ expiresAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) })
+      .where(eq(childShares.id, share.id));
+
+    expect((await getChildForViewer(bob, aliceChild))?.role).toBe("PARTNER");
+    expect(await assertChildAccessible(bob, aliceChild)).toBe(true);
+    expect((await listChildrenForViewer(bob)).some(({ child }) => child.id === aliceChild)).toBe(
+      true,
+    );
+
+    // Pencabutan oleh pemilik: barulah aksesnya tertutup.
+    expect(await revokeShare(share.id, alice)).toBeDefined();
+    expect(await getChildForViewer(bob, aliceChild)).toBeUndefined();
+    expect(await assertChildAccessible(bob, aliceChild)).toBe(false);
   });
 
   it("undangan kedaluwarsa dan email salah tidak diterima", async () => {
