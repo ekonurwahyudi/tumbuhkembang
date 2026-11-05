@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { users, type MembershipTier } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { pushPublicKey } from "@/lib/push";
 import { listChildrenWithLatestForViewer, listSharesByOwner } from "@/lib/data/children";
@@ -16,6 +16,16 @@ import { SettingsChildCard } from "@/components/settings/settings-child-card";
 import { PushToggle } from "@/components/notifications/push-toggle";
 
 export const metadata: Metadata = { title: "Profil" };
+
+/**
+ * FREE ikut ditampilkan, bukan disembunyikan: badge yang hanya muncul untuk VIP
+ * membuat pemilik akun FREE mengira statusnya gagal dimuat.
+ */
+const TIER_BADGE: Record<MembershipTier, { label: string; className: string }> = {
+  FREE: { label: "Free Member", className: "bg-muted text-muted-foreground" },
+  VIP: { label: "VIP Member", className: "bg-amber-100 text-amber-900" },
+  VVIP: { label: "VVIP Member", className: "bg-amber-100 text-amber-900" },
+};
 
 const initials = (name: string) =>
   name
@@ -68,9 +78,11 @@ export default async function SettingsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <h2 className="text-headline-sm truncate">{user.name}</h2>
-              <span className="bg-accent text-primary text-label-sm inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-bold">
+              <span
+                className={`text-label-sm inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-bold ${TIER_BADGE[user.membershipTier].className}`}
+              >
                 <Icon name="verified" className="text-[12px]" />
-                PWA Terverifikasi
+                {TIER_BADGE[user.membershipTier].label}
               </span>
             </div>
             <p className="text-muted-foreground text-body-sm mt-0.5 truncate">{user.email}</p>

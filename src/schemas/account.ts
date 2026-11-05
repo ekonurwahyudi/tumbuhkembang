@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { membershipTierEnum } from "@/db/schema";
 import { passwordSchema } from "./auth";
 
 /** Nomor HP Indonesia longgar: 08xxx / 62xxx / +62xxx. Kosong = hapus. */
@@ -13,6 +14,17 @@ export const profileSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100, "Nama terlalu panjang"),
   email: z.string().trim().toLowerCase().email("Email tidak valid"),
   phone: phoneSchema.optional(),
+});
+
+/**
+ * Ubah akun orang tua oleh admin: profil + tingkat keanggotaan.
+ *
+ * Tier hanya ada di form admin, bukan di profileSchema: profileSchema juga dipakai
+ * halaman Profil milik user sendiri, dan field tier di sana berarti siapa pun bisa
+ * menaikkan dirinya ke VVIP lewat satu POST.
+ */
+export const adminEditParentSchema = profileSchema.extend({
+  membershipTier: z.enum(membershipTierEnum.enumValues),
 });
 
 /**

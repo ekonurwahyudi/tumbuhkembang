@@ -1,7 +1,7 @@
 import "server-only";
 import { count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { children, users } from "@/db/schema";
+import { children, users, type MembershipTier } from "@/db/schema";
 import type { NewChild } from "./children";
 
 /**
@@ -40,6 +40,7 @@ export async function adminListParents(q?: string) {
       email: users.email,
       phone: users.phone,
       role: users.role,
+      membershipTier: users.membershipTier,
       createdAt: users.createdAt,
       // Jumlah anak per orang tua lewat subquery, bukan groupBy: leftJoin + groupBy
       // memaksa setiap kolom users masuk GROUP BY dan membuat query ini sulit dibaca.
@@ -66,6 +67,7 @@ export async function adminGetParent(userId: string) {
       email: users.email,
       phone: users.phone,
       role: users.role,
+      membershipTier: users.membershipTier,
       createdAt: users.createdAt,
     })
     .from(users)
@@ -76,7 +78,7 @@ export async function adminGetParent(userId: string) {
 
 export async function adminUpdateParent(
   userId: string,
-  values: { name: string; email: string; phone: string | null },
+  values: { name: string; email: string; phone: string | null; membershipTier: MembershipTier },
 ) {
   const [row] = await db
     .update(users)

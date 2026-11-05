@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { MembershipTier } from "@/db/schema";
 import { adminListParents } from "@/lib/data/admin";
 import { formatDate } from "@/lib/format";
 import { AdminDeleteButton } from "@/components/admin/admin-delete-button";
@@ -16,6 +17,16 @@ import {
 } from "@/components/ui/table";
 
 export const metadata: Metadata = { title: "Data Orang Tua" };
+
+/**
+ * FREE sengaja abu-abu, bukan tanda pisah "—": tiap akun selalu punya tier, dan
+ * sel kosong di kolom ini terbaca seperti data yang gagal dimuat.
+ */
+const TIER_BADGE: Record<MembershipTier, string> = {
+  FREE: "bg-muted text-muted-foreground",
+  VIP: "bg-amber-100 text-amber-900",
+  VVIP: "bg-violet-100 text-violet-900",
+};
 
 export default async function AdminParentsPage({ searchParams }: PageProps<"/admin/parents">) {
   const { q } = await searchParams;
@@ -61,6 +72,7 @@ export default async function AdminParentsPage({ searchParams }: PageProps<"/adm
                 <TableHead>Email</TableHead>
                 <TableHead>No. HP</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Member</TableHead>
                 <TableHead className="text-right">Jumlah Anak</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -94,6 +106,11 @@ export default async function AdminParentsPage({ searchParams }: PageProps<"/adm
                         ORANG TUA
                       </span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`text-label-sm rounded px-1.5 py-0.5 font-bold ${TIER_BADGE[p.membershipTier]}`}>
+                      {p.membershipTier}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{p.childCount}</TableCell>
                   <TableCell className="text-right">

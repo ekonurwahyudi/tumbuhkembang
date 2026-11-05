@@ -16,6 +16,12 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["USER", "SUPERADMIN"]);
+/**
+ * Tingkat keanggotaan. Terpisah dari `role`: role menentukan akses admin, tier
+ * menentukan fitur berbayar. Satu kolom untuk keduanya berarti menaikkan orang
+ * ke VIP ikut membuka /admin.
+ */
+export const membershipTierEnum = pgEnum("membership_tier", ["FREE", "VIP", "VVIP"]);
 export const sexEnum = pgEnum("sex", ["MALE", "FEMALE"]);
 export const birthTypeEnum = pgEnum("birth_type", ["TERM", "PRETERM"]);
 export const shareStatusEnum = pgEnum("share_status", ["PENDING", "ACCEPTED"]);
@@ -91,6 +97,9 @@ export const users = pgTable(
     // Default USER untuk setiap pendaftar. Dinaikkan hanya lewat scripts/grant-admin.ts —
     // tidak ada server action yang menulis kolom ini, jadi tidak ada jalur eskalasi.
     role: userRoleEnum("role").notNull().default("USER"),
+    // Setiap pendaftar mulai dari FREE. Dinaikkan hanya oleh SUPERADMIN lewat
+    // /admin/parents — tidak ada server action milik user yang menulis kolom ini.
+    membershipTier: membershipTierEnum("membership_tier").notNull().default("FREE"),
     phone: text("phone"),
     photoKey: text("photo_key"),
     // Tautan publik MyRegistry. Token baru dibuat saat pertama kali dibagikan, bukan
@@ -673,6 +682,7 @@ export const shopFavoritesRelations = relations(shopFavorites, ({ one }) => ({
 export type User = typeof users.$inferSelect;
 /** Satu-satunya sumber nilai peran — jangan tulis literalnya lagi di tempat lain. */
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
+export type MembershipTier = (typeof membershipTierEnum.enumValues)[number];
 export type Child = typeof children.$inferSelect;
 export type GrowthMeasurement = typeof growthMeasurements.$inferSelect;
 export type FeedingLog = typeof feedingLogs.$inferSelect;

@@ -14,7 +14,7 @@ import {
   adminUpdateParent,
 } from "@/lib/data/admin";
 import { deleteChildPhoto, deletePhoto } from "@/lib/storage";
-import { adminNewParentSchema, profileSchema } from "@/schemas/account";
+import { adminEditParentSchema, adminNewParentSchema } from "@/schemas/account";
 import { parseChildForm, toChildRow } from "./child-form";
 
 /**
@@ -71,15 +71,16 @@ export async function adminUpdateParentAction(
 ): Promise<ActionResult> {
   try {
     await requireSuperadmin();
-    const parsed = profileSchema.safeParse({
+    const parsed = adminEditParentSchema.safeParse({
       name: formData.get("name"),
       email: formData.get("email"),
       phone: formData.get("phone") ?? "",
+      membershipTier: formData.get("membershipTier"),
     });
     if (!parsed.success)
       return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
 
-    const { name, email, phone } = parsed.data;
+    const { name, email, phone, membershipTier } = parsed.data;
 
     // Email unik dikecualikan untuk baris yang sedang diubah.
     const [conflict] = await db
@@ -93,6 +94,7 @@ export async function adminUpdateParentAction(
       name,
       email,
       phone: phone === "" || phone == null ? null : phone,
+      membershipTier,
     });
     if (!row) return fail("NOT_FOUND", "Akun tidak ditemukan.");
 

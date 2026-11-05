@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { passwordChangeSchema, profileSchema } from "./account";
+import { adminEditParentSchema, passwordChangeSchema, profileSchema } from "./account";
 
 describe("profileSchema", () => {
   it("menerima profil lengkap dan tanpa telepon", () => {
@@ -14,6 +14,33 @@ describe("profileSchema", () => {
       profileSchema.safeParse({ name: "Budi", email: "budi@ex.com", phone: "081234" }).success,
     ).toBe(false);
     expect(profileSchema.safeParse({ name: "B", email: "budi@ex.com" }).success).toBe(false);
+  });
+});
+
+describe("adminEditParentSchema", () => {
+  const base = { name: "Budi", email: "budi@ex.com", phone: "" };
+
+  it("menerima ketiga tingkat keanggotaan", () => {
+    for (const membershipTier of ["FREE", "VIP", "VVIP"] as const) {
+      expect(adminEditParentSchema.parse({ ...base, membershipTier }).membershipTier).toBe(
+        membershipTier,
+      );
+    }
+  });
+
+  it("menolak tier karangan dan tier yang tidak dikirim", () => {
+    expect(adminEditParentSchema.safeParse({ ...base, membershipTier: "SUPERADMIN" }).success).toBe(
+      false,
+    );
+    expect(adminEditParentSchema.safeParse({ ...base, membershipTier: "vip" }).success).toBe(false);
+    expect(adminEditParentSchema.safeParse(base).success).toBe(false);
+  });
+
+  it("tidak membocorkan tier lewat profileSchema milik halaman Profil", () => {
+    // Penjaga eskalasi: kalau suatu saat tier ikut masuk profileSchema, user bisa
+    // menaikkan dirinya sendiri lewat form Profil. Tes ini gagal lebih dulu.
+    const parsed = profileSchema.parse({ ...base, membershipTier: "VVIP" });
+    expect(parsed).not.toHaveProperty("membershipTier");
   });
 });
 

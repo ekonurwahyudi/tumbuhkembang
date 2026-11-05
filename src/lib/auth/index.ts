@@ -76,6 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: users.name,
             email: users.email,
             role: users.role,
+            membershipTier: users.membershipTier,
             photoKey: users.photoKey,
           })
           .from(users)
@@ -90,6 +91,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.name = row.name;
         session.user.email = row.email;
         session.user.role = row.role;
+        // Dibaca dari DB tiap auth(), sama seperti role: tier yang baru dinaikkan
+        // admin langsung berlaku tanpa user login ulang.
+        session.user.membershipTier = row.membershipTier;
         // Dibawa di session supaya avatar di header ikut berubah begitu foto
         // profil diganti, tanpa query tambahan di tiap layout.
         session.user.photoKey = row.photoKey;
@@ -126,6 +130,7 @@ export async function requireUser() {
     name: session.user.name ?? "",
     email: session.user.email ?? "",
     role: session.user.role,
+    membershipTier: session.user.membershipTier,
     photoKey: session.user.photoKey ?? null,
   };
 }

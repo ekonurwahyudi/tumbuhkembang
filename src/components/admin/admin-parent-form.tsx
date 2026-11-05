@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import type { MembershipTier } from "@/db/schema";
 import { adminCreateParentAction, adminUpdateParentAction } from "@/lib/actions/admin";
 import { useFormAction } from "@/lib/use-form-action";
 import { FieldError } from "@/components/auth/field-error";
@@ -21,7 +22,13 @@ import { Label } from "@/components/ui/label";
 export function AdminParentForm({
   parent,
 }: {
-  parent?: { id: string; name: string; email: string; phone: string | null };
+  parent?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    membershipTier: MembershipTier;
+  };
 }) {
   const router = useRouter();
   const { action, fields, formError } = useFormAction(
@@ -80,6 +87,35 @@ export function AdminParentForm({
         />
         <FieldError id="admin-parent-phone-error" message={fields?.phone} />
       </div>
+
+      {/*
+        Tier hanya muncul saat mengubah, bukan saat membuat: akun baru selalu FREE,
+        sama seperti yang mendaftar sendiri. `<select>` bawaan dengan alasan yang sama
+        seperti kategori di form Shop — di HP ia membuka picker asli sistem.
+      */}
+      {parent && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="admin-parent-tier">Status Member</Label>
+          <select
+            id="admin-parent-tier"
+            name="membershipTier"
+            defaultValue={parent.membershipTier}
+            aria-describedby={
+              fields?.membershipTier ? "admin-parent-tier-error" : "admin-parent-tier-hint"
+            }
+            aria-invalid={!!fields?.membershipTier}
+            className="border-input bg-background focus-visible:ring-ring aria-invalid:border-destructive h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+          >
+            <option value="FREE">Free</option>
+            <option value="VIP">VIP</option>
+            <option value="VVIP">VVIP</option>
+          </select>
+          <p id="admin-parent-tier-hint" className="text-muted-foreground text-body-sm">
+            Berlaku segera tanpa pemiliknya login ulang.
+          </p>
+          <FieldError id="admin-parent-tier-error" message={fields?.membershipTier} />
+        </div>
+      )}
 
       {!parent && (
         <div className="flex flex-col gap-1.5">
