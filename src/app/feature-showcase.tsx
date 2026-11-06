@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { BookOpen, CalendarDays, ChartNoAxesCombined, Check, Clock3, Gift, ShoppingBag } from "lucide-react";
+import { BookOpen, CalendarDays, ChartNoAxesCombined, Check, Clock3, Gift, ListChecks, ShoppingBag } from "lucide-react";
 
 const highlights = [
   {
@@ -46,6 +46,20 @@ const highlights = [
     screenshot: { src: "/landing/vaksin-all.webp", width: 465, height: 957 },
     alt: "Tampilan jadwal imunisasi anak dengan data contoh",
     icon: CalendarDays,
+  },
+  {
+    title: "Skrining perkembangan anak",
+    subtitle: "Centang capaian sesuai usianya",
+    description: "Kuesioner Pra Skrining Perkembangan (KPSP) membantu kamu mengamati capaian si kecil pada usia tertentu: gerak kasar, gerak halus, bicara dan bahasa, serta sosialisasi dan kemandirian. Pertanyaannya disalin apa adanya dari Buku Bagan SDIDTK Kemenkes RI, lengkap dengan contoh gambar untuk butir yang memerlukannya.",
+    points: [
+      "Formulir usia 3, 6, 9 bulan s/d 6 tahun dengan sepuluh pertanyaan masing-masing.",
+      "Pertanyaan dikelompokkan per aspek perkembangan.",
+      "Hasilnya terbaca langsung: sesuai, perlu stimulasi, atau perlu pemeriksaan lanjutan.",
+    ],
+    note: "Pra-skrining, bukan diagnosis; hasilnya tidak menggantikan pemeriksaan tenaga kesehatan.",
+    screenshot: { src: "/landing/KPSP.webp", width: 432, height: 890 },
+    alt: "Tampilan skrining perkembangan KPSP dengan data contoh",
+    icon: ListChecks,
   },
   {
     title: "Tips imunisasi & MPASI",
