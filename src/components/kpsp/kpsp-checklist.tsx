@@ -5,8 +5,37 @@ import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
 import { saveKpspAnswerAction } from "@/lib/actions/kpsp";
-import { KPSP_CATEGORIES, KPSP_SOURCE, type KpspForm } from "@/lib/kpsp/catalog";
-import { Icon } from "@/components/ui/icon";
+import { KPSP_CATEGORIES, KPSP_SOURCE, type KpspCategory, type KpspForm } from "@/lib/kpsp/catalog";
+import { Icon, type IconName } from "@/components/ui/icon";
+
+/**
+ * Keping ikon per kategori perkembangan. Nama ikon diambil dari union `IconName`,
+ * bukan dari yang paling pas maknanya: font ikonnya subset
+ * (public/fonts/material-symbols-subset.woff2), dan nama di luar subset akan tampil
+ * sebagai teks mentah. Yang paling pas (`directions_run`, `pan_tool`, `chat_bubble`)
+ * tidak ada di subset, jadi dipakai padanan terdekat yang ada; regenerasi subset
+ * bila ingin ikon yang lebih tepat. Ikonnya murni pembeda tempat — nama kategorinya
+ * selalu tertulis di sebelahnya, jadi tidak ada makna yang hilang bila ikonnya
+ * tidak terbaca.
+ */
+const CATEGORY_STYLE: Record<KpspCategory, { icon: IconName; tone: string }> = {
+  "Gerak kasar": {
+    icon: "height",
+    tone: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+  },
+  "Gerak halus": {
+    icon: "edit",
+    tone: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+  },
+  "Bicara dan bahasa": {
+    icon: "menu_book",
+    tone: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  },
+  "Sosialisasi dan kemandirian": {
+    icon: "family_restroom",
+    tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  },
+};
 
 /**
  * Checklist KPSP: satu kotak centang per butir, bukan sepasang tombol Ya/Tidak.
@@ -77,22 +106,44 @@ export function KpspChecklist({ childId, name, form, ages, answers, preterm }: {
         </nav>
       </div>
 
-      {/* Ringkasan hasil. aria-live supaya skor dan statusnya diumumkan saat centang berubah. */}
-      <div className={`mt-5 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${verdict.box}`} aria-live="polite">
-        <span className={`grid size-14 shrink-0 place-items-center rounded-full text-base font-bold ${verdict.badge}`}>
-          {yes}/{total}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-            Hasil Skrining Usia {form.ageMonths} Bulan:
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${verdict.chip}`}>{verdict.label}</span>
+      {/* Ringkasan hasil. aria-live supaya skor dan statusnya diumumkan saat centang berubah.
+
+          Dua bentuk, satu isi:
+          - Layar kecil: skor | (judul di atas status). Saran dan sumber turun ke bawah,
+            keduanya kalimat penuh yang tidak muat di samping.
+          - Desktop (sm+): skor | (judul + status sebaris, saran di bawahnya) | sumber.
+            Saran ikut masuk kolom tengah supaya lebarnya terbatas dan tidak melintang
+            sampai ke bawah keping skor. */}
+      <div className={`mt-5 rounded-xl border p-4 ${verdict.box}`} aria-live="polite">
+        <div className="flex items-center gap-3 sm:items-start sm:gap-4">
+          <span className={`grid size-14 shrink-0 place-items-center rounded-full text-base font-bold ${verdict.badge} sm:self-center`}>
+            {yes}/{total}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+              <p className="text-sm font-semibold">
+                Hasil Skrining Usia {form.ageMonths} Bulan<span className="hidden sm:inline">:</span>
+              </p>
+              <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold sm:mt-0 ${verdict.chip}`}>
+                {verdict.label}
+              </span>
+            </div>
+            {/* Saran: di bawah kartu pada layar kecil, di dalam kolom ini pada desktop. */}
+            <p className="text-muted-foreground mt-1 hidden text-sm sm:block">{verdict.advice}</p>
+          </div>
+          <p className="text-muted-foreground hidden shrink-0 self-center text-right text-xs sm:block">
+            Standar Evaluasi
+            <a href={KPSP_SOURCE} target="_blank" rel="noopener noreferrer"
+              className="text-primary mt-0.5 block text-sm font-semibold underline underline-offset-2">
+              Buku Bagan SDIDTK Kemenkes RI 2022
+            </a>
           </p>
-          <p className="text-muted-foreground mt-1 text-sm">{verdict.advice}</p>
         </div>
-        <p className="text-muted-foreground shrink-0 text-xs sm:text-right">
-          Standar Evaluasi
+        <p className="text-muted-foreground mt-3 text-sm sm:hidden">{verdict.advice}</p>
+        <p className="text-muted-foreground mt-2 text-xs sm:hidden">
+          Standar Evaluasi:{" "}
           <a href={KPSP_SOURCE} target="_blank" rel="noopener noreferrer"
-            className="text-primary mt-0.5 block text-sm font-semibold underline underline-offset-2">
+            className="text-primary font-semibold underline underline-offset-2">
             Buku Bagan SDIDTK Kemenkes RI 2022
           </a>
         </p>
@@ -123,7 +174,12 @@ export function KpspChecklist({ childId, name, form, ages, answers, preterm }: {
         if (!questions.length) return null;
         return (
           <div key={category} className="mt-6">
-            <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">{category}</h3>
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${CATEGORY_STYLE[category].tone}`}>
+                <Icon name={CATEGORY_STYLE[category].icon} filled className="text-[16px]" />
+              </span>
+              {category}
+            </h3>
             <ul className="mt-2.5 space-y-2.5">
               {questions.map((q) => {
                 const checked = values[q.key];
@@ -133,11 +189,8 @@ export function KpspChecklist({ childId, name, form, ages, answers, preterm }: {
                      dipakai di seluruh aplikasi. Bukan satu-satunya penanda — kotaknya
                      ikut tercentang dan terbaca oleh pembaca layar.
 
-                     Yang belum dicentang memakai `--rule`, BUKAN `border-border`:
-                     `--border` sengaja transparan di aplikasi ini (lihat globals.css),
-                     jadi `border-border` tidak menggambar apa pun. `--rule` adalah token
-                     untuk garis yang memang harus terlihat. */
-                  <li key={q.key} className={`rounded-xl border-2 transition-colors ${checked ? "border-emerald-500 bg-emerald-50 dark:border-emerald-500/60 dark:bg-emerald-500/10" : "border-[var(--rule)]"}`}>
+                     Yang belum dicentang memakai `border-border` biasa. */
+                  <li key={q.key} className={`rounded-xl border-2 transition-colors ${checked ? "border-emerald-500 bg-emerald-50 dark:border-emerald-500/60 dark:bg-emerald-500/10" : "border-border"}`}>
                     <label htmlFor={inputId} className="flex cursor-pointer items-start gap-3 p-4">
                       <input
                         id={inputId}
@@ -145,9 +198,7 @@ export function KpspChecklist({ childId, name, form, ages, answers, preterm }: {
                         checked={checked}
                         disabled={pending && busyKey !== q.key}
                         onChange={(e) => toggle(q.key, e.target.checked)}
-                        /* `--rule` lagi, sebab alasan yang sama: kotak centang kosong
-                           tanpa garis tidak terbaca sebagai tempat yang bisa diketuk. */
-                        className="focus-visible:ring-ring mt-0.5 size-5 shrink-0 cursor-pointer rounded border-[var(--rule)] text-emerald-600 accent-current focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="border-border focus-visible:ring-ring mt-0.5 size-5 shrink-0 cursor-pointer rounded text-emerald-600 accent-current focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm leading-relaxed font-medium sm:text-[15px]">{q.text}</span>

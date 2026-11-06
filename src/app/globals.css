@@ -109,37 +109,41 @@
   --accent-foreground: oklch(0.353 0.078 238.1);
   --destructive: oklch(0.577 0.215 27.3);
   /*
-    Tanpa garis di seluruh aplikasi: `--border` dan `--input` dibuat transparan,
-    bukan menghapus ratusan kelas `border` satu per satu. Satu titik ubah, dan
-    bentuk elemennya tetap utuh — lebar 1px-nya masih menempati ruang, jadi tidak
-    ada tata letak yang bergeser saat garisnya hilang.
+    Garis tepi kembali terlihat. Sebelumnya `--border` transparan supaya aplikasi
+    tampak tanpa garis — hasilnya setiap kelas `border` di ratusan komponen tidak
+    menggambar apa pun, dan tepi yang MEMANG harus terbaca (kartu pilihan, kotak
+    centang, ubin) ikut hilang bersamanya.
 
-    Pemisah antar-kartu kini dari bayangan dan jarak, seperti di beranda.
+    Nilainya sama dengan `--rule`: satu abu-abu untuk semua garis, jadi tepi kartu
+    dan pemisah antar-baris tidak pernah beda nuansa. Lebar 1px-nya memang sudah
+    menempati ruang sejak dulu, jadi menyalakannya tidak menggeser tata letak.
 
-    `--input` ikut transparan atas permintaan. Konsekuensinya kolom isian kehilangan
-    satu-satunya penandanya, jadi latar `--input-surface` di bawah menggantikannya —
-    lihat catatannya di sana.
+    `--input` ikut dinyalakan dan nilainya sama. Ia bukan hanya milik kolom ketik:
+    radio dan kotak centang memakainya sebagai SATU-SATUNYA bentuk mereka — tanpa
+    garis, lingkaran pilihan "Laki-laki / Perempuan" di form tambah anak benar-benar
+    tidak tergambar sampai dipilih. Kolom ketik tetap punya `--input-surface`;
+    garis tipis di sekelilingnya menegaskan tepinya, bukan menduplikasi penanda.
   */
-  --border: transparent;
-  --input: transparent;
+  --border: oklch(0.906 0.017 252.9);
+  --input: var(--border);
   /*
-    Latar kolom isian. Dibutuhkan karena `--input` kini transparan: komponen Input
-    memakai `bg-transparent`, jadi tanpa latar ini kolomnya benar-benar tidak terlihat
-    dan tidak ada lagi yang menyampaikan "di sini tempat mengetik" — penanda area
-    interaktif itu syarat dasar aksesibilitas, bukan hiasan.
+    Latar kolom isian. Lahir saat `--input` transparan dan kolomnya tidak punya
+    penanda apa pun. Tetap dipakai sesudah garis dinyalakan: permukaan yang sedikit
+    berbeda dari kartu itulah yang menyampaikan "di sini tempat mengetik", dan ia
+    tidak bergantung pada garis 1px yang mudah hilang di layar padat.
   */
   --input-surface: oklch(0.968 0.007 247.9);
   /*
-    Abu-abu untuk garis dan lintasan yang memang harus TERLIHAT: alur progress bar,
-    pemisah antar-baris di dalam satu kartu, `Separator`.
+    Abu-abu untuk garis dan lintasan: alur progress bar, pemisah antar-baris di dalam
+    satu kartu, `Separator`.
 
-    Dulu semuanya memakai `bg-border` — warna yang sama dengan garis tepi kartu. Saat
-    `--border` dibuat transparan, semuanya ikut lenyap: progress bar 0% tidak
-    menampilkan apa pun dan terbaca seperti barnya hilang, bukan seperti bar kosong.
-    Dipisahkan jadi token sendiri supaya "tanpa garis tepi" tidak lagi berarti "tanpa
-    garis sama sekali"; keduanya memang dua hal berbeda.
+    Token ini lahir saat `--border` transparan — tanpa itu progress bar 0% tidak
+    menampilkan apa pun dan terbaca seperti barnya hilang. Sekarang `--border` kembali
+    terlihat, jadi `--rule` mengikutinya: satu nilai, dan tepi kartu tidak akan pernah
+    beda nuansa dari pemisah di dalamnya. Namanya dipertahankan karena dipakai di
+    banyak tempat dan artinya memang berbeda — ini garis ISI, bukan garis TEPI.
   */
-  --rule: oklch(0.906 0.017 252.9);
+  --rule: var(--border);
   /* Cincin fokus mengikuti primary baru (#2391FF) supaya keduanya sekeluarga.
      Sebagai elemen non-teks ambangnya 3:1, dan terhadap canvas nilainya 3,06:1. */
   --ring: oklch(0.655 0.188 253.3);
@@ -184,13 +188,14 @@
   --accent: oklch(0.31 0.058 249.4);
   --accent-foreground: oklch(0.912 0.045 249.4);
   --destructive: oklch(0.711 0.166 22.2);
-  --border: transparent;
-  --input: transparent;
+  /* Sama dengan `--rule` mode gelap: dinaikkan dari surface, bukan diturunkan. */
+  --border: oklch(1 0 0 / 20%);
+  --input: var(--border);
   /* Di mode gelap latar isian dinaikkan dari surface, bukan diturunkan: permukaan
      yang lebih terang itulah yang terbaca sebagai "bisa disentuh". */
   --input-surface: oklch(0.289 0.046 261.4);
-  /* Di gelap, garis/lintasan dinaikkan dari surface supaya tetap terbaca. */
-  --rule: oklch(1 0 0 / 20%);
+  /* Mengikuti --border, sama seperti di mode terang. */
+  --rule: var(--border);
   --ring: oklch(0.745 0.139 253.3);
   --chart-1: oklch(0.669 0.159 22.3);
   --chart-2: oklch(0.7 0.13 240);

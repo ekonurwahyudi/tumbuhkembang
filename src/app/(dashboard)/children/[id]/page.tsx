@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { getChildForViewer } from "@/lib/data/children";
+import { getChildForViewer, listChildrenForViewer } from "@/lib/data/children";
 import { listFeedingLogs } from "@/lib/data/feeding";
 import { listMeasurements } from "@/lib/data/measurements";
 import { listVaccinations } from "@/lib/data/vaccinations";
 import { listReminders } from "@/lib/data/vaccine-reminders";
 import { listSkippedCatalogKeys } from "@/lib/data/vaccination-skips";
+import { chronologicalAge, formatAgeDetailed } from "@/lib/growth/age";
 import { buildChartSeries } from "@/lib/growth/chart-data";
 import { fentonEligible } from "@/lib/growth/engine";
 import type { MeasurementType } from "@/lib/growth/types";
 import { groupByDay, summarizeDay } from "@/lib/feeding/summary";
 import { todayLocalISO } from "@/schemas/date";
 import { ChildHero } from "@/components/children/child-hero";
+import { ChildPicker } from "@/components/children/child-picker";
 import { DeleteChildButton } from "@/components/children/delete-child-button";
 import { FeedingDialog } from "@/components/feeding/feeding-dialog";
 import { FeedingEstimate } from "@/components/feeding/feeding-estimate";
@@ -65,6 +67,7 @@ export default async function ChildProfilePage({
   const skippedKeys = await listSkippedCatalogKeys(user.id, child.id);
   const reminders = await listReminders(user.id, child.id);
   const todayFeedingLogs = await listFeedingLogs(user.id, child.id, { from: todayStart });
+  const siblings = await listChildrenForViewer(user.id);
   const latest = measurements[0];
   const currentWeightGrams =
     latest?.weightKg != null ? Math.round(Number(latest.weightKg) * 1000) : child.birthWeightGrams;
@@ -94,13 +97,25 @@ export default async function ChildProfilePage({
       <ChildHero
         child={child}
         action={
-          isOwner ? (
-            <Button asChild variant="ghost" size="icon-sm" aria-label="Ubah profil anak">
-              <Link href={`/children/${child.id}/edit`}>
-                <Icon name="edit" className="text-[18px]" />
-              </Link>
-            </Button>
-          ) : undefined
+          <div className="flex shrink-0 items-center gap-0.5">
+            <ChildPicker
+              activeId={child.id}
+              items={siblings.map(({ child: c }) => ({
+                id: c.id,
+                name: c.name,
+                photoKey: c.photoKey,
+                caption: formatAgeDetailed(chronologicalAge(c.dateOfBirth)),
+                href: `/children/${c.id}`,
+              }))}
+            />
+            {isOwner && (
+              <Button asChild variant="ghost" size="icon-sm" aria-label="Ubah profil anak">
+                <Link href={`/children/${child.id}/edit`}>
+                  <Icon name="edit" className="text-[18px]" />
+                </Link>
+              </Button>
+            )}
+          </div>
         }
       />
 
