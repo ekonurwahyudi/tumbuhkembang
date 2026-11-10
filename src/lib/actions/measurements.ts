@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { limitWrite } from "@/lib/auth/write-limit";
 import { assertChildAccessible } from "@/lib/data/children";
 import {
   deleteMeasurement,
@@ -37,6 +38,8 @@ export async function createMeasurementAction(
 ): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requireUser();
+    const limited = await limitWrite("measurement", user.id, 30);
+    if (limited) return limited;
     // childId datang dari client — verifikasi kepemilikan sebelum menulis apa pun.
     if (!(await assertChildAccessible(user.id, childId)))
       return fail("NOT_FOUND", "Data anak tidak ditemukan.");

@@ -12,6 +12,7 @@ import { fail, fieldErrors, handleUnexpected, ok, type ActionResult } from "@/li
 import { signIn, signOut } from "./index";
 import { googleOAuthConfigured } from "./config";
 import { checkRateLimit, pruneRateLimit, resetRateLimit } from "./rate-limit";
+import { limitByIp } from "./write-limit";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -31,6 +32,11 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
   });
   if (!parsed.success)
     return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
+
+  // Satu IP tidak perlu membuat lebih dari sekumpulan kecil akun dalam seperempat jam.
+  // Dicek SETELAH validasi supaya salah ketik tidak memakan jatah.
+  const limited = await limitByIp("register", 3);
+  if (limited) return limited;
 
   const { name, email, password } = parsed.data;
 

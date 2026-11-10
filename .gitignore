@@ -43,3 +43,6 @@ next-env.d.ts
 # Python
 __pycache__/
 *.pyc
+
+# aset video promo — berat (MP4 + font/gambar base64), dibangun lokal, tidak perlu di repo
+motion/

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { limitWrite } from "@/lib/auth/write-limit";
 import { getChildForViewer } from "@/lib/data/children";
 import { setKpspAnswer } from "@/lib/data/kpsp";
 import { KPSP_ENABLED_AGES, KPSP_FORMS } from "@/lib/kpsp/catalog";
@@ -24,6 +25,8 @@ export async function saveKpspAnswerAction(
       return fail("VALIDATION_ERROR", "Pertanyaan tidak dikenal.");
 
     const user = await requireUser();
+    const limited = await limitWrite("kpsp", user.id, 120);
+    if (limited) return limited;
     if (user.membershipTier !== "VIP" && user.membershipTier !== "VVIP")
       return fail("FORBIDDEN", "Skrining KPSP tersedia untuk member VIP dan VVIP.");
     const viewer = await getChildForViewer(user.id, childId);

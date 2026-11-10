@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { limitWrite } from "@/lib/auth/write-limit";
 import {
   deleteChild,
   getChild,
@@ -39,6 +40,8 @@ function parseInitialMeasurement(formData: FormData) {
 export async function createChildAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requireUser();
+    const limited = await limitWrite("child", user.id, 10);
+    if (limited) return limited;
     const parsed = parseChildForm(formData);
     if (!parsed.success)
       return fail("VALIDATION_ERROR", "Data tidak valid", fieldErrors(parsed.error.issues));
