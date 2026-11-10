@@ -18,10 +18,16 @@ import LandingHeader from "./landing-header";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], display: "swap" });
 
+/*
+  Judulnya tidak memakai template "%s · Kembangku": halaman ini adalah akarnya,
+  dan judul akar sudah lengkap di layout. Menambah sufiks hanya mengulang merek
+  dua kali di satu baris hasil pencarian.
+*/
 export const metadata: Metadata = {
-  title: "Pantau tumbuh kembang si kecil lebih tenang",
+  title: { absolute: "Kembangku — Pantau tumbuh kembang si kecil lebih tenang" },
   description:
     "Catat pertumbuhan dengan referensi WHO atau Fenton, usia koreksi prematur, imunisasi, artikel, wishlist kado, dan katalog dalam satu tempat.",
+  alternates: { canonical: "/" },
 };
 
 const features = [

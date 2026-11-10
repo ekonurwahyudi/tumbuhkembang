@@ -1,3 +1,13 @@
+import type { Metadata } from "next";
+
+/**
+ * Halaman ini memuat catatan kesehatan anak. robots.txt sudah melarangnya,
+ * tapi larangan itu hanya berlaku untuk perayapan — tautan yang tersebar dari
+ * tempat lain tetap bisa membuat halaman terindeks tanpa pernah dirayapi.
+ * `noindex` di header respons menutup celah itu.
+ */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 import { redirect } from "next/navigation";
 import { requireSuperadmin } from "@/lib/auth";
 import { AppHeader } from "@/components/layout/app-header";

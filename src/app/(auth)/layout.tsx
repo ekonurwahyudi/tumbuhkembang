@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+
+/**
+ * Formulir masuk dan daftar tidak punya nilai pencarian, dan halaman login yang
+ * terindeks hanya membingungkan orang yang mencari aplikasinya. robots.txt sudah
+ * melarang perayapannya; `noindex` menutup jalur tautan dari luar.
+ */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
     <main className="relative flex min-h-dvh flex-col overflow-x-hidden bg-[#f8f9ff]">

@@ -54,7 +54,13 @@ export const config = {
   // akun, jadi logonya tidak pernah muncul dan panel rekening tampak kotak kosong.
   // `landing` berisi tangkapan layar data demo dan ikon untuk halaman publik.
   // `kpsp` berisi gambar sumber PDF; pengoptimal gambar mengambilnya tanpa cookie sesi.
+  // `sitemap.xml` dan `opengraph-image` HARUS dilewatkan dan bukan sekadar boleh:
+  // yang memintanya adalah perayap Google dan pengambil pratinjau WhatsApp,
+  // Facebook, X, Telegram — tidak satu pun punya cookie sesi. Tanpa dilewatkan
+  // keduanya dialihkan ke /login, sitemap tidak pernah terbaca, dan kartu yang
+  // dibagikan muncul tanpa gambar. `robots.txt` sudah ada di sini sejak awal
+  // karena alasan yang persis sama.
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|icons|fonts|stores|banks|landing/|kpsp/|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
+    "/((?!api/auth|_next/static|_next/image|manifest.webmanifest|sw.js|offline.html|robots.txt|sitemap.xml|opengraph-image|twitter-image|icons|fonts|stores|banks|landing/|kpsp/|apple-icon.png|icon.png|favicon.ico|brand-logo.png).*)",
   ],
 };
