@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { KPSP_FORMS } from "./catalog";
+import { KPSP_ENABLED_AGES, KPSP_FORMS } from "./catalog";
 import { kpspAge, kpspResult } from "./evaluation";
 
 const child = { dateOfBirth: "2024-01-01", birthType: "TERM" as const, gestationalAgeWeeks: null, gestationalAgeDays: null };
@@ -40,9 +40,15 @@ describe("KPSP 2022", () => {
     expect(kpspResult([...Array(6).fill(true), ...Array(4).fill(false)])?.status).toBe("Kemungkinan ada penyimpangan");
   });
 
-  it("ships cropped figures for the ages that have them, pointing at real assets", () => {
-    const withFigure = KPSP_FORMS.flatMap((f) => f.questions.filter((q) => q.figure).map((q) => `${f.ageMonths}-${q.key}`));
-    expect(withFigure).toEqual(["3-6", "3-7", "3-8", "3-9", "3-10", "6-1", "6-2", "6-3", "6-5", "9-1", "9-9"]);
+  it("opens every age the catalogue ships a form for", () => {
+    expect([...KPSP_ENABLED_AGES]).toEqual(KPSP_FORMS.map((f) => f.ageMonths));
+  });
+
+  it("ships a cropped figure for every illustrated item, pointing at real assets", () => {
+    // Tidak ada butir bergambar yang tersisa tanpa potongan: "seperti pada gambar"
+    // tanpa gambar membuat butirnya tidak bisa dinilai.
+    const withoutFigure = KPSP_FORMS.flatMap((f) => f.questions.filter((q) => q.illustration && !q.figure).map((q) => `${f.ageMonths}-${q.key}`));
+    expect(withoutFigure).toEqual([]);
     for (const form of KPSP_FORMS)
       for (const q of form.questions) {
         if (!q.figure) continue;

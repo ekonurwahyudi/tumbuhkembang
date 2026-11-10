@@ -7,6 +7,14 @@ import { toast } from "sonner";
 import { saveKpspAnswerAction } from "@/lib/actions/kpsp";
 import { KPSP_CATEGORIES, KPSP_SOURCE, type KpspCategory, type KpspForm } from "@/lib/kpsp/catalog";
 import { Icon, type IconName } from "@/components/ui/icon";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Keping ikon per kategori perkembangan. Nama ikon diambil dari union `IconName`,
@@ -59,6 +67,11 @@ export function KpspChecklist({ childId, name, form, ages, answers, preterm }: {
   const [pending, startTransition] = useTransition();
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
+  // Dua usia pertama jadi tab, sisanya masuk menu.
+  const tabs = ages.slice(0, 2);
+  const rest = ages.slice(2);
+  const restActive = rest.includes(form.ageMonths);
+
   const total = form.questions.length;
   const yes = form.questions.filter((q) => values[q.key]).length;
   const verdict = kpspVerdict(yes, total);
@@ -94,15 +107,50 @@ export function KpspChecklist({ childId, name, form, ages, answers, preterm }: {
         </div>
 
         {/* Tab usia. Tetap tautan, bukan tombol: setiap usia punya URL sendiri,
-            jadi bisa dibagikan dan tombol kembali bekerja. */}
-        <nav aria-label="Usia formulir KPSP" className="bg-muted flex shrink-0 gap-1 self-start rounded-full p-1">
-          {ages.map((age) => (
-            <Link key={age} href={`?usia=${age}`} aria-current={age === form.ageMonths ? "page" : undefined}
-              className={`inline-flex min-h-9 items-center rounded-full px-3 text-sm font-medium transition-colors sm:px-4 ${
-                age === form.ageMonths ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              Usia {age} Bulan
-            </Link>
-          ))}
+            jadi bisa dibagikan dan tombol kembali bekerja.
+
+            Dua usia pertama tampil sebagai tab, sisanya masuk satu menu: daftar
+            usianya terus bertambah dan deretan penuh sudah lebih lebar dari layar
+            ponsel. Satuan "Bulan" ikut tertulis di semua ukuran layar — angka telanjang
+            pada kartu skrining bisa terbaca sebagai skor, bukan usia. Usia yang sedang
+            dibuka selalu terbaca: bila ia ada di dalam menu, tombol menunya yang
+            menampilkan angkanya, bukan kata "Lainnya". */}
+        <nav aria-label="Usia formulir KPSP" className="shrink-0 self-start">
+          <div className="bg-muted flex items-center gap-1 rounded-full p-1">
+            {tabs.map((age) => (
+              <Link key={age} href={`?usia=${age}`}
+                aria-current={age === form.ageMonths ? "page" : undefined}
+                className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-medium transition-colors ${
+                  age === form.ageMonths ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                {age}&nbsp;Bulan
+              </Link>
+            ))}
+            {rest.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label={restActive ? `Usia ${form.ageMonths} bulan, pilih usia lain` : "Pilih usia lain"}
+                  className={`inline-flex min-h-9 shrink-0 items-center gap-0.5 rounded-full px-3.5 text-sm font-medium transition-colors ${
+                    restActive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                  {restActive ? `${form.ageMonths} Bulan` : "Lainnya"}
+                  <Icon name="expand_more" aria-hidden="true" className="text-[18px]" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuLabel>Usia formulir</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {rest.map((age) => (
+                    <DropdownMenuItem key={age} asChild className="py-2">
+                      <Link href={`?usia=${age}`} aria-current={age === form.ageMonths ? "page" : undefined}>
+                        <span className="flex-1">Usia {age} Bulan</span>
+                        {age === form.ageMonths && (
+                          <Icon name="check" aria-label="Sedang dibuka" className="text-primary text-[18px]" />
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </nav>
       </div>
 
